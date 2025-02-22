@@ -1,0 +1,7 @@
+// 基础变量
+$base-font-size-px: 16;
+
+// 辅助函数：将像素值转换为 rem 单位
+@function rem($px) {
+    @return #{calc($px / $base-font-size-px)}rem;
+}

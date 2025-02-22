@@ -1,0 +1,33 @@
+// 输入框提示文字
+:deep(.el-input__inner)::placeholder {
+    color: var(--gray);
+}
+// 输入框选中后边框变色
+:deep(.el-input__wrapper.is-focus) {
+    box-shadow: 0 0 0 1px var(--blue) inset;
+}
+// 单选组件
+:deep(.el-radio__label) {
+    color: var(--dark-blue);
+}
+
+:deep(.el-radio__inner):hover {
+    border-color: var(--blue);
+}
+// 单选组件文字
+:deep(.el-radio__input.is-checked .el-radio__inner) {
+    background-color: var(--blue);
+    border-color: var(--blue);
+}
+
+:deep(.el-radio__input.is-checked+.el-radio__label) {
+    // @extend .label;
+    color: var(--blue);
+}
+
+:deep(.el-button.is-disabled){
+    color: var(--gray) !important;
+    background-color: var(--white-grey) !important;
+    border-color: var(--white-grey) !important;
+    cursor: not-allowed !important;
+}

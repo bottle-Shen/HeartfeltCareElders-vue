@@ -1,0 +1,96 @@
+// $header-height: 60px;
+// $toggle-height: calc($header-height*10);
+// $font-size: 16px;
+// $font-weight: 600;
+// $headerBac:#fff;
+// $mainBac:#F5F6FA;
+// $iconColor:#CBD0D4;
+// $iconSize:26px;
+// $headerBorder:#F2F2F2;
+// $fontColor:#C7C6C8;
+// $aside-width:150px;
+// $toggle-width:64px;
+// :root{
+//     --header-height:60px;
+//     --toggle-height:$toggle-height;
+//     --font-size:$font-size;
+// }
+@use "sass:color";
+// 尺寸变量
+$sizes: (
+    "header-height": 60px,
+    "toggle-height": calc(60px * 10),
+    "icon-size": 26px,
+    "aside-width": 150px,
+    "toggle-width": 64px,
+);
+
+// 字体变量
+$fonts: (
+    "primary-font": 'AlimamaDongFangDaKai-Regular',
+    // secondary-font: 'Tobias',
+    // tertiary-font: 'PP Hatton'
+    "font-size": 16px,
+    "font-weight": 600,
+);
+
+// 颜色变量
+// $colors: (
+//     black: #000000,
+//     blue: #3184F2,
+//     white: #FFFFFF,
+//     cream: #EFEAD7,
+//     white-blue: #E6F3FF,
+//     dark-blue: #003C74,
+//     darker-blue: #001A33,
+//     primary-blue: #0783F5,
+//     red: #BA2109,
+//     green: #2DC200,
+//     yellow: #FBBB1A,
+//     dark-yellow: #EFF500,
+//     coral: #FF858C,
+//     light: var(--cream),
+//     dark: var(--dark-blue)
+// );
+$colors:(
+    "black": #000000,
+    "white": #FFFFFF,
+    "blue": #3083F1,
+    "grey": #747D7E,
+    "white-grey": #dcdfe6,
+    "white-blue": #E6F3FF,
+    "primary-blue":#0783F5,
+    "white-green":#EAF9FE,
+    "green-blue":#1C7EC7,
+    "grey-blue": #425A76,
+    "dark-blue": #162D41,
+    "hover-blue": #406D9B,
+);
+
+:root{
+    // 尺寸变量
+    @each $key, $value in $sizes {
+        --#{$key}: #{"#{$value}"};
+    }
+
+    // 字体变量
+    @each $key, $value in $fonts {
+        --#{$key}: #{"#{$value}"};
+    }
+
+    // 颜色变量
+    @each $key, $value in $colors {
+        $name: str-replace($key, "_", "-"); // str-replace 函数将key键名中的下划线替换
+    }
+    // 颜色变量
+    @each $key, $value in $colors {
+        // $rgb: rgb(red($value),green($value),blue($value) , 8%);
+        $rgba: rgba(color.channel($value, "red", $space: rgb),
+                    color.channel($value, "green", $space: rgb),
+                    color.channel($value, "blue", $space: rgb),
+                    0.08 // 将 8% 转换为小数 0.08
+                );
+        --#{$key}:#{"#{$value}"};// 定义颜色的 HEX 值
+        --#{$key}-rgb: #{"#{$rgba}"}; // 定义颜色的 RGB 值
+    }
+}

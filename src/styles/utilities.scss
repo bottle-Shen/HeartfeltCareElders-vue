@@ -1,0 +1,120 @@
+// 基础混合和函数
+// @mixin mobile {
+//     @media (max-width: 768px) {
+//         @content;
+//     }
+// }
+
+// @mixin desktop {
+//     @media (min-width: 769px) {
+//         @content;
+//     }
+// }
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.flex-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.flex-center-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.flex-one {
+    flex: 1;
+}
+.flex-two {
+    flex: 2;
+}
+.flex-three {
+    flex: 3;
+}
+
+.fixed-header {
+    position: fixed; // 固定顶部导航
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 999; // 确保在内容上方
+}
+.absolute{
+    position: absolute;
+    top: 0;
+}
+
+.h-full {
+    height: 100%;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.o-hidden {
+    overflow: hidden;
+}
+.d-none {
+    display: none !important;
+}
+
+.bg {
+    min-height: 100vh;//设置最小高度为视口高度
+    min-height: calc(var(--vh, 1vh) * 100);//兼容性写法，用于处理某些浏览器可能不支持 100vh 的情况。
+
+    // @include mobile {
+    //     // 如果需要在移动端设置背景渐变，可以在这里添加
+    //     // background: var(--gradient);
+    // }
+    background: var(--white-blue);
+}
+
+.tp-dfwv {
+    z-index: 101;
+    display: none;
+    cursor: default !important;
+
+    button {
+        cursor: pointer !important;
+    }
+
+    html.show-tweakpane & {//当页面有 show-tweakpane 类时，显示该元素。
+        display: block;
+    }
+}
+
+#theatrejs-studio-root {//控制显示,当页面有 show-theatrejs 类时，显示该元素
+    display: none;
+
+    html.show-theatrejs & {
+        display: block;
+    }
+}
+
+.focusable {//当元素获得焦点时，将其透明度设置为 0.5，用于视觉反馈。
+    //适用于按钮、输入框等需要焦点效果的元素
+    &:focus {
+        opacity: 0.5;
+    }
+}
+
+.subtitle-icon {//设置图标的高度和宽度，并在桌面设备上调整高度。
+    // height: rem(14);
+    width: auto;
+
+    // @include desktop {
+    //     // height: rem(20);
+    // }
+}

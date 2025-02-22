@@ -1,0 +1,176 @@
+// 基础变量
+$base-font-size-px: 16;
+
+// 辅助函数：将像素值转换为 rem 单位
+@function rem($px) {
+    @return #{calc($px / $base-font-size-px)}rem;
+}
+
+// 基础字体设置
+body{
+    font-family: var(--primary-font);
+    font-size: rem(16);
+    line-height: 1.25;
+    font-weight: 300;
+}
+
+b,strong{// 加粗文本
+    font-weight: 700;
+}
+
+// utilities
+.text-center {//居中对齐文本
+    text-align: center;
+}
+
+.uppercase {//将文本转换为大写
+    text-transform: uppercase;
+}
+
+//定义不同的字体权重
+.font-light {
+    font-weight: 300;
+}
+
+.font-regular {
+    font-weight: 400;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+.primary-font {//设置主字体
+    font-family: var(--primary-font);
+}
+
+// Figma 样式
+.text,
+.title,
+.subtitle,
+.cta {//统一设置字体
+    font-family: var(--primary-font);
+}
+
+.fake-bold {//使用 -webkit-text-stroke 创建伪加粗效果
+    -webkit-text-stroke-width: rem(0.25);
+    -webkit-text-stroke-color: var(--cream);
+}
+
+.title {//标题样式，使用 clamp() 使字体大小响应式
+    font-size: clamp(26px, 2.5vw, 40px);
+    line-height: 1;
+    text-transform: uppercase;
+    font-weight: 400;
+}
+
+
+.body {//正文样式，使用 @extend 继承工具类，并通过 @include desktop 提供响应式调整。
+    @extend .uppercase, .font-light;
+    font-size: rem(16);
+    line-height: 1.2;
+    font-weight: 400;
+
+    // @include desktop {
+    //     font-size: rem(24);
+    // }
+}
+
+.body-s {
+    @extend .uppercase;
+    font-size: rem(16);
+    line-height: 1.2;
+
+    // @include desktop {
+    //     font-size: rem(20);
+    // }
+}
+
+.body-big {
+    @extend .uppercase;
+    font-size: rem(20);
+    line-height: 1.2;
+
+    // @include desktop {
+    //     font-size: rem(32);
+    // }
+}
+
+.title-big {
+    @extend .uppercase;
+    font-size: rem(48);
+    line-height: 1.1;
+
+    // @include desktop {
+    //     font-size: rem(128);
+    // }
+}
+
+.h1 {//大标题样式
+    font-size: rem(55);
+    line-height: rem(58);
+    letter-spacing: -0.05em;
+    text-align: center;
+    color: var(--dark-blue);
+}
+
+.h2 {//大标题样式
+    @extend .primary-font, .uppercase;
+    font-size: rem(36);
+    letter-spacing: -26.4px;
+    line-height: 1.2;
+    text-transform: uppercase;
+    font-weight: 300;
+    text-align: center;
+    margin-bottom: rem(-32);
+
+    // @include desktop {
+    //     font-size: rem(264);
+    // }
+}
+
+.input {
+    height: rem(48);
+}
+.label{
+    // margin: 0;
+    padding: 0;
+    text-align: center;
+    font-size: rem(16);
+    color:var(--dark-blue);
+}
+.text{
+    font-size: rem(14);
+    color: var(--dark-blue);
+}
+.link{
+    font-size: rem(14);
+    color: var(--blue);
+    cursor: pointer;
+}
+
+.button {
+    height: rem(48);
+    background-color: var(--blue);
+    color: var(--white);
+    border: 1px solid var(--primary-blue);
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: rem(14);
+    letter-spacing: 0.2em;
+}
+.primary-button {
+    border-radius: 50px;
+    font-size: rem(20) !important;
+}
+.link-button{
+    padding: 0 !important;
+    background-color: transparent !important;
+    border: 1px solid transparent !important;
+    color: var(--dark-blue) !important;
+}
+.link-button:hover {
+    color: var(--blue) !important;
+}
+
+
