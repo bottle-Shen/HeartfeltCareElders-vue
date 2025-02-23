@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import  SearchCom from './SearchCom.vue'
+// import  SearchCom from './SearchCom.vue'
 import { useStore } from 'vuex';
 import UserInfoCom from './UserInfoCom.vue'
 
@@ -10,25 +10,25 @@ const store = useStore();
 const user = computed(() => store.getters['user/getUser']);
 
 
-const searchQuery = ref(""); // 搜索关键词
-// 搜索逻辑
-const handleSearch = (query: string) => {
-  // 模拟搜索逻辑：根据关键词跳转到知识详情页
-  // 假设知识详情页的路由路径为 `/knowledge/:id`
-  const knowledgeId = searchKnowledge(query); // 搜索知识并获取 ID
-  if (knowledgeId) {
-    router.push(`/knowledge/${knowledgeId}`); // 跳转到知识详情页
-  } else {
-    alert("未找到相关知识");
-  }
-};
+// const searchQuery = ref(""); // 搜索关键词
+// // 搜索逻辑
+// const handleSearch = (query: string) => {
+//   // 模拟搜索逻辑：根据关键词跳转到知识详情页
+//   // 假设知识详情页的路由路径为 `/knowledge/:id`
+//   const knowledgeId = searchKnowledge(query); // 搜索知识并获取 ID
+//   if (knowledgeId) {
+//     router.push(`/knowledge/${knowledgeId}`); // 跳转到知识详情页
+//   } else {
+//     alert("未找到相关知识");
+//   }
+// };
 
 // 模拟搜索函数
-const searchKnowledge = (query: string): string | null => {
-  // 这里可以根据实际逻辑调用 API 或查询 Vuex 状态
-  // 示例：假设返回知识的 ID
-  return query.toLowerCase() === "example" ? "123" : null;
-};
+// const searchKnowledge = (query: string): string | null => {
+//   // 这里可以根据实际逻辑调用 API 或查询 Vuex 状态
+//   // 示例：假设返回知识的 ID
+//   return query.toLowerCase() === "example" ? "123" : null;
+// };
 </script>
 <template>
   <div class="element-header flex-center">
@@ -36,7 +36,7 @@ const searchKnowledge = (query: string): string | null => {
       <img src="../assets/images/LOGO.png" />
     </div>
     <div class="search">
-      <SearchCom @search="handleSearch" class="search-com"></SearchCom>
+      <!-- <SearchCom @search="handleSearch" class="search-com"></SearchCom> -->
     </div>
     <div class="flex info flex-between">
       <el-icon class="info-items icon">
