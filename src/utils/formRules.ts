@@ -20,7 +20,7 @@ export const formRules: FormRules = reactive({
     //账号
     account: [
       { required: true, message: "请输入账号", trigger: "blur" },
-      { min: 6, max: 20, message: "长度在 6 到 20 个字符", trigger: "blur" },
+      { min: 20, max: 35, message: "长度在 20 到 35 个字符", trigger: "blur" },
     ],
     //用户名
     username: [

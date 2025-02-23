@@ -1,4 +1,5 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory} from 'vue-router'
+import type { RouteLocationNormalizedLoaded,ScrollPosition } from 'vue-router'
 import IndexView from '../views/IndexView.vue'
 
 const router = createRouter({
@@ -58,7 +59,12 @@ const router = createRouter({
         {// 健康知识库
           path: '/knowledge',
           name: 'knowledge',
-          component: () => import('../views/KnowledgeView.vue')
+          component: () => import('../views/KnowledgeView.vue'),
+        },
+        {// 单页健康知识库
+          path: '/knowledge/:id',
+          name: 'knowledgeDetail',
+          component: () => import('../views/KnowDetailView.vue'),
         },
         {
           path: '/test',
@@ -75,7 +81,21 @@ const router = createRouter({
       // which is lazy-loaded when the route is visited.
       component: () => import('../views/AboutView.vue')
     }
-  ]
+  ],
+  scrollBehavior(to: RouteLocationNormalizedLoaded, from: RouteLocationNormalizedLoaded, savedPosition: ScrollPosition | null): ScrollPosition | undefined{
+        // 如果保存了滚动位置，直接返回
+        if (savedPosition) {
+            return savedPosition;
+        }
+    // 如果从知识详情页返回到列表页，恢复之前保存的滚动位置
+        if (to.name === "KnowledgeView" && from.name === "KnowDetailView") {
+            return { top: savedPosition ? parseInt(savedPosition, 10) : 0 };
+        }
+
+
+        // 默认返回顶部
+        return { top: 0 };
+    },
 })
 
 export default router

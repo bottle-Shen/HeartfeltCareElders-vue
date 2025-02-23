@@ -1,18 +1,18 @@
 import { createStore } from 'vuex'
 import type { UserState } from './modules/user';
-import type { ArticleState } from './modules/article'
+import type { KnowledgeState } from './modules/knowledge'
 import { userModule } from './modules/user';
-import { articleModule } from './modules/article'
+import { knowledgeModule } from './modules/knowledge'
 
 export interface RootState {
   user: UserState;
-  article: ArticleState;
+  knowledge: KnowledgeState;
 }
 
 export const store = createStore<RootState>({
   modules: {
     user: userModule,
-    article: articleModule,
+    knowledge: knowledgeModule,
   },
 });
 

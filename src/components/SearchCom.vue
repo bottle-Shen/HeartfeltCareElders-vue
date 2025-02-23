@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { Search } from '@element-plus/icons-vue'
-
-const input = ref('')
+const searchQuery = ref(""); // 搜索关键词
+const emit = defineEmits(["search"]);
+const handleSearch = () => {
+  if (searchQuery.value.trim()) {
+    emit("search", searchQuery.value); // 触发搜索事件
+  }
+};
+// const input = ref('')
 </script>
 <template>
     <div>
-      <el-input v-model="input" placeholder="请输入搜索内容" :prefix-icon="Search" />
+      <el-input @keyup.enter="handleSearch" v-model="searchQuery" placeholder="请输入搜索内容" :prefix-icon="Search" />
     </div>
 </template>
 <style lang="scss" scoped>

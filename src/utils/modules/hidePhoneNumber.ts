@@ -1,10 +1,10 @@
 // import CryptoJS from 'crypto-js';
 
-export function hidePhoneNumber(phoneNumber: string): string {
-  if (!phoneNumber || phoneNumber.length !== 11) {
-    throw new Error('Invalid phone number');
+export function hidePhoneNumber(phone: string): string {
+  if (!phone) {
+    return ''; // 如果手机号为空，返回空字符串
   }
-  return phoneNumber.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
+  return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
 }
 
 // 使用示例

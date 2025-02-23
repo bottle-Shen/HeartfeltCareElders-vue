@@ -34,6 +34,7 @@ export const register =(data: RegisterParams):Promise<RegisterResponse> => {
     ).then(response => {
       if (response.data.code === "201") {
         ElMessage.success('注册成功');
+        router.push('/login');
       } else {
         // ElMessage.error(response.data.message);
         ElMessage.error('注册失败');
@@ -62,7 +63,8 @@ export const register =(data: RegisterParams):Promise<RegisterResponse> => {
             }).catch((action: Action) => {
                 if (action === 'cancel') {
                     // 用户选择继续注册
-                    continueRegistration(data)
+                  continueRegistration(data)
+                  router.push('/login');
                 } else {
                     // 用户关闭弹窗，不执行任何操作
                     ElMessage({

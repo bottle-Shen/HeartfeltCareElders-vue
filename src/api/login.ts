@@ -66,8 +66,11 @@ export const login =(data: LoginParams):Promise<LoginResponse> => {
           if (errors.captcha) {
             ElMessage.error('验证码错误');
           }
-          if (errors.non_field_errors) {
-            ElMessage.error('账号或密码错误');
+          if (errors.password) {
+            ElMessage.error('密码错误');
+          }
+          if (errors.account) {
+            ElMessage.error('该账号不存在');
           }
           return Promise.reject(new Error(message));
         }

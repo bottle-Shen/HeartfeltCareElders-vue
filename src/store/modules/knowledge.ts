@@ -1,29 +1,29 @@
 import type { Module } from 'vuex';
-import type { IArticle } from '@/@types/article';
-import { getArticle } from '@/api/article';
+import type { IKnowledge } from '@/@types/knowledge';
+import { getKnowledge } from '@/api/knowledge';
 import type { RootState } from '@/store/index'
 
-export interface ArticleState {
-  articles: IArticle[];
+export interface KnowledgeState {
+  knowledge: IKnowledge[];
 //   currentArticle: IArticle | null;
 }
-export const articleModule: Module<ArticleState, RootState> = {
+export const knowledgeModule: Module<KnowledgeState, RootState> = {
   state: {
-    articles: [],
+    knowledge: [],
     // currentArticle: null,
   },
   mutations: {
-    setArticles(state, articles: IArticle[]) {
-      state.articles = articles;
+    setKnowledge(state, knowledge: IKnowledge[]) {
+      state.knowledge = knowledge;
     },
     // setCurrentArticle(state, article: IArticle) {
     //   state.currentArticle = article;
     // },
     },
   actions: {
-    getArticle({ commit }) {
-      return getArticle().then((articles: IArticle[]) => {
-        commit('setArticles', articles);
+    getKnowledge({ commit }) {
+      return getKnowledge().then((knowledge: IKnowledge[]) => {
+        commit('setAKnowledge', knowledge);
       });
     },
     // getCurrentArticle({ commit }, id: number) {

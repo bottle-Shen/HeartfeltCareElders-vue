@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { register } from '@/api/register'
-import {countdown,isCounting,sendSms} from '@/utils/captchaUtils'
+import {countdown,isCounting,sendSms,clearCountdown} from '@/utils/captchaUtils'
 import { resetForm,form } from '@/utils/form'
 import PasswordConfirmation from '@/components/PasswordConfirmation.vue'
 import { formRules } from '@/utils/formRules'
-import { clearCountdown } from '@/utils/captchaUtils'
+
 //注册登录表单
 
 const registerForm = async () => {
