@@ -10,5 +10,6 @@
   ],
   "compilerOptions": {
     "typeRoots": ["./node_modules/@types", "./declarations.d.ts"],
+    "types": ["node"],
   }
 }

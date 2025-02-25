@@ -1,6 +1,17 @@
 <script setup lang="ts">
 // import { RouterLink, RouterView } from 'vue-router'
 // import HelloWorld from './components/HelloWorld.vue'
+import { useStore } from 'vuex';
+
+const store = useStore();
+
+// 初始化定时清理任务
+store.dispatch('user/initClearOldData');
+
+// 在组件销毁时清理定时器
+onUnmounted(() => {
+  store.dispatch('user/clearClearOldDataInterval');
+});
 </script>
 
 <template>

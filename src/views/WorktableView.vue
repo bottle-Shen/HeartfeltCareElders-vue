@@ -1,175 +1,255 @@
 <script setup lang="ts">
 import zhCn from "element-plus/dist/locale/zh-cn.mjs"
-import {image} from '@/api/images'
-// 定义一个响应式变量来存储图片数据
-const images = ref<string[]>([]);
-const value = ref(new Date())
+import type { CalendarDateType, CalendarInstance } from 'element-plus'
+import { getActivityData,getUserActivityData,registerActivity } from "@/api/activities";
+import store from "@/store";
+import type { ActivityData, ActivitiesByDate,userActivityData } from "@/@types/activities"
 const locale = ref(zhCn)
-// 定义一个响应式变量来存储问候语
-const greeting = ref('早上好');
-// 获取当前时间并判断时间段
-function getGreeting() {
-  const now = new Date();
-  const hour = now.getHours();
 
-  if (hour >= 6 && hour < 12) {
-    return '早上好';
-  } else if (hour >= 12 && hour < 18) {
-    return '中午好';
-  } else {
-    return '晚上好';
-  }
+// 定义活动数据的响应式变量
+const activityData = ref<ActivityData[]>([])
+// 按日期分类的活动数据
+const activitiesByDate = ref<ActivitiesByDate>({});
+const calendar = ref<CalendarInstance>()
+// 定义用户参加活动的响应式变量
+const userActivitiesData = ref<userActivityData[]>([])
+const options = { hour12: true };//使用12小时制格式,显示上午下午
+const userId = store.state.user.user.id
+// 获取活动数据
+const fetchActivityData = async () => {
+  const response = await getActivityData()
+  console.log(response)
+  activityData.value = response
+  console.log(activityData.value)
+  // activityData.value.sort((a, b) => {
+  //   const aDate = new Date(a.start_time).getTime()// 将日期字符串转换为时间戳
+  //   const bDate = new Date(b.start_time).getTime()
+  //   return bDate - aDate;//降序
+  // })
+  // 处理活动数据
+  activityData.value = response.map((activity: ActivityData) => {
+    return {
+      ...activity,
+      start_time: new Date(activity.start_time).toLocaleString(undefined, options),
+      end_time: new Date(activity.end_time).toLocaleString(undefined,options),
+    }
+  })
+   // 按日期分类活动数据
+    activitiesByDate.value = response.reduce((acc: ActivitiesByDate, activity: ActivityData)=> {
+      const date = new Date(activity.start_time).toISOString().split("T")[0];
+      if (!acc[date]) {
+        acc[date] = []
+      }
+      acc[date].push(activity);
+      return acc;
+    }, {});
+  console.log(activitiesByDate.value);
 }
-// 定义异步函数来获取图片数据
-const fn = async () => {
-  const { data } = await image();
-  // console.log(data)
-  // console.log(data[0].image)
-  // const res = await image();
-  // console.log(res)
-  for (let i = 0; i < data.length; i++) {
-    // console.log(data[i].image);
-    images.value.push(data[i].image);
-  }
-  // 打印 images 以调试
-  console.log(images.value);
+//  获取用户活动数据
+const fetchUserActivityData = async () => {
+  const response = await getUserActivityData({ user_id: userId });
+  console.log('用户参加的活动数据', response);
+  // 处理用户活动数据
+  userActivitiesData.value = response.map((activity: userActivityData) => {
+    return {
+      ...activity,
+      registered_at: new Date(activity.registered_at).toLocaleString(undefined,options),
+      event: {
+        ...activity.event,
+        start_time: new Date(activity.event.start_time).toLocaleString(undefined,options),
+        end_time: new Date(activity.event.end_time).toLocaleString(undefined,options),
+      },
+    }
+  })
+  console.log('userActivitiesData', userActivitiesData.value);
 }
-
-// 在组件挂载时调用 fn 函数
+// 日期选择事件
+const selectDate = (val: CalendarDateType) => {
+  if (!calendar.value) return
+  calendar.value.selectDate(val)
+}
+// 显示更多活动
+const showMoreActivities = (date: string) => {
+  console.log(`查看日期 ${date} 的更多活动`);
+  // 在这里实现查看更多活动的逻辑，例如弹出一个模态框
+};
+const hasRegistered = (row: number) => {
+  return userActivitiesData.value.some(activity => activity.event.id === row && activity.user === userId);
+  
+}
+const activityBtn = async (row:number) => {
+  // 获取当前行的 event_id
+  //     const eventId = row;
+  // console.log('Clicked event ID:', eventId);
+    const params = { event_id: row,user_id:userId }
+    // 在这里处理报名逻辑
+  await registerActivity(params)
+}
+// 在组件挂载时获取数据
 onMounted(() => {
-  fn();
-  // greeting.value = getGreeting();
+  fetchActivityData()
+  fetchUserActivityData()
 })
-// 在组件挂载时调用 getGreeting 方法
-onMounted(() => {
-  greeting.value = getGreeting();
-});
+
 </script>
 <template>
-    <div class="worktable-page">
-      <div class="header worktable-item">
-        <div class="worktable-left">
-          <div class="carousel">
-            <div class="title">企业宣传栏</div>
-            <el-carousel class="carousel-item" trigger="click">
-              <el-carousel-item v-for="(image, item) in images" :key="item">
-                <el-image style="width: 100%; height: 100%;" :src="image" fit="fill" lazy />
-              </el-carousel-item>
-            </el-carousel>
-          </div>
-        </div>
-        <div class="worktable-right">
-          <div class="work-card">
-            <div class="title">审批</div>
-            <div>
-              <div class="card-header">
-                <ul>
-                  <li class="card-header-item">待办</li>
-                  <li class="card-header-item">抄送我</li>
-                  <li class="card-header-item">已发起</li>
-                  <li class="card-header-item">发起申请</li>
-                </ul>
-              </div>
-              <div class="card-body">
-                <p v-for="o in 4" :key="o" class="text item">
-                  <span class="text-title">{{ 'xxx发起项目结算申请' + o }}</span>
-                  <span class="text-user">{{ '发起人' }}</span>
-                  <span class="text-time">{{ '时间' }}</span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div class="worktable-page ">
+     <el-row :gutter="20">
+    <el-col :xs="8" :sm="6" :md="4" :lg="8" :xl="1"><div class="grid-content ep-bg-purple">
+      <div class="item1">
+        <el-config-provider :locale="locale">
+        <el-calendar ref="calendar">
+          <template #header="{ date }">
+      <span class="calendar-h1">活动日历</span>
+      <el-button-group>
+        <el-button size="small" @click="selectDate('prev-month')">
+          上一月
+        </el-button>
+        <el-button size="small" @click="selectDate('today')"><span>{{ date }}</span>今天</el-button>
+        <el-button size="small" @click="selectDate('next-month')">
+          下一月
+        </el-button>
+      </el-button-group>
+      </template>
+      <template #date-cell="{ data }">
+        <p :class="data.isSelected ? 'is-selected' : ''">
+        {{ data.day.split('-').slice(2).join('-') }}
+          <span v-if="activitiesByDate[data.day]">
+            <!-- {{ activitiesByDate[data.day][0].title }} -->
+              <p v-for="(activity, index) in activitiesByDate[data.day]" 
+              :key="activity.id" v-show="index<1" class="activity-title">
+            {{ activity.title }}
+              </p>
+              <p v-if="activitiesByDate[data.day].length > 1" 
+                class="view-more" @click="showMoreActivities(data.day)">
+            查看更多
+          </p>
+          </span>
+      </p>
+    </template>
+  </el-calendar>
+</el-config-provider>
       </div>
-      <div class="worktable-item">
-        <div class="worktable-left">
-          <div class="title">{{ greeting }}，用户名！</div>
-        </div>
-        <div class="worktable-right">
-          <div class="title">222</div>
-          <el-config-provider :locale="locale">
+      <div class="item2">
+        <!-- <el-config-provider :locale="locale">
             <el-calendar v-model="value" />
-          </el-config-provider>
+          </el-config-provider> -->
       </div>
+    </div></el-col>
+    <el-col :xs="4" :sm="6" :md="8" :lg="10" :xl="11"><div class="grid-content ep-bg-purple">
+      报名活动
+      <el-table
+    :data="activityData"
+    style="width: 100%"
+  >
+    <el-table-column prop="title" label="活动名称" width="80" />
+    <el-table-column prop="description" label="介绍" width="150" show-overflow-tooltip/>
+    <el-table-column prop="location" label="地点" />
+    <el-table-column prop="start_time" label="开始时间" />
+    <el-table-column prop="end_time" label="结束时间" />
+    <el-table-column label="立即参与" fixed="right">
+       <!-- 为按钮绑定点击事件，并传递当前行的数据 -->
+      <template #default="scope">
+          <el-button v-if="!hasRegistered(scope.row.id)" @click="activityBtn(scope.row.id)">确认报名</el-button>
+          <el-button v-else disabled type="info">您已报名</el-button>
+        </template>
+    </el-table-column>
+  </el-table>
+    </div></el-col>
+    <el-col :xs="4" :sm="6" :md="8" :lg="6" :xl="11"><div class="grid-content ep-bg-purple">
+      <el-card>
+    <template #header>
+      <div class="card-header">
+        <span>我的活动</span>
+      </div>
+    </template>
+    <div class="search-com">
+      <SearchCom></SearchCom>
     </div>
+    <el-card v-for="useractivity in userActivitiesData" :key="useractivity.id" style="width: 100%" shadow="hover">
+      <p>{{ '活动名称：' + useractivity.event.title }}</p>
+      <p>{{'结束时间：' + useractivity.event.end_time}}</p>
+      <p>{{'活动地点：' + useractivity.event.location}}</p>
+      <p>{{'活动描述：' + useractivity.event.description}}</p>
+      <p>{{'开始时间：' + useractivity.event.start_time}}</p>
+    </el-card>
+    <template #footer>Footer content</template>
+  </el-card>
+    </div></el-col>
+  </el-row>
 </div>
 </template>
 <style scoped lang="scss">
 // @use '@/styles/main.scss';
 .worktable-page{
-.worktable-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 20px 40px;
-  font-size: var(--font-size);
+  // border:1px solid red;
+  .is-selected {
+  color: #1989fa;
+}
+.search-com{
+  margin-bottom: 20px;
   // border: 1px solid red;
-
-  .worktable-left {
-    flex: 1;
-    margin-right: 20px;
-
-    .carousel {
-      height: 333px;
-      // border: 1px solid red;
-
-      .carousel-item {
-        border-radius: 10px;
-      }
+  // padding: 0 5px 10px;
+}
+.el-card{
+  color: #5B91AD;
+  :deep(.el-card__header){
+    background-color: #FE893C;
+    color: #fff;
+    // border-bottom: 1px solid #FE893C;
+    
+  }
+  background-color: #FFF8F2;
+}
+.el-calendar{
+  color: #5B91AD;
+:deep(.el-calendar__header) {
+  flex-direction: column;
+  align-items: center;
+  .el-button-group {
+    // margin-top: 10px;
+    .el-button {
+      color: #5B91AD;
     }
   }
-
-  .worktable-right {
-    flex: 1;
-    // border: 1px solid red;
-
-    .work-card {
-      width: 100%;
-
-      .el-card {
-        height: 302px;
-      }
-    }
-
-    .card-header {
-      display: flex;
-
-      .card-header-item {
-        float: left;
-        flex-grow: 1;
-        font-weight: var(--font-weight);
-      }
-    }
-
-    .text {
-      position: relative;
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-      height: 45px;
-      color: var(--fontColor);
-      font-size: calc(var(--font-size) * 0.9);
-
-      .text-title {
-        color: #000;
-        font-weight: var(--font-weight);
-      }
-
-      .text-user {
-        position: absolute;
-        bottom: 0;
-      }
-    }
-  }
-
-  .title {
-    font-weight: var(--font-weight);
-    margin-bottom: 10px;
-  }
-
-  .el-calendar {
-    width: 100%;
-  }
-
+}
+.calendar-h1{
+  color: #454D54;
+  font-size: 20px;
+}
+:deep(.el-calendar-table thead th){
+ color: #5B91AD;
+}
+.activity-title{
+  color: #FBBFDD;
+}
+.view-more{
+  font-size: 12px;
+  color: #F1BA78;
+}
+}
+.el-row {
+  margin-bottom: 20px;
+}
+.el-row:last-child {
+  margin-bottom: 0;
+}
+.el-col {
+  height: calc(100vh - var(--header-height));
+  border-radius: 4px;
+  border:1px solid red;
+}
+.grid-content {
+  display: flex;
+  border-radius: 4px;
+  min-height: 36px;
+  flex-direction: column
+}
+.item1{
+  border:1px solid red;
+}
+.item2{
+  border:1px solid red;
 }
 @media (max-width: 768px) {
     .worktable-item{

@@ -113,9 +113,10 @@ const toggleHeader = () => {
   }
 
   .el-main {
+    background-color: #fff;
     margin-top: var(--header-height);
     margin-left: calc(var(--el-menu-icon-width) + var(--el-menu-base-level-padding) * 6); // 留出侧边栏的空间
-    padding:0 10px; // 根据需要调整内边距
+    padding:0 20px; // 根据需要调整内边距
     background-color: var(mainBac);
     overflow-y: auto; // 使内容区域可滚动
     // height: 100%; // 确保内容区域占据剩余空间--导致滚动条

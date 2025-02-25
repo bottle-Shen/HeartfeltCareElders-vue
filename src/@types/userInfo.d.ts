@@ -1,3 +1,15 @@
+// 存储用户信息
+export interface userData {
+  id: number;// 用户id
+  user_type: number;// 用户类型
+  elderly_id: number;
+  family_id: number;
+  caregiver_id: number;
+  avatar: string;
+  username: string;
+  background_image: string;// 背景图片
+  last_login: string;
+}
 // 定义用户共有信息
 export interface user {
   id: number;// 用户id
@@ -14,6 +26,7 @@ export interface user {
   age: number;// 年龄
   background_image: string;// 背景图片
   signature: string;// 个性签名
+  last_login: string;
 }
 
 // 定义用户请求参数类型
