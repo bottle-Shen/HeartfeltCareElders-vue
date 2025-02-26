@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@coze/api": "^1.0.20",
+    "@coze/chat-sdk": "^0.1.8",
     "@element-plus/icons-vue": "^2.3.1",
     "@types/crypto-js": "^4.2.2",
     "@vue/cli-plugin-babel": "^5.0.8",

@@ -35,7 +35,6 @@ export const getUserActivityData =(params: getUserActivityDataParams)=> {
     }).then(response => {
       if (response.status === 200) {
         // console.log(response.data)
-        store.commit('activities/setUserActivity', response.data)
         return response.data;
       }
     }).catch((error) => {
@@ -53,10 +52,45 @@ export const registerActivity =(params: getRegisterActivityDataParams)=> {
       }
     }).then(response => {
       if (response.status === 201) {
-
+        store.commit('activities/addUserActivity', {
+          id: response.data.id,
+          registered_at: new Date(response.data.registered_at).toISOString(),
+          user: response.data.user,
+          event: response.data.event,
+        })
         ElMessage.success('报名成功')
       }
     }).catch((error) => {
        console.log(error)
     })
+}
+// 用户取消报名活动
+export const cancelRegisterActivity =(params: getRegisterActivityDataParams)=> {
+    return request({
+        url: `activities/registrations/cancel/${params.user_id}/${params.event_id}/`,
+        method: 'DELETE',
+    }).then(response => {
+      if (response.status === 204) {
+        console.log(response)
+        store.commit('activities/deleteUserActivity', {
+          event_id:params.event_id,
+          user_id:params.user_id,
+        });
+        ElMessage.success('取消报名成功')
+      }
+    }).catch((error) => {
+       console.log(error)
+    })
+}
+// 搜索用户活动
+export const searchUserActivity =(params:string)=> {
+    return request({
+        url: `activities/registrations/?search=${params}`,
+        method: 'GET',
+    }).then(response => {
+      if (response.status === 200) {
+        console.log(response.data)
+        // return response.data;
+      }
+    }).catch((error)=> {})
 }

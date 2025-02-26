@@ -1,6 +1,6 @@
 import type { Module } from 'vuex';
 // import { getFromSessionStorage, saveToSessionStorage } from '@/utils/vuex-storage';
-import type { userData } from '@/@types/userInfo';
+import type { IUserInfo } from '@/@types/userInfo';
 import type { RootState } from '@/store/index'
 // import { getRefresh } from '@/api/refresh';
 import SecureLS from 'secure-ls'
@@ -13,24 +13,26 @@ export interface UserState {
     access_token: string;
     refresh_token: string;
   };
-  user: userData;
+  user: IUserInfo;
 }
 
 export const userModule: Module<UserState, RootState> = {
   namespaced: true, // 使用命名空间，避免命名冲突
   state: {
     token: {
-      access_token: '',
-      refresh_token: '',
+      access_token: ls.get('access_token')||'',
+      refresh_token: ls.get('refresh_token')||'',
     },
-    user: ls.get('user') || {} as userData,
+    user: ls.get('user') || {} as IUserInfo,
   },
   mutations: {
     setToken(state, token: { access_token: string; refresh_token: string }) {
       state.token.access_token = token.access_token;
       state.token.refresh_token = token.refresh_token;
+      ls.set('access_token', token.access_token);
+      ls.set('refresh_token', token.refresh_token);
     },
-    setUser(state, user: userData) {
+    setUser(state, user: IUserInfo) {
       state.user = user;
       ls.set('user', user);
     },
@@ -41,21 +43,25 @@ export const userModule: Module<UserState, RootState> = {
     clearToken(state) {
       state.token.access_token = '';
       state.token.refresh_token = '';
+      ls.remove('access_token');
+      ls.remove('refresh_token');
     },
   },
   actions: {
-    login({ commit }, { access_token, refresh_token, user }: { access_token: string, refresh_token: string, user: userData }) {
+    login({ commit }, { access_token, refresh_token, user }: { access_token: string, refresh_token: string, user: IUserInfo }) {
       commit('setToken', { access_token, refresh_token });
       commit('setUser', user);
     },
-    userInfo({ commit }, response: userData) {
+    userInfo({ commit }, response: IUserInfo) {
       commit('setUser', response);
     },
     logout({ commit },{router}) {
       commit('clearToken');// 清除 Vuex 中的令牌
-      commit('setUser', {} as userData);// 清除 Vuex 中的用户信息
-      // 清空会话存储中的用户信息
+      commit('setUser', {} as IUserInfo);// 清除 Vuex 中的用户信息
+      // 清空会话存储中的信息
       // sessionStorage.removeItem('user');
+      ls.remove('access_token');
+      ls.remove('refresh_token');
       ls.remove('user'); // 清空加密存储中的用户信息
       // 跳转到登录页面
       router.push('/login');

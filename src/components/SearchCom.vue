@@ -5,6 +5,7 @@ const emit = defineEmits(["search"]);
 const handleSearch = () => {
   if (searchQuery.value.trim()) {
     emit("search", searchQuery.value); // 触发搜索事件
+    console.log('触发搜索事件');
   }
 };
 // const input = ref('')

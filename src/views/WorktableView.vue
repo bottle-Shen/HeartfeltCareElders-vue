@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import zhCn from "element-plus/dist/locale/zh-cn.mjs"
 import type { CalendarDateType, CalendarInstance } from 'element-plus'
-import { getActivityData,getUserActivityData,registerActivity } from "@/api/activities";
+import { getActivityData,getUserActivityData,registerActivity,cancelRegisterActivity,searchUserActivity } from "@/api/activities";
 import store from "@/store";
 import type { ActivityData, ActivitiesByDate,userActivityData } from "@/@types/activities"
 const locale = ref(zhCn)
@@ -13,12 +13,13 @@ const activitiesByDate = ref<ActivitiesByDate>({});
 const calendar = ref<CalendarInstance>()
 // 定义用户参加活动的响应式变量
 const userActivitiesData = ref<userActivityData[]>([])
+
 const options = { hour12: true };//使用12小时制格式,显示上午下午
 const userId = store.state.user.user.id
 // 获取活动数据
 const fetchActivityData = async () => {
   const response = await getActivityData()
-  console.log(response)
+  // console.log(response)
   activityData.value = response
   console.log(activityData.value)
   // activityData.value.sort((a, b) => {
@@ -62,6 +63,7 @@ const fetchUserActivityData = async () => {
     }
   })
   console.log('userActivitiesData', userActivitiesData.value);
+  store.commit('activities/setUserActivity', userActivitiesData.value)
 }
 // 日期选择事件
 const selectDate = (val: CalendarDateType) => {
@@ -84,7 +86,16 @@ const activityBtn = async (row:number) => {
     const params = { event_id: row,user_id:userId }
     // 在这里处理报名逻辑
   await registerActivity(params)
+  // store.dispatch('activities/addUserActivity', params)
 }
+const cancelActivity = async (row:number) => {
+  const params = { event_id: row,user_id:userId }
+  await cancelRegisterActivity(params)
+}
+const searchUserActivity = async (search:string) => {
+  await searchUserActivity(search)
+}
+
 // 在组件挂载时获取数据
 onMounted(() => {
   fetchActivityData()
@@ -150,8 +161,8 @@ onMounted(() => {
     <el-table-column label="立即参与" fixed="right">
        <!-- 为按钮绑定点击事件，并传递当前行的数据 -->
       <template #default="scope">
-          <el-button v-if="!hasRegistered(scope.row.id)" @click="activityBtn(scope.row.id)">确认报名</el-button>
-          <el-button v-else disabled type="info">您已报名</el-button>
+          <el-button v-if="!hasRegistered(scope.row.id)" v-debounceClick:click="()=>activityBtn(scope.row.id)">确认报名</el-button>
+          <el-button v-else v-debounceClick:click="()=>cancelActivity(scope.row.id)" type="danger">取消报名</el-button>
         </template>
     </el-table-column>
   </el-table>
@@ -164,6 +175,7 @@ onMounted(() => {
       </div>
     </template>
     <div class="search-com">
+      <el-button @click="searchUserActivity('游戏')">测试</el-button>
       <SearchCom></SearchCom>
     </div>
     <el-card v-for="useractivity in userActivitiesData" :key="useractivity.id" style="width: 100%" shadow="hover">
