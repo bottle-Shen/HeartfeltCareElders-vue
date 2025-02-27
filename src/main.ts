@@ -10,7 +10,7 @@ import './styles/reset.scss'
 // import "element-plus/theme-chalk/el-message-box.css";
 //vuex状态库
 import { store } from './store'
-import { useDebounceDirective } from "@/utils";
+import { useDebounceDirective,useThrottleDirective } from "@/utils";
 
 //导入axios实例
 import request from './utils/request';
@@ -34,6 +34,8 @@ app.use(router)
 app.use(store)
 // 注册全局防抖指令
 app.directive('debounceClick', useDebounceDirective(500));
+// 注册全局节流指令
+app.directive('throttleClick', useThrottleDirective(500));
 
 
 app.mount('#app')

@@ -1,10 +1,6 @@
 import store from '@/store';
 import request from '@/utils/request'
 
-// 定义请求参数类型
-interface getUserActivityDataParams {
-  user_id: number;
-}
 
 // 获取全部活动数据
 export const getActivityData =()=> {
@@ -17,7 +13,8 @@ export const getActivityData =()=> {
         return response.data;
       }
     }).catch((error) => {
-        console.log(error)
+      console.log('获取全部活动信息失败',error)
+      throw error;
   });
 }
 
@@ -28,9 +25,9 @@ interface getRegisterActivityDataParams {
 }
 
 //  获取用户参加的活动数据
-export const getUserActivityData =(params: getUserActivityDataParams)=> {
+export const getUserActivityData =()=> {
     return request({
-        url: `activities/registrations/user-id/${params.user_id}/`,
+        url: `activities/registrations/my-activities/`,
         method: 'GET',
     }).then(response => {
       if (response.status === 200) {
@@ -38,7 +35,8 @@ export const getUserActivityData =(params: getUserActivityDataParams)=> {
         return response.data;
       }
     }).catch((error) => {
-       console.log(error)
+      console.error('获取用户活动数据失败:', error);
+      throw error; // 抛出错误，以便在调用处捕获
     })
 }
 //  用户报名活动
@@ -67,7 +65,7 @@ export const registerActivity =(params: getRegisterActivityDataParams)=> {
 // 用户取消报名活动
 export const cancelRegisterActivity =(params: getRegisterActivityDataParams)=> {
     return request({
-        url: `activities/registrations/cancel/${params.user_id}/${params.event_id}/`,
+        url: `activities/registrations/cancel/${params.event_id}/`,
         method: 'DELETE',
     }).then(response => {
       if (response.status === 204) {
@@ -92,5 +90,7 @@ export const searchUserActivity =(params:string)=> {
         console.log(response.data)
         // return response.data;
       }
-    }).catch((error)=> {})
+    }).catch((error) => {
+        console.log(error)
+    })
 }

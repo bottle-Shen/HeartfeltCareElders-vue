@@ -60,4 +60,7 @@ declare module 'vue' {
     ThreeCom: typeof import('./components/ThreeCom.vue')['default']
     UserInfoCom: typeof import('./components/UserInfoCom.vue')['default']
   }
+  export interface ComponentCustomProperties {
+    vInfiniteScroll: typeof import('element-plus/es')['ElInfiniteScroll']
+  }
 }

@@ -93,6 +93,13 @@ export const userModule: Module<UserState, RootState> = {
   },
   getters: {
     getToken: (state) => state.token,
-    getUser: (state) => state.user
+    getUser: (state) => state.user,
+    getUserId: (state) => state.user.id,
+    // getUserName: (state) => state.user.username,
+    // getUserAvatar: (state) => state.user.avatar,
+    // getUserRole: (state) => state.user.role,
+    // getUserLastLogin: (state) => state.user.last_login,
+    // getUserPhone: (state) => state.user.phone,
+    // getUserEmail:(state) => state.user.email,
   }
 };

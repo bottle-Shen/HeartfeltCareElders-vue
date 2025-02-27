@@ -2,10 +2,10 @@
 import zhCn from "element-plus/dist/locale/zh-cn.mjs"
 import type { CalendarDateType, CalendarInstance } from 'element-plus'
 import { getActivityData,getUserActivityData,registerActivity,cancelRegisterActivity,searchUserActivity } from "@/api/activities";
-import store from "@/store";
+import { useStore } from 'vuex'
 import type { ActivityData, ActivitiesByDate,userActivityData } from "@/@types/activities"
 const locale = ref(zhCn)
-
+const store = useStore()
 // 定义活动数据的响应式变量
 const activityData = ref<ActivityData[]>([])
 // 按日期分类的活动数据
@@ -16,6 +16,7 @@ const userActivitiesData = ref<userActivityData[]>([])
 
 const options = { hour12: true };//使用12小时制格式,显示上午下午
 const userId = store.state.user.user.id
+console.log('userId', userId)
 // 获取活动数据
 const fetchActivityData = async () => {
   const response = await getActivityData()
@@ -48,7 +49,7 @@ const fetchActivityData = async () => {
 }
 //  获取用户活动数据
 const fetchUserActivityData = async () => {
-  const response = await getUserActivityData({ user_id: userId });
+  const response = await getUserActivityData();
   console.log('用户参加的活动数据', response);
   // 处理用户活动数据
   userActivitiesData.value = response.map((activity: userActivityData) => {
@@ -62,7 +63,7 @@ const fetchUserActivityData = async () => {
       },
     }
   })
-  console.log('userActivitiesData', userActivitiesData.value);
+  // console.log('userActivitiesData', userActivitiesData.value);
   store.commit('activities/setUserActivity', userActivitiesData.value)
 }
 // 日期选择事件
@@ -92,10 +93,20 @@ const cancelActivity = async (row:number) => {
   const params = { event_id: row,user_id:userId }
   await cancelRegisterActivity(params)
 }
-const searchUserActivity = async (search:string) => {
-  await searchUserActivity(search)
-}
+// 搜索用户活动
+const handleSearch = async (query: string) => {
+  if (!query.trim()) {
+    console.log('搜索内容不能为空');
+    return;
+  }
 
+  try {
+    await searchUserActivity(query);
+    // 处理搜索结果，例如更新列表数据
+  } catch (error) {
+    console.error('搜索失败:', error);
+  }
+};
 // 在组件挂载时获取数据
 onMounted(() => {
   fetchActivityData()
@@ -175,8 +186,8 @@ onMounted(() => {
       </div>
     </template>
     <div class="search-com">
-      <el-button @click="searchUserActivity('游戏')">测试</el-button>
-      <SearchCom></SearchCom>
+      <!-- <el-button @click="searchUserActivityData('游戏')">测试</el-button> -->
+      <SearchCom @search="handleSearch"></SearchCom>
     </div>
     <el-card v-for="useractivity in userActivitiesData" :key="useractivity.id" style="width: 100%" shadow="hover">
       <p>{{ '活动名称：' + useractivity.event.title }}</p>

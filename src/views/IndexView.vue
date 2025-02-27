@@ -119,7 +119,7 @@ const toggleHeader = () => {
     padding:0 20px; // 根据需要调整内边距
     background-color: var(mainBac);
     overflow-y: auto; // 使内容区域可滚动
-    // height: 100%; // 确保内容区域占据剩余空间--导致滚动条
+    height: calc(100vh - var(--header-height)); // 确保内容区域占据剩余空间--导致滚动条
   }
 
   @media (max-width: 768px) {

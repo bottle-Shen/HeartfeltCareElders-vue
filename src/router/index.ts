@@ -42,6 +42,11 @@ const router = createRouter({
           component: () => import('../views/UserInfoView.vue')
         },
         {// 健康档案
+          path: '/document',
+          name: 'document',
+          component: () => import('../views/DocumentView.vue')
+        },
+        {// 记录-测试
           path: '/record',
           name: 'record',
           component: () => import('../views/RecordView.vue')

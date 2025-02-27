@@ -25,7 +25,7 @@ const handleSelect = (index: string) => {
       router.push('/consult');
       break;
     case '6':
-      router.push('/record');
+      router.push('/document');
       break;
     case '7':
       router.push('/userInfo');
