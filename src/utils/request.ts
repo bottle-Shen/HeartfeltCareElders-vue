@@ -7,7 +7,7 @@ let hasRetriedRefresh = false;
 
 // 创建axios实例
 const request = axios.create({
-  baseURL: 'http://localhost:8000/api/v1/',// API 请求的公共路径
+  baseURL: 'http://localhost:3000/api/v1/',// API 请求的公共路径
   timeout: 5000,
   withCredentials: true,// 携带 cookie
 })

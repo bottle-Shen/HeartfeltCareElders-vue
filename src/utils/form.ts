@@ -26,8 +26,7 @@ export const resetForm = () => {
 }
 
 import type { IUserInfo, UserInfoFormType } from '@/@types/userInfo'
-// export const updateUserInfo = (params: IUserInfo): Promise<UserInfoFormType> =>
-//   getUserInfo(params)
+//个人信息表单
 export const userInfo = reactive<UserInfoFormType>({
   user: {
     id: 0,
@@ -44,6 +43,7 @@ export const userInfo = reactive<UserInfoFormType>({
     account: '',
     background_image: '',//背景图片
     signature: '',//个性签名
+    last_login:'',
   },
   //老人
   elderly_id: 0,
@@ -78,6 +78,7 @@ export const userInfoForm = ref<IUserInfo>({
   signature: '',
     age: 0,
   account: '',
+  last_login:'',
   elderly_id: 0, // 对于老人类型
   emergency_contact: '',
   emergency_phone: '',

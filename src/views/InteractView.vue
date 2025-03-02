@@ -29,26 +29,12 @@
 //     }
 //   });
 // }
-
-import { getSocial, likePost, addComment, addPost,getComments } from '@/api/social'
+// import type {SocialData} from '@/@types/social'
+import { socket,CommentContent,socialData,getSocial,initializeWebSocket, likePost,addComment, addPost,getComments } from '@/api/social'
 import { useStore } from 'vuex'
 const store = useStore()
 const userId = store.getters['user/getUserId']
-interface socialData{
-  content: string;//内容
-  id: number;//id
-  title: string;//标题
-  comments_count: number;//评论数
-  likes_count: number;//点赞数
-  comments: {//评论
-    comment_content: string;//评论内容
-    id: number;//评论id
-    user_id: number;//评论用户id
-  }[]
-}
-const socialData = ref<socialData[]>([])
-const commentsData = ref<string[]>([])
-const CommentContent = ref('')
+console.log('userId', userId)
 
 const getSocialData = async () => {
   const response = await getSocial()
@@ -57,22 +43,11 @@ const getSocialData = async () => {
 }
 const getCommentsData = async () => {
   socialData.value.forEach(async (post) => {
-    await getComments(post.id);
-    // post.comments = commentsResponse.data; // 将评论数据绑定到帖子对象
+    const response = await getComments(post.id);
+    post.comments = response; // 将评论数据绑定到帖子对象
+    console.log('评论数据', post);
   });
 }
-
-// const socket = new WebSocket(`ws://${window.location.host}/ws/posts/${postId}/`);
-
-// socket.onmessage = function(event) {
-//     const data = JSON.parse(event.data);
-//     console.log(data.message);  // 更新评论或点赞信息
-//     // 将新评论添加到评论列表
-//     const commentsList = document.getElementById('comments-list');
-//     const newComment = document.createElement('li');
-//     newComment.textContent = data.message.comment_content;
-//     commentsList.appendChild(newComment);
-// };
 
 const addPostBtn = async() => {
   await addPost({
@@ -81,10 +56,18 @@ const addPostBtn = async() => {
     user_id:userId,
   })
 }
+
 onMounted(() => {
   getSocialData()
-  // getCommentsData()
+  socialData.value.forEach(post => {
+        initializeWebSocket(post.id, '', userId); // 初始化 WebSocket 连接
+    });
 })
+onUnmounted(() => {
+  if (socket) {
+    socket.close();
+  }
+});
 </script>
 <template>
     <div class="interact-page">
@@ -93,20 +76,26 @@ onMounted(() => {
           <li>{{ post.title }}</li>
           <li>{{ post.content }}</li>
           <li>
-            <el-button type="primary" @click="likePost(post.id)">点赞</el-button>
+            <el-button type="primary" @click="likePost(post.id,post)">点赞</el-button>
             <span>{{ post.likes_count }}</span>
           </li>
+          <li><span>评论数:{{ post.comments_count }}</span></li>
           <li>
-            <ul id="comments-list">
-              <li v-for="comment in post.comments" :key="comment.id">
+            <ul v-for="comment in post.comments" :key="comment.id">
+               <li>
+                {{ comment.user.username }}
+              </li>
+              <li>
                 {{ comment.comment_content }}
+              </li>
+              <li>
+                {{ comment.created_at }}
               </li>
             </ul>
           </li>
           <li>
             <el-input v-model="CommentContent" placeholder="评论内容" />
-            <span>{{ post.comments_count }}</span>
-            <el-button type="primary" @click="addComment(post.id,CommentContent)">评论</el-button>
+            <el-button type="primary" @click="addComment(post.id,CommentContent,userId)">评论</el-button>
           </li>
         </ul>
         <el-button type="primary" @click="addPostBtn">发布帖子</el-button>

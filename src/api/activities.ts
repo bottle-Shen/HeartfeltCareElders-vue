@@ -1,5 +1,6 @@
 import store from '@/store';
 import request from '@/utils/request'
+import type { getRegisterActivityDataParams } from '@/@types/activities'
 
 
 // 获取全部活动数据
@@ -18,11 +19,6 @@ export const getActivityData =()=> {
   });
 }
 
-// 定义请求参数类型
-interface getRegisterActivityDataParams {
-  user_id: number;
-  event_id: number;
-}
 
 //  获取用户参加的活动数据
 export const getUserActivityData =()=> {
@@ -46,7 +42,7 @@ export const registerActivity =(params: getRegisterActivityDataParams)=> {
         method: 'POST',
       data:{
           user: params.user_id,
-        event_id: params.event_id,
+          event_id: params.event_id,
       }
     }).then(response => {
       if (response.status === 201) {

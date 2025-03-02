@@ -76,6 +76,7 @@ export default defineConfig({
 },
   server: {
     host: '0.0.0.0',//显示当前局域网
-    open:false,//是否自动启动浏览器
+    open: false,//是否自动启动浏览器
+    // port: 5173, // 修改为其他端口
   },
 })

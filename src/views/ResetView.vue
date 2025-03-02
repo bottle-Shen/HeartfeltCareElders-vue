@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {countdown,isCounting,sendSms,clearCountdown} from '@/utils/captchaUtils'
+import {countdown,isCounting,sendSms,clearCountdown} from '@/utils/modules/captchaUtils'
 import { reset } from '@/api/resetPassword'
 import { resetForm, form } from '@/utils/form'
 import { formRules } from '@/utils/formRules'

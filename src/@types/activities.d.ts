@@ -1,3 +1,8 @@
+// 定义用户报名和取消活动请求参数类型
+export interface getRegisterActivityDataParams {
+  user_id: number;
+  event_id: number;
+}
 // 定义活动数据的类型
 export interface ActivityData {
   title: string,

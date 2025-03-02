@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { login } from '@/api/login'
-import {countdown,isCounting,sendSms} from '@/utils/captchaUtils'
+import {countdown,isCounting,sendSms} from '@/utils/modules/captchaUtils'
 import { resetForm, form } from '@/utils/form'
 import { formRules } from '@/utils/formRules'
-import { clearCountdown } from '@/utils/captchaUtils'
+import { clearCountdown } from '@/utils/modules/captchaUtils'
 
 const isAccountLogin = ref(true);
 const isPasswordLogin = ref(true);

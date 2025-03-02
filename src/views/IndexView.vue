@@ -72,55 +72,55 @@ const toggleHeader = () => {
 <style scoped lang="scss">
 // @use '@/styles/variables.scss';
 
-.svg-icon {
-  width: 60px;
-  height: auto;
-  display: none; // 默认状态下不显示
-  position: absolute;
-  top: 0;
-  right: 5%;
-}
+// .svg-icon {
+//   width: 60px;
+//   height: auto;
+//   display: none; // 默认状态下不显示
+//   position: absolute;
+//   top: 0;
+//   right: 5%;
+// }
 
 .index-page {
   // display: flex;
   // flex-direction: column;
-  background-color: var(--white-green);
+  // background-color: var(--white-green);
 
-  .el-header {
-    height: var(--header-height);
-    border-bottom: 1px solid var(--white-gray);
-    box-shadow: 0 1px 4px var(--black-rgb);
-    background-color: var(--white-green);
-    // padding: 0 30px;
-  }
+  // .el-header {
+  //   height: var(--header-height);
+  //   border-bottom: 1px solid var(--white-gray);
+  //   box-shadow: 0 1px 4px var(--black-rgb);
+  //   background-color: var(--white-green);
+  //   // padding: 0 30px;
+  // }
 
-  .el-container {
-    display: flex;
-    flex: 1; // 使内容区域占据剩余空间
-    // margin-top: $header-height; // 留出顶部导航的高度
-  }
+  // .el-container {
+  //   display: flex;
+  //   flex: 1; // 使内容区域占据剩余空间
+  //   // margin-top: $header-height; // 留出顶部导航的高度
+  // }
 
-  .el-aside {
-    position: fixed; // 固定侧边栏
-    top: var(--header-height);
-    bottom: 0;
-    left: 0;
-    z-index: 1000; // 确保在内容上方
-    border-right: 1px solid var(--el-menu-border-color);
-    background: linear-gradient(to right, var(--white-green) 20%, #F0F2FF 80%);
-    overflow: hidden;
-    width: calc(var(--el-menu-icon-width) + var(--el-menu-base-level-padding) * 6);
-  }
+  // .el-aside {
+  //   position: fixed; // 固定侧边栏
+  //   top: var(--header-height);
+  //   bottom: 0;
+  //   left: 0;
+  //   z-index: 1000; // 确保在内容上方
+  //   border-right: 1px solid var(--el-menu-border-color);
+  //   background: linear-gradient(to right, var(--white-green) 20%, #F0F2FF 80%);
+  //   overflow: hidden;
+  //   width: calc(var(--el-menu-icon-width) + var(--el-menu-base-level-padding) * 6);
+  // }
 
-  .el-main {
-    background-color: #fff;
-    margin-top: var(--header-height);
-    margin-left: calc(var(--el-menu-icon-width) + var(--el-menu-base-level-padding) * 6); // 留出侧边栏的空间
-    padding:0 20px; // 根据需要调整内边距
-    background-color: var(mainBac);
-    overflow-y: auto; // 使内容区域可滚动
-    height: calc(100vh - var(--header-height)); // 确保内容区域占据剩余空间--导致滚动条
-  }
+  // .el-main {
+  //   background-color: #fff;
+  //   margin-top: var(--header-height);
+  //   margin-left: calc(var(--el-menu-icon-width) + var(--el-menu-base-level-padding) * 6); // 留出侧边栏的空间
+  //   padding:0 20px; // 根据需要调整内边距
+  //   background-color: var(mainBac);
+  //   overflow-y: auto; // 使内容区域可滚动
+  //   height: calc(100vh - var(--header-height)); // 确保内容区域占据剩余空间--导致滚动条
+  // }
 
   @media (max-width: 768px) {
     .el-header {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { register } from '@/api/register'
-import {countdown,isCounting,sendSms,clearCountdown} from '@/utils/captchaUtils'
+import {countdown,isCounting,sendSms,clearCountdown} from '@/utils/modules/captchaUtils'
 import { resetForm,form } from '@/utils/form'
 import PasswordConfirmation from '@/components/PasswordConfirmation.vue'
 import { formRules } from '@/utils/formRules'
