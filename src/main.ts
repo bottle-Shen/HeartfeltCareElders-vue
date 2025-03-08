@@ -2,7 +2,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-import './styles/reset.scss'
+// import './styles/reset.scss'
 //Element Plus消息弹出框样式
 // import "element-plus/theme-chalk/el-loading.css";
 // import "element-plus/theme-chalk/el-message.css";

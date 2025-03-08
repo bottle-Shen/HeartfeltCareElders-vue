@@ -1,0 +1,67 @@
+// 定义过渡动画相关的变量
+// 用户界面过渡状态
+$ui-transition-stand: 0.3s;
+// 主要过渡
+$primary-transition: $ui-transition-stand;
+// 动画
+$easebounceOut: cubic-bezier(0.22, 1.4, 0.36, 1);// 开始时速度较慢，然后快速加速，最后在结束时有一个“弹跳”效果
+$easebounceIn: cubic-bezier(0.43, 0, 0.79, -0.28);// 开始时速度较快，然后逐渐减速，最后在结束时有一个“反弹”效果
+$easeQuintIn: cubic-bezier(0.64, 0, 0.78, 0);// 开始时速度较慢，然后逐渐加速，最终快速完成。这种效果适合需要缓慢开始的动画。
+$easeQuintOut: cubic-bezier(0.22, 1, 0.36, 1);// 开始时速度较快，然后逐渐减速，最终缓慢完成。这种效果适合需要快速开始但缓慢结束的动画。
+$easeQuint: cubic-bezier(0.84, 0, 0.16, 1);// 开始时速度较慢，中间加速，最后减速完成。这种效果介于 ease-in 和 ease-out 之间，适合需要平滑过渡的动画。
+$easeQuartIn: cubic-bezier(0.52, 0, 0.74, 0);// 开始时速度较慢，然后逐渐加速，最终快速完成。这种效果比 easeQuintIn 更加平滑。
+$easeQuartOut: cubic-bezier(0.26, 1, 0.48, 1);// 开始时速度较快，然后逐渐减速，最终缓慢完成。这种效果比 easeQuintOut 更加平滑。
+$easeQuart: cubic-bezier(0.76, 0, 0.24, 1);// 开始时速度较慢，中间加速，最后减速完成。这种效果适合需要平滑过渡的动画，比 easeQuint 更缓和。
+
+
+@function frames($frame, $fps: 60) {
+    @return ($frame / $fps) * 1s;
+}
+
+// 常用样式 mixin
+@mixin full() {
+    width: 100%;
+    height: 100%;
+}
+
+// Vue 过渡类 mixin
+@mixin transition-default() {
+// 进入和离开的过渡样式
+    &-enter-active,
+    &-leave-active {
+        transition: all $primary-transition !important;
+    }
+// 移动的过渡样式
+    &-move {
+        transition: transform 0.6s;
+    }
+}
+
+// // 示例用法
+// .example {
+//     @include full();
+//     transition: all $easeQuintOut 0.3s;
+
+//     &:hover {
+//         transform: scale(1.1);
+//     }
+
+//     &-fade {
+//         @include transition-default();
+//     }
+// }
+
+
+// // 说明：
+// // 变量定义：
+// // 所有过渡动画的 cubic-bezier 曲线都定义为 SCSS 变量，方便复用。
+// // 假设 $ui-transition-stand 是一个已经定义的变量，表示默认的过渡时长。
+// // 辅助函数：
+// // rem($val)：将像素值转换为 rem 单位。
+// // frames($frame, $fps)：计算帧动画的时间，返回秒数。
+// // Mixin：
+// // full()：设置元素的宽高为 100%。
+// // transition-default()：为 Vue 的 <transition> 组件生成默认的过渡样式。
+// // 示例用法：
+// // .example：展示如何使用 full() 和 transition-default() mixin。
+// // &-fade：为 Vue 的 fade 动画生成默认的过渡样式。

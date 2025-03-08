@@ -1,42 +1,46 @@
-// 基础变量
-$base-font-size-px: 16;
+@use '@/styles/base.module' as *;
 
-// 辅助函数：将像素值转换为 rem 单位
-@function rem($px) {
-    @return #{calc($px / $base-font-size-px)}rem;
-}
-
-// 基础字体设置
+// ----------全局字体样式----------
 body{
+    box-sizing: content-box;
     font-family: var(--primary-font);
     font-size: rem(16);
-    line-height: 1.25;
-    font-weight: 300;
+    font-weight: 400;
+    // 隐藏滚动条
+    ::-webkit-scrollbar {
+        display: none;
+    }
+    @include mobile {
+        font-size: rem(10);
+    }
+    @include tablet {
+        font-size: rem(18);
+    }
+    @include desktop {
+        font-size: rem(20);
+    }
+    @include hd {
+        font-size: rem(28);
+    }
 }
-
-b,strong{// 加粗文本
+b,strong{
     font-weight: 700;
 }
 
-// utilities
+// ----------工具类----------
 .text-center {//居中对齐文本
     text-align: center;
 }
 
-.uppercase {//将文本转换为大写
-    text-transform: uppercase;
-}
-
-//定义不同的字体权重
-.font-light {
+.font-light { // 注释文本300
     font-weight: 300;
 }
 
-.font-regular {
+.font-regular {// 正常文本400
     font-weight: 400;
 }
 
-.font-bold {
+.font-bold {// 加粗文本700
     font-weight: 700;
 }
 
@@ -44,42 +48,34 @@ b,strong{// 加粗文本
     font-family: var(--primary-font);
 }
 
-// Figma 样式
+// 样式
 .text,
 .title,
 .subtitle,
 .cta {//统一设置字体
-    font-family: var(--primary-font);
+    @extend .primary-font;
 }
 
-.fake-bold {//使用 -webkit-text-stroke 创建伪加粗效果
-    -webkit-text-stroke-width: rem(0.25);
-    -webkit-text-stroke-color: var(--cream);
-}
+// .fake-bold {//使用 -webkit-text-stroke 创建伪加粗效果
+//     -webkit-text-stroke-width: rem(0.25);
+//     -webkit-text-stroke-color: var(--cream);
+// }
 
 .title {//标题样式，使用 clamp() 使字体大小响应式
-    font-size: clamp(26px, 2.5vw, 40px);
-    line-height: 1;
-    text-transform: uppercase;
-    font-weight: 400;
+    font-size: clamp(8px, 2.5vw, 22px);
+    @extend .font-regular;
 }
 
 
 .body {//正文样式，使用 @extend 继承工具类，并通过 @include desktop 提供响应式调整。
-    @extend .uppercase, .font-light;
-    font-size: rem(16);
-    line-height: 1.2;
-    font-weight: 400;
-
-    // @include desktop {
-    //     font-size: rem(24);
-    // }
+    // @extend .font-light;
+    // font-size: rem(16);
+    // font-weight: 400;
 }
 
 .body-s {
-    @extend .uppercase;
     font-size: rem(16);
-    line-height: 1.2;
+    // line-height: 1.2;
 
     // @include desktop {
     //     font-size: rem(20);
@@ -87,7 +83,6 @@ b,strong{// 加粗文本
 }
 
 .body-big {
-    @extend .uppercase;
     font-size: rem(20);
     line-height: 1.2;
 
@@ -97,58 +92,61 @@ b,strong{// 加粗文本
 }
 
 .title-big {
-    @extend .uppercase;
-    font-size: rem(48);
-    line-height: 1.1;
+    font-size: rem(32);
+    // line-height: 1.1;
 
-    // @include desktop {
+    // @include base.desktop {
     //     font-size: rem(128);
     // }
 }
 
 .h1 {//大标题样式
-    font-size: rem(55);
-    line-height: rem(58);
+    // line-height: 1.5;
+    font-size: clamp(40px, 8.5vw, 55px);
     letter-spacing: -0.05em;
     text-align: center;
-    color: var(--dark-blue);
 }
 
 .h2 {//大标题样式
-    @extend .primary-font, .uppercase;
+    // @extend .primary-font, .uppercase;
     font-size: rem(36);
-    letter-spacing: -26.4px;
-    line-height: 1.2;
-    text-transform: uppercase;
-    font-weight: 300;
+    // line-height: 1.2;
+    // text-transform: uppercase;
+    // font-weight: 300;
     text-align: center;
-    margin-bottom: rem(-32);
+    // margin-bottom: rem(-32);
 
     // @include desktop {
     //     font-size: rem(264);
     // }
 }
 
+// 表单样式
+.form-bg {
+    background-color: var(--white);
+}
 .input {
     height: rem(48);
 }
-.label{
-    // margin: 0;
-    padding: 0;
-    text-align: center;
-    font-size: rem(16);
-    color:var(--dark-blue);
-}
-.text{
-    font-size: rem(14);
-    color: var(--dark-blue);
-}
+// .label{
+//     // padding: 0;
+//     text-align: center;
+//     font-size: rem(16);
+//     color:var(--blue);
+// }
+// .text{
+//     font-size: rem(14);
+//     color: var(--dark-blue);
+// }
 .link{
-    font-size: rem(14);
+    // font-size: rem(14);
     color: var(--blue);
     cursor: pointer;
+    &:hover{
+        color: var(--dark-blue);
+    }
 }
-
+// 按钮样式
 .button {
     height: rem(48);
     background-color: var(--blue);
@@ -158,7 +156,45 @@ b,strong{// 加粗文本
     cursor: pointer;
     font-size: rem(14);
     letter-spacing: 0.2em;
+    // @include rounded-border;
+    // @include shadow;
+    // @include mixin.mobile{
+    //     color: aqua;
+    //     // font-size: rem(10);
+    // }
 }
+// 按钮样式不同状态
+// 按钮禁用样式
+// @include base.create-class(button, disabled){
+//     background-color: gray;
+//     cursor: not-allowed;
+//     pointer-events: none;
+// }
+
+// @include base.create-class(button, active) {
+//     background-color: red;
+//     cursor: not-allowed;
+//     pointer-events: none;
+// }
+// @include base.create-class(button, hover) {
+//     background-color: blue;
+//     cursor: not-allowed;
+//     pointer-events: none;
+// }
+// // 不同主题样式按钮
+// @include base.create-class(button, primary){
+//     @extend .button;
+//     background-color: var(--primary-blue);
+// }
+// @include base.create-class(button, secondary){
+//     @extend .button;
+//     background-color: var(--secondary-blue);
+// }
+// @include base.create-class(button, tertiary){
+//     @extend .button;
+//     background-color: var(--tertiary-blue);
+// }
+
 .primary-button {
     border-radius: 50px;
     font-size: rem(20) !important;

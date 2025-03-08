@@ -1,32 +1,23 @@
-// $header-height: 60px;
-// $toggle-height: calc($header-height*10);
-// $font-size: 16px;
-// $font-weight: 600;
-// $headerBac:#fff;
-// $mainBac:#F5F6FA;
-// $iconColor:#CBD0D4;
-// $iconSize:26px;
-// $headerBorder:#F2F2F2;
-// $fontColor:#C7C6C8;
-// $aside-width:150px;
-// $toggle-width:64px;
-// :root{
-//     --header-height:60px;
-//     --toggle-height:$toggle-height;
-//     --font-size:$font-size;
-// }
+// ----------定义变量SCSS----------
+
 @use "sass:color";
-// 尺寸变量
+
+// 1.尺寸变量
 $sizes: (
-    "header-height": 60px,
+    "header-height": 9.7vh,
+    "min-header-height": 45px,
+    "aside-width": 332px,
+    "min-aside-width":227.7px,
+    "mobile-aside-width":100px,
+    "min-mobile-aside-width":40px,
+    "side-width":40px,// 两侧边距
+    "min-side-width":10px,
     "toggle-height": calc(60px * 10),
-    "icon-size": 26px,
-    "aside-width": 150px,
     "toggle-width": 64px,
 );
 
 
-// 字体变量
+// 2.字体变量
 $fonts: (
     "primary-font": 'AlimamaDongFangDaKai-Regular',
     // secondary-font: 'Tobias',
@@ -35,24 +26,31 @@ $fonts: (
     "font-weight": 600,
 );
 
-// 颜色变量
-$colors:(
+// 3.颜色变量
+$colors: (
     "black": #000000,
+    "blue": #1C7FC7,
+    "white-blue": #CAEEFF,
     "white": #FFFFFF,
-    "blue": #3083F1,
-    "grey": #747D7E,
-    "white-grey": #dcdfe6,
-    "white-blue": #E6F3FF,
-    "primary-blue":#0783F5,
-    "white-green":#EAF9FE,
-    "green-blue":#1C7EC7,
-    "grey-blue": #425A76,
-    "dark-blue": #162D41,
-    "hover-blue": #406D9B,
-    // "light":var(--white-grey),
-    // "dark":var(--dark-blue),
+    "cream": #fff8f2,
+    "dark-blue": #3f627b,
+    "darker-blue": #001A33,
+    "primary-blue": #9CC3F7,
+    "bg-one": #E5F3FF,
+    "bg-two":#F0F2FF,
+    "purple": #F0F2FF,
+    "dark-purple": #8C8FE3,
+    "red": #d84b37,
+    "green": #0db166,
+    "yellow": #f6c138,
+    "orange":#F68D14,
+    "pink":#e27391,
+    "dark-yellow": #EFF500,
+    "coral": #FFA78F,
+    "transparent": transparent,
 );
-
+$light: var(--cream);
+$dark: var(--dark-blue);
 
 :root{
     // 尺寸变量
@@ -67,17 +65,17 @@ $colors:(
 
     // 颜色变量
     @each $key, $value in $colors {
-        $name: str-replace($key, "_", "-"); // str-replace 函数将key键名中的下划线替换
-    }
-    // 颜色变量
-    @each $key, $value in $colors {
+        --#{$key}:#{"#{$value}"};// 基础颜色
         // $rgb: rgb(red($value),green($value),blue($value) , 8%);
         $rgba: rgba(color.channel($value, "red", $space: rgb),
                     color.channel($value, "green", $space: rgb),
                     color.channel($value, "blue", $space: rgb),
-                    0.08 // 将 8% 转换为小数 0.08
+                    50%
                 );
-        --#{$key}:#{"#{$value}"};// 定义颜色的 HEX 值
         --#{$key}-rgb: #{"#{$rgba}"}; // 定义颜色的 RGB 值
+        // --#{$key}-hover: #{"#{$rgba}"};
+
+        --#{$key}-light: #{color.scale($value, $lightness: 80%)}; // 生成浅色变体
+        --#{$key}-dark: #{color.scale($value, $lightness: -30%)}; // 生成深色变体
     }
 }

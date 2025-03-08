@@ -1,5 +1,8 @@
 import request from '@/utils/request'
-import type {SocialData} from '@/@types/social'
+import type { SocialData,addPostParams } from '@/@types/social'
+
+export const socialData = ref<SocialData[]>([]);
+export const CommentContent = ref('')
 
 //  获取全部帖子
 export const getSocial =()=> {
@@ -13,11 +16,21 @@ export const getSocial =()=> {
       console.error(error);
   });
 }
-interface addPostParams {
-    title: string;
-    content: string;
-    user_id:number
+
+// 获取用户自己的帖子
+export const getUserSocial =()=> {
+    return request({
+        url: `social/posts/my-posts/`,
+        method: 'GET',
+    }).then(response => {
+      console.log('用户发布的帖子:',response.data)
+      // return response.data;
+    }).catch((error) => {
+      console.error(error);
+  });
 }
+
+
 // 发布帖子
 export const addPost = (params: addPostParams) => {
     return request({
@@ -57,10 +70,18 @@ export const likePost = (postId: number,post:SocialData) => {
       ElMessage.error('点赞失败');
   });
 }
-// interface addCommentParams {
-//     postId: number;
-//     commentContent: string;
-// }
+// 获取用户点赞过的帖子
+export const UserLikePost = () => {
+    return request({
+        url: `social/likes/my-likes/`,
+        method: 'GET',
+    }).then(response => {
+      console.log('用户点赞的帖子:', response.data)
+    //   return response.data;
+    }).catch((error) => {
+      console.error(error);
+  });
+}
 // 获取评论
 export const getComments = (postId: number) => {
     return request({
@@ -76,15 +97,6 @@ export const getComments = (postId: number) => {
   });
 }
 
-// WebSocket URL
-const getWebSocketUrl = (postId: number) => {
-  const baseURL = request.defaults.baseURL || '';
-  const wsUrl = baseURL.replace('http', 'ws');
-  return `${wsUrl}social/ws/posts/${postId}/`;
-}
-
-export const socialData = ref<SocialData[]>([]);
-export const CommentContent = ref('')
 
 // 添加评论
 export const addComment = async(postId:number,commentContent:string,userId:number) => {
@@ -131,34 +143,43 @@ export const addComment = async(postId:number,commentContent:string,userId:numbe
     ElMessage.error('评论失败');
   })
   // 初始化 WebSocket 连接
-  await initializeWebSocket(postId, commentContent, userId)
+  // await initializeWebSocket(postId, commentContent, userId)
   CommentContent.value = '';
 }
 
+// WebSocket URL
+const getWebSocketUrl = (postId: number) => {
+  const baseURL = request.defaults.baseURL || '';
+  const wsUrl = baseURL.replace('http', 'ws');
+  return `${wsUrl}social/ws/posts/${postId}/`;
+}
+
 export let socket: WebSocket | null = null;
-export const initializeWebSocket = (postId: number, commentContent: string, userId: number) => {
+
+// 初始化 WebSocket 连接
+export const initializeWebSocket = (postId: number,userId:number) => {
   if (socket) {
     socket.close();
   }
   const wsUrl = getWebSocketUrl(postId);
   socket = new WebSocket(wsUrl);
   socket.onopen = () => {
-    if (socket) {
-      socket.send(JSON.stringify({
-        type: "comment",
-        content: commentContent,
-        user_id: userId,
-      }));
-    } else {
-      console.error('WebSocket connection is not established');
-    }
+    console.log('WebSocket connection established');
+    // if (socket) {
+    //   socket.send(JSON.stringify({
+    //     type: "comment",
+    //     content: commentContent,
+    //     user_id: userId,
+    //   }));
+    // } else {
+    //   console.error('WebSocket connection is not established');
+    // }
   };
 
   socket.onmessage = (event) => {
     try {
         const {type,message} = JSON.parse(event.data);
       // console.log('Parsed message:', type,message); // 打印解析后的消息
-
       if (type === "comment_message") {
         // 更新评论列表
         // console.log('postID', postId)
@@ -170,29 +191,38 @@ export const initializeWebSocket = (postId: number, commentContent: string, user
           if (!Array.isArray(post.comments)) {
             post.comments = [];
           }
-          // 添加新评论
-          post.comments.push({
-            id: message.id,// 评论ID
-            comment_content: message.comment_content,
-            created_at: message.created_at,
-            user: {
-              id: message.user.id,
-              username: message.user.username,
-              avatar: message.user.avatar,
-            }
-          })
-          post.comments_count += 1;
+          // 判断是否是用户自己发送的评论
+          const isOwnComment = message.user.id === userId;
+          if (!isOwnComment) {
+            // 添加新评论
+            post.comments.push({
+              id: message.id,// 评论ID
+              comment_content: message.comment_content,
+              created_at: message.created_at,
+              user: {
+                id: message.user.id,
+                username: message.user.username,
+                avatar: message.user.avatar,
+              }
+            })
+            post.comments_count += 1;
+          }
         }
       } else if (type === "like_message") {
+        // console.log('Received like message:', message);
         // 更新点赞数
             const post = socialData.value.find(item => item.id === message.post_id);
             if (post) {
+              // 判断是否是用户自己的点赞操作
+                const isOwnLike = message.user_id === userId;
                 if (message.action === "like") {
-                    post.likes_count += 1;
-                    ElMessage.success('有人点赞了你的帖子');
+                    if (!isOwnLike) {
+                        post.likes_count += 1; // 只有非自己的点赞才更新
+                    }
                 } else if (message.action === "unlike") {
-                    post.likes_count -= 1;
-                    ElMessage.success('有人取消了对你的帖子的点赞');
+                   if (!isOwnLike) {
+                        post.likes_count -= 1; // 只有非自己的取消点赞才更新
+                    }
                 }
             }
       }

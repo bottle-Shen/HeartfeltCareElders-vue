@@ -30,7 +30,7 @@
 //   });
 // }
 // import type {SocialData} from '@/@types/social'
-import { socket,CommentContent,socialData,getSocial,initializeWebSocket, likePost,addComment, addPost,getComments } from '@/api/social'
+import { socket,CommentContent,socialData,UserLikePost,getUserSocial,getSocial,initializeWebSocket, likePost,addComment, addPost,getComments } from '@/api/social'
 import { useStore } from 'vuex'
 const store = useStore()
 const userId = store.getters['user/getUserId']
@@ -56,13 +56,38 @@ const addPostBtn = async() => {
     user_id:userId,
   })
 }
+const getUserSocialData = async () => {
+  const response = await getUserSocial()
+  // socialData.value = response
+  // console.log('用户帖子数据', socialData.value)
+}
+const getUserLikeData = async () => {
+  const response = await UserLikePost()
+  // socialData.value = response
+  // console.log('用户点赞过的帖子数据', socialData.value)
+}
 
+// onMounted(() => {
+//   getSocialData()
+//   socialData.value.forEach(post => {
+//     console.log('初始化 WebSocket 连接');
+//         initializeWebSocket(post.id); // 初始化 WebSocket 连接
+//     console.log('初始化 WebSocket 连接j结束');
+
+//   });
+// })
 onMounted(() => {
-  getSocialData()
-  socialData.value.forEach(post => {
-        initializeWebSocket(post.id, '', userId); // 初始化 WebSocket 连接
+  console.log('onMounted 钩子已触发');
+  getSocialData().then(() => {
+    console.log('数据加载完成，初始化 WebSocket 连接');
+    socialData.value.forEach(post => {
+      console.log(`初始化 WebSocket 连接，帖子ID: ${post.id}`);
+      initializeWebSocket(post.id,userId); // 初始化 WebSocket 连接
     });
-})
+  }).catch((error) => {
+    console.error('加载帖子数据失败', error);
+  });
+});
 onUnmounted(() => {
   if (socket) {
     socket.close();
@@ -100,6 +125,8 @@ onUnmounted(() => {
         </ul>
         <el-button type="primary" @click="addPostBtn">发布帖子</el-button>
         <el-button type="primary" @click="getCommentsData">获取评论</el-button>
+        <el-button type="primary" @click="getUserSocialData">获取用户帖子</el-button>
+        <el-button type="primary" @click="getUserLikeData">获取用户点赞过的帖子</el-button>
     </div>
 </template>
 

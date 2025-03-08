@@ -16,3 +16,10 @@ export interface CommentData {
         avatar: string;
     };
 }
+
+// 发布帖子请求参数
+export interface addPostParams {
+    title: string;
+    content: string;
+    user_id:number
+}

@@ -13,7 +13,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <RouterView />
+  <RouterView/>
+  <!-- <div class="body">
+    <RouterView/>
+  </div> -->
 </template>
 
 <style scoped>

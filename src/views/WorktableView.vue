@@ -116,8 +116,8 @@ onMounted(() => {
 </script>
 <template>
     <div class="worktable-page ">
-     <el-row :gutter="20">
-    <el-col :xs="8" :sm="6" :md="4" :lg="8" :xl="1"><div class="grid-content ep-bg-purple">
+
+   <div class="grid-content ep-bg-purple one">
       <div class="item1">
         <el-config-provider :locale="locale">
         <el-calendar ref="calendar">
@@ -157,8 +157,8 @@ onMounted(() => {
             <el-calendar v-model="value" />
           </el-config-provider> -->
       </div>
-    </div></el-col>
-    <el-col :xs="4" :sm="6" :md="8" :lg="10" :xl="11"><div class="grid-content ep-bg-purple">
+    </div>
+    <div class="grid-content ep-bg-purple two">
       报名活动
       <el-table
     :data="activityData"
@@ -177,8 +177,8 @@ onMounted(() => {
         </template>
     </el-table-column>
   </el-table>
-    </div></el-col>
-    <el-col :xs="4" :sm="6" :md="8" :lg="6" :xl="11"><div class="grid-content ep-bg-purple">
+    </div>
+   <div class="grid-content ep-bg-purple three">
       <el-card>
     <template #header>
       <div class="card-header">
@@ -198,16 +198,33 @@ onMounted(() => {
     </el-card>
     <template #footer>Footer content</template>
   </el-card>
-    </div></el-col>
-  </el-row>
+    </div>
+
 </div>
 </template>
 <style scoped lang="scss">
 // @use '@/styles/main.scss';
 .worktable-page{
+  display: flex;
+  flex-wrap: wrap; /* 允许子元素换行 */
+  gap: 10px; /* 子元素之间的间距 */
   // border:1px solid red;
+  .grid-content{
+    flex:1;
+    min-width: 300px;
+    height: 300px;
+  }
   .is-selected {
   color: #1989fa;
+}
+.one{
+  height: calc(100vh - var(--header-height));
+  display: flex;
+  flex-direction: column
+}
+.two{
+  height: calc(100vh - var(--header-height));
+  flex:2;
 }
 .search-com{
   margin-bottom: 20px;
@@ -215,6 +232,7 @@ onMounted(() => {
   // padding: 0 5px 10px;
 }
 .el-card{
+  flex:1;
   color: #5B91AD;
   :deep(.el-card__header){
     background-color: #FE893C;
@@ -225,52 +243,75 @@ onMounted(() => {
   background-color: #FFF8F2;
 }
 .el-calendar{
+  flex:1;
+  height: 0px;
+  // width: 353px;
+  // min-width: 100px;
   color: #5B91AD;
-:deep(.el-calendar__header) {
-  flex-direction: column;
-  align-items: center;
-  .el-button-group {
-    // margin-top: 10px;
-    .el-button {
-      color: #5B91AD;
-    }
+  :deep(.el-calendar__body){
+    width: 100%;
+    height: 314px;
+    padding: 0;
   }
+  :deep(.el-calendar-table thead th){
+        height: 42px;
+        padding: 0;
+    }
+    :deep(.el-calendar-table .el-calendar-day){
+      height: calc((353px - 42px)/6);
+      padding: 0;
+    }
+  :deep(.el-calendar__header){
+    width: 100%;;
+    padding: 0;
+    height: 9.2vh;
+    min-height: 35px;
+  }
+// :deep(.el-calendar__header) {
+//   flex-direction: column;
+//   align-items: center;
+//   .el-button-group {
+//     // margin-top: 10px;
+//     .el-button {
+//       color: #5B91AD;
+//     }
+//   }
+// }
+// .calendar-h1{
+//   color: #454D54;
+//   font-size: 20px;
+// }
+// :deep(.el-calendar-table thead th){
+//  color: #5B91AD;
+// }
+// .activity-title{
+//   color: #FBBFDD;
+// }
+// .view-more{
+//   font-size: 12px;
+//   color: #F1BA78;
+// }
 }
-.calendar-h1{
-  color: #454D54;
-  font-size: 20px;
-}
-:deep(.el-calendar-table thead th){
- color: #5B91AD;
-}
-.activity-title{
-  color: #FBBFDD;
-}
-.view-more{
-  font-size: 12px;
-  color: #F1BA78;
-}
-}
-.el-row {
-  margin-bottom: 20px;
-}
-.el-row:last-child {
-  margin-bottom: 0;
-}
-.el-col {
-  height: calc(100vh - var(--header-height));
-  border-radius: 4px;
-  border:1px solid red;
-}
-.grid-content {
-  display: flex;
-  border-radius: 4px;
-  min-height: 36px;
-  flex-direction: column
-}
-.item1{
-  border:1px solid red;
-}
+// .el-row {
+//   margin-bottom: 20px;
+// }
+// .el-row:last-child {
+//   margin-bottom: 0;
+// }
+// .el-col {
+//   height: calc(100vh - var(--header-height));
+//   border-radius: 4px;
+//   border:1px solid red;
+// }
+// .grid-content {
+//   display: flex;
+//   border-radius: 4px;
+//   min-height: 36px;
+//   flex-direction: column
+// }
+// .item1{
+//   border:1px solid red;
+// }
 .item2{
   border:1px solid red;
 }

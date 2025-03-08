@@ -1,0 +1,143 @@
+@use '@/styles/base.module' as *;
+
+// 定义变量和函数
+// 定义大屏下的网格样式
+$grid_d: (// 桌面端的网格样式
+    display: grid,
+    grid-template-columns: repeat(12, 1fr),// 创建 12 列的网格
+    gap: rem(20)// 列间距，设置列之间的间距为 20px
+);
+
+$grid: (// 移动端的网格样式
+    display: grid,
+    width: 100%,
+    gap: rem(10),
+    grid-template-columns: repeat(6, 1fr)// 创建 6 列的网格
+);
+
+
+// 定义基础网格样式
+.grid {
+    @each $property, $value in $grid {// 将 移动端$grid 中的样式应用到 .grid 中
+        #{$property}: $value;
+    }
+
+    @include desktop{
+        @each $property, $value in $grid_d {//将 桌面端$grid_d 中的样式应用到 .grid 中
+            #{$property}: $value;
+        }
+    }
+}
+
+// 定义响应式网格样式
+// 循环在mixin中的$breakpoint，为大屏添加响应式样式
+@each $breakpoint, $query in ("xl": "min-width: 1050px") {
+    .#{$breakpoint}:grid {
+        @each $property, $value in $grid_d {
+            #{$property}: $value;
+        }
+    }
+}
+
+// 定义内边距样式
+.padded {
+    padding: 0 rem(10);
+
+    @include desktop{
+        padding: 0 rem(20);
+    }
+}
+
+// 定义列和行的响应式样式
+$columns: 12;
+// 循环12列，为每个列添加响应式样式
+// 例如，.col-start-#{$idx} 类在 max-width: 1050px 时设置 grid-column-start，而在 min-width: 1050px 时通过 .xl:col-start-#{$idx} 设置相同的样式。
+// 同理，col-span、col-end、row-start、row-span 和 row-end 也生成了类似的响应式样式。
+@for $idx from 1 through $columns {
+    .col-start-#{$idx} {
+        @media (max-width: 1050px) {
+            grid-column-start: $idx;
+        }
+    }
+
+    .xl\:col-start-#{$idx} {
+        @media (min-width: 1050px) {
+            grid-column-start: $idx;
+        }
+    }
+
+    .col-span-#{$idx} {
+        @media (max-width: 1050px) {
+            grid-column-end: span $idx;
+        }
+    }
+
+    .xl\:col-span-#{$idx} {
+        @media (min-width: 1050px) {
+            grid-column-end: span $idx;
+        }
+    }
+
+    .col-end-#{$idx} {
+        @media (max-width: 1050px) {
+            grid-column-end: $idx;
+        }
+    }
+
+    .xl\:col-end-#{$idx} {
+        @media (min-width: 1050px) {
+            grid-column-end: $idx;
+        }
+    }
+
+    .row-start-#{$idx} {
+        @media (max-width: 1050px) {
+            grid-row-start: $idx;
+        }
+    }
+
+    .xl\:row-start-#{$idx} {
+        @media (min-width: 1050px) {
+            grid-row-start: $idx;
+        }
+    }
+
+    .row-span-#{$idx} {
+        @media (max-width: 1050px) {
+            grid-row-end: span $idx;
+        }
+    }
+
+    .xl\:row-span-#{$idx} {
+        @media (min-width: 1050px) {
+            grid-row-end: span $idx;
+        }
+    }
+
+    .row-end-#{$idx} {
+        @media (max-width: 1050px) {
+            grid-row-end: $idx;
+        }
+    }
+
+    .xl\:row-end-#{$idx} {
+        @media (min-width: 1050px) {
+            grid-row-end: $idx;
+        }
+    }
+}
+
+// 页面隐藏光标
+// body,
+// button {
+//     .remove-cursor & {
+//         cursor: none;
+//     }
+// }
+// 使用示例
+// body,
+// button {
+//     .remove-cursor & {
+//         cursor: none;
+//     }
+// }

@@ -69,7 +69,10 @@ export default defineConfig({
       scss: {
       javascriptEnabled: true,
       // additionalData: `@use "@/styles/index.scss" as *;`, // 使用 as * 来避免命名空间冲突
-      additionalData: `@use "@/styles/index.scss" as *;`,
+        // additionalData: `@use "@/styles/index.scss" as *;`,
+        additionalData: `
+        @use "@/styles/index.scss" as *;
+         @use '@/styles/base.module' as *;`,
       api: 'modern-compiler'
       },
   }

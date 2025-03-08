@@ -1,0 +1,261 @@
+@use "sass:map";
+@use "sass:meta";
+@use 'sass:list';
+@use "sass:math";
+// 创建一个选择器
+@mixin create-class($selected, $class) {
+    .#{$selected}.#{$class} {
+        //拼接成一个复合选择器
+        @content;
+    }
+}
+$base-font-size:16px;
+// 定义断点
+$breakpoint: (
+    mobile-device:768px,//移动设备
+    desktop-device:1050px,//桌面设备
+    hd-device: 1800px,
+    max-device:99999px,
+    anti-overlap:false,//是否允许重叠
+    use-device-width:null,//是否使用设备宽度
+    base-font-size: $base-font-size,
+);
+// 将断点值暴露为 CSS 自定义属性
+:root{
+    --breakpoint-mobile-device: #{map-get($breakpoint, 'mobile-device')};
+    --breakpoint-desktop-device: #{map-get($breakpoint, 'desktop-device')};
+    --breakpoint-hd-device: #{map-get($breakpoint, 'hd-device')};
+    --breakpoint-max-device: #{map-get($breakpoint, 'max-device')};
+};
+$breakpoint-size: (
+    0:0px,
+    1:450px,
+    2:map.get($breakpoint, 'mobile-device'),
+    3:900px,
+    4:map.get($breakpoint, 'desktop-device'),
+    5:map.get($breakpoint, 'hd-device'),
+    6:map.get($breakpoint, 'max-device'),
+);
+
+// 获取断点索引
+@function get-size-number($size-name) {
+    @each $key, $value in $breakpoint-size {
+        @if $value == $size-name {
+            @return $key;// 返回索引
+        }
+    }
+    @return false;
+}
+
+// 单位转换器
+@function convert-to($unit, $i, $item: map.get($breakpoint, 'base-font-size')) {
+    $shife-unit: math.unit($i);
+
+    @if $unit == $shife-unit {
+        @return $i;
+    }
+
+    @if $unit in ('em', 'rem') {
+        @return math.div($i , $item);// $i / $item;
+    }
+
+    @if $unit =='px' {
+        @return math.mul($i , $item);// $i * $item;
+    }
+
+    @return $i;
+}
+// 计算偏移量防止断点重叠
+@function get-overlap($anti-overlap, $i) {
+    $shift-unit: math.unit($i);
+    $anti-overlap: if($anti-overlap, $anti-overlap, 0px);
+
+    @if meta.type-of($anti-overlap)== "boolean" {
+        $anti-overlap: 1px;
+    }
+
+    @if list.length($anti-overlap) == 1 {
+        @return -$anti-overlap;
+    }
+
+    @each $item in $anti-overlap {
+        @if unit($item)==$shift-unit {
+            @return $item;
+        }
+    }
+
+    @return 0;
+}
+// 根据偏移量调整断点值
+@function shift-overlap($anti-overlap, $i, $size: 'min') {
+    $shife: get-overlap($anti-overlap, $i);
+
+    @if ($size =='min' and $shife > 0) or ($size =='max' and $shife < 0) {
+        $i: $i + $shife;
+    }
+    @return $i;
+}
+
+// 媒体查询函数
+@mixin between($min, $max,$anti-overlap: map.get($breakpoint, 'anti-overlap'),$orientation,$use-device-width: map.get($breakpoint, 'use-device-width')) {
+    $condition: 'screen';
+    @if meta.type-of($min) == number{
+        $min:get-size-number($min);
+    }
+    @if meta.type-of($max) == number{
+        $max:get-size-number($max);
+    }
+    $max:if(0 < $max and $max < list.length(map.keys($breakpoint-size)),$max, number(list.length(map.keys($breakpoint-size))-1));
+    $min:if($min < 0 or $min >list.length(map.keys($breakpoint-size)), 0px,$min);
+    $max:map.get($breakpoint-size,$max);
+    $min:map.get($breakpoint-size,$min);
+    @if $min and $max {
+        $min: convert-to('px', $min);
+        $min: shift-overlap($anti-overlap, $min, 'min');
+        $max: convert-to('px', $max);
+        $max: shift-overlap($anti-overlap, $max, 'max');
+        $condition: $condition + ' and (min-#{$use-device-width}width: #{$min}) and (max-#{$use-device-width}width: #{$max})';
+    }
+    @media #{$condition}{
+        @content;
+    }
+
+}
+
+// 生成一个媒体查询,两个断点值，一个最小值，一个最大值
+@mixin at($size-min,$size-max,$anti-overlap: map.get($breakpoint, 'anti-overlap'),$orientation: null, $use-device-width: map.get($breakpoint, 'use-device-width')){
+    @include between($size-min,$size-max,$anti-overlap,$orientation,$use-device-width){
+        @content;
+    }
+}
+
+// 媒体查询-移动设备
+@mixin mobile($anti-overlap: map.get($breakpoint, 'anti-overlap'), $orientation: null,$use-device-width: map.get($breakpoint, 'use-device-width')) {
+    @include at(0px,map.get($breakpoint, 'mobile-device'), $anti-overlap, $orientation,$use-device-width) {
+        @content;
+    }
+};
+// 媒体查询-平板设备
+@mixin tablet($anti-overlap: map.get($breakpoint, 'anti-overlap'), $orientation: null,$use-device-width: map.get($breakpoint, 'use-device-width')) {
+    @include at(map.get($breakpoint, 'mobile-device'), map.get($breakpoint, 'desktop-device'), $anti-overlap, $orientation,$use-device-width) {
+        @content;
+    }
+}
+
+// 桌面设备
+@mixin desktop($anti-overlap: map.get($breakpoint, 'anti-overlap'), $orientation: null,$use-device-width: map.get($breakpoint, 'use-device-width')) {
+    @include at(map.get($breakpoint, 'desktop-device'),map.get($breakpoint,'hd-device'), $anti-overlap, $orientation,$use-device-width) {
+        @content;
+    }
+}
+
+// 高清设备
+@mixin hd($anti-overlap: map.get($breakpoint, 'anti-overlap'), $orientation: null,$use-device-width: map.get($breakpoint, 'use-device-width')) {
+    @include at(map.get($breakpoint, 'hd-device'),map.get($breakpoint,'max-device'), $anti-overlap, $orientation,$use-device-width) {
+        @content;
+    }
+}
+
+// 横向屏幕
+@mixin landscape{
+    @media screen and (orientation: landscape) {
+        @content;
+    }
+}
+// 纵向屏幕
+@mixin portrait{
+    @media screen and (orientation: portrait) {
+        @content;
+    }
+}
+
+// 鼠标悬停
+@mixin hover{
+    @media screen and (any-hover: hover) {// 设备允许鼠标悬停则生效
+        @content;
+    }
+}
+
+// 暗黑模式
+@mixin dark-mode {
+    @media (prefers-color-scheme: dark) {
+        @content;
+    }
+}
+// 明亮模式
+@mixin light-mode {
+    @media (prefers-color-scheme: light) {
+        @content;
+    }
+}
+
+//Flex 布局 - 垂直居中
+@mixin flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+//Flex 布局 - 两端对齐
+@mixin flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+// Flex 布局 - 垂直排列
+@mixin flex-column {
+    display: flex;
+    flex-direction: column;
+}
+// 阴影效果
+@mixin shadow {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+// 渐变背景
+@mixin gradient {
+    background: linear-gradient(to right, #f0f0f0, #e0e0e0);
+}
+
+//动画混合宏
+//渐变动画
+@mixin fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+//实用混合宏
+//隐藏元素
+@mixin hidden {
+    display: none;
+}
+//显示元素
+@mixin visible {
+    display: block;
+}
+//指针事件
+@mixin pointer-events-none {
+    pointer-events: none;
+}
+//常用工具类
+@mixin width($width) {
+    width: $width;
+}
+
+@mixin height($height) {
+    height: $height;
+}
+//内边距和外边距
+@mixin padding($padding) {
+    padding: $padding;
+}
+
+@mixin margin($margin) {
+    margin: $margin;
+}

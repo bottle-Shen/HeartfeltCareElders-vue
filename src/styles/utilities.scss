@@ -1,20 +1,15 @@
-// 基础混合和函数
-// @mixin mobile {
-//     @media (max-width: 768px) {
-//         @content;
-//     }
-// }
+@use '@/styles/base.module' as *;
 
-// @mixin desktop {
-//     @media (min-width: 769px) {
-//         @content;
-//     }
-// }
-
+// flex布局-垂直居中
 .flex-center {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+// flex布局-交叉轴水平居中
+.flex-align-center {
+    display: flex;
+    align-items: center;
 }
 .flex-between {
     display: flex;
@@ -22,17 +17,19 @@
     justify-content: space-between;
 }
 
+.flex-end {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+// 向下列
 .flex-col {
     display: flex;
     flex-direction: column;
 }
 
-.flex-center-col {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
+// flex布局-占满剩余空间
 .flex-one {
     flex: 1;
 }
@@ -42,14 +39,26 @@
 .flex-three {
     flex: 3;
 }
-
-.fixed-header {
-    position: fixed; // 固定顶部导航
+// 相对定位
+.relative {
+    position: relative;
+}
+// 固定位置
+.fixed-top {
+    position: fixed; // 固定顶部
     top: 0;
-    left: 0;
-    right: 0;
+    // left: 0;
+    // right: 0;
     z-index: 999; // 确保在内容上方
 }
+.fixed-bottom {
+    position: fixed; // 固定底部
+    bottom: 0;
+    // left: 0;
+    // right: 0;
+    z-index: 999; // 确保在内容上方
+}
+// 绝对定位
 .absolute{
     position: absolute;
     top: 0;
@@ -70,15 +79,15 @@
     display: none !important;
 }
 
+// 背景
 .bg {
     min-height: 100vh;//设置最小高度为视口高度
     min-height: calc(var(--vh, 1vh) * 100);//兼容性写法，用于处理某些浏览器可能不支持 100vh 的情况。
-
-    // @include mobile {
+    // background-color: var(--bg-blue);
+    // @include base.mobile {
     //     // 如果需要在移动端设置背景渐变，可以在这里添加
-    //     // background: var(--gradient);
+    //     // background-color:red;
     // }
-    // background: var(--white-blue);
 }
 
 .tp-dfwv {

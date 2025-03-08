@@ -101,7 +101,6 @@ const submitForm = () => {
       });
     };
 
-
 // 监听路由离开事件
 onBeforeRouteLeave(() => {
   clearCountdown(); // 清空计时器
@@ -109,15 +108,15 @@ onBeforeRouteLeave(() => {
 });
 </script>
 <template>
-  <div class="login-page bg flex-center flex-col">
+  <div class="bg flex-center">
     <el-form
     :model="form"
     ref="ruleFormRef"
     status-icon
-    class="demo-ruleForm"
+    class="form-bg"
     :rules="formRules"
   >
-  <h1 class="h1">登录</h1>
+  <h1 class="h1 title">登录</h1>
       <div>
         <!-- 用户身份选择 -->
         <el-form-item class="radio-group" label="请选择您的真实身份">
@@ -186,43 +185,34 @@ onBeforeRouteLeave(() => {
   </div>
 </template>
 <style scoped lang="scss">
-.login-page {
-  // background: url('../assets/images/background.png') no-repeat;
-  // background-size: cover;
-  // background-position: bottom;
-    :deep(.el-form-item__content){//:deep()穿透
-          @extend .flex-between;
-        }
-    .el-form{
-      background-color: var(--white);
-        border-radius: 30% 10px 20% 20%;
-        width:650px;/* 确保有明确的宽度 */
-        padding: 30px 80px 50px;
-        h1{
-          margin-bottom: 30px;
-        }
-      .el-form-item{
-        @extend .flex-center;
-      }
-      .radio-group > :deep(.el-form-item__content){
-          justify-content: flex-end;
-        }
-
-      :deep(.el-form-item__label){
-        @extend .label;
-      }
-      .el-input{
-        @extend .input;
-      }
-        .el-button{
-          @extend .button;// 继承全局按钮样式
-          @extend .w-full;
-        }
-    }
-    @media (max-width: 768px) {
-    .el-form{
-      width: 95%;
-    }
+// @use '@/styles/index.scss';
+:deep(.el-form-item__content){//:deep()穿透
+  @extend .flex-between;
+}
+h1{
+  color: var(--dark-blue);
+  margin-bottom: 30px;
+}
+.radio-group > :deep(.el-form-item__content){
+  justify-content: flex-end;
+}
+// :deep(.el-form-item__label){
+//   @extend .label;
+// }
+.el-form{
+  border-radius: 30% 10px 20% 20%;
+  width:650px;/* 确保有明确的宽度 */
+  padding: 30px 80px 50px;
+  .el-input{
+    @extend .input;
+  }
+  .el-button{
+    @extend .button;// 继承全局按钮样式
+    @extend .w-full;
+  }
+  @include mobile{
+      width:80%;/* 确保有明确的宽度 */
+      padding: 3% 2% 5%;
   }
 }
 </style>
