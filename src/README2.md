@@ -364,4 +364,31 @@ RedisCache
 那么说明已经成功使用了 Redis 缓存后端。如果是：
 LocMemCache
 那么说明仍然在使用本地内存缓存。
-
+21.docker内nginx安装工具
+su -
+进入root用户
+apt-get update && apt-get install -y net-tools
+安装 net-tools（包含 netstat）
+安装完成后，再次运行：
+netstat -tulnp | grep :80
+输出：
+root@51a845e4cb4a:~# netstat -tulnp | grep :80
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      1/nginx: master pro 
+发现80端口被占用，端口 80 被 Nginx 的主进程（nginx: master process）占用，进程 ID 是 1。
+停止当前运行的 Nginx 进程，然后重新启动它。
+运行以下命令停止 Nginx：
+nginx -s stop
+再次运行 netstat 命令，确认端口 80 已不再被占用：
+netstat -tulnp | grep :80
+输出：
+# netstat -tulnp | grep :80
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      1/nginx: master pro 
+重新启动 Nginx
+nginx -g 'daemon off;'
+验证 Nginx 是否正常运行
+检查 Nginx 是否成功启动：
+netstat -tulnp | grep :80
+检查 Nginx 的错误日志：
+cat /var/log/nginx/error.log
+22.导出vue-router.d.ts文件中的ScrollPosition
+export declare type ScrollPosition = ScrollPositionCoordinates | ScrollPositionElement;

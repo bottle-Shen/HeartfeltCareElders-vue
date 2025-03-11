@@ -32,9 +32,9 @@ const router = createRouter({
           component: () => import('../views/HomeView.vue')
         },
         {// 工作台
-          path: '/worktable',
-          name: 'worktable',
-          component: () => import('../views/WorktableView.vue')
+          path: '/activity',
+          name: 'activity',
+          component: () => import('../views/ActivityView.vue')
         },
         {// 个人资料
           path: '/userInfo',

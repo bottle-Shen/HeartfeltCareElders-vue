@@ -4,14 +4,12 @@
 
 // 1.尺寸变量
 $sizes: (
-    "header-height": 9.7vh,
-    "min-header-height": 45px,
+    // "header-height": 9.7vh,
+    // "min-header-height": 50px,
     "aside-width": 332px,
     "min-aside-width":227.7px,
     "mobile-aside-width":100px,
     "min-mobile-aside-width":40px,
-    "side-width":40px,// 两侧边距
-    "min-side-width":10px,
     "toggle-height": calc(60px * 10),
     "toggle-width": 64px,
 );

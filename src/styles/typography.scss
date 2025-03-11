@@ -1,6 +1,25 @@
 @use '@/styles/base.module' as *;
-
+//-------------样式类-------------
 // ----------全局字体样式----------
+html {
+    // font-size: rem(16);
+    /* 默认字体大小 */
+    // @include mobile {
+    //         font-size: rem(10);
+    //     }
+    
+        // @include tablet {
+        //     font-size: rem(18);
+        // }
+    
+        // @include desktop {
+        //     font-size: rem(20);
+        // }
+    
+        // @include hd {
+        //     font-size: rem(28);
+        // }
+}
 body{
     box-sizing: content-box;
     font-family: var(--primary-font);
@@ -74,18 +93,14 @@ b,strong{
 }
 
 .body-s {
-    font-size: rem(16);
-    // line-height: 1.2;
-
+    font-size: rem(22);
     // @include desktop {
     //     font-size: rem(20);
     // }
 }
 
 .body-big {
-    font-size: rem(20);
-    line-height: 1.2;
-
+    font-size: rem(37);
     // @include desktop {
     //     font-size: rem(32);
     // }
@@ -94,14 +109,15 @@ b,strong{
 .title-big {
     font-size: rem(32);
     // line-height: 1.1;
-
+    @include mobile{
+        font-size: rem(20);
+    }
     // @include base.desktop {
     //     font-size: rem(128);
     // }
 }
 
 .h1 {//大标题样式
-    // line-height: 1.5;
     font-size: clamp(40px, 8.5vw, 55px);
     letter-spacing: -0.05em;
     text-align: center;
@@ -146,16 +162,16 @@ b,strong{
         color: var(--dark-blue);
     }
 }
-// 按钮样式
+// ------按钮样式开始------
 .button {
-    height: rem(48);
+    // height: rem(48);
     background-color: var(--blue);
     color: var(--white);
     border: 1px solid var(--primary-blue);
-    padding: 10px 20px;
+    // padding: 10px 20px;
     cursor: pointer;
     font-size: rem(14);
-    letter-spacing: 0.2em;
+    // letter-spacing: 0.2em;
     // @include rounded-border;
     // @include shadow;
     // @include mixin.mobile{
@@ -208,6 +224,22 @@ b,strong{
 .link-button:hover {
     color: var(--blue) !important;
 }
-
-
-
+//------定义main样式类开始------
+.el-main {
+    margin-left: clamp(var(--min-aside-width), 17%, var(--aside-width));// 留出侧边栏的空间
+    margin-top: var(--header-top);
+    padding-right: 2.1vw;
+    padding-left: 1.4vw;
+    height: calc(100vh - var(--header-top)); // 内容区域占据剩余空间
+}
+.el-main-hidden {// 侧边栏隐藏main占满左侧
+    margin-left: 0;
+    width: 100vw;
+    padding: 0 2.1vw;
+}
+//------定义移动端样式类------
+.el-main-mobile {
+    margin-left: clamp(var(--min-mobile-aside-width), 20%, var(--mobile-aside-width));
+    padding-right: 1.4vw;
+}
+//------定义main样式类结束------

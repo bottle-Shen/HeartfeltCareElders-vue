@@ -95,6 +95,7 @@ export const userModule: Module<UserState, RootState> = {
     getToken: (state) => state.token,
     getUser: (state) => state.user,
     getUserId: (state) => state.user.id,
+    isAuthenticated: (state) => !!state.token.access_token, // 如果 access_token 存在，则认为用户已登录
     // getUserName: (state) => state.user.username,
     // getUserAvatar: (state) => state.user.avatar,
     // getUserRole: (state) => state.user.role,

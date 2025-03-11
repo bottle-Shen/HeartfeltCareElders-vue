@@ -16,7 +16,7 @@ const userActivitiesData = ref<userActivityData[]>([])
 
 const options = { hour12: true };//使用12小时制格式,显示上午下午
 const userId = store.state.user.user.id
-console.log('userId', userId)
+// console.log('userId', userId)
 // 获取活动数据
 const fetchActivityData = async () => {
   const response = await getActivityData()
@@ -115,21 +115,21 @@ onMounted(() => {
 
 </script>
 <template>
-    <div class="worktable-page ">
+    <div class="activity-page ">
 
-   <div class="grid-content ep-bg-purple one">
-      <div class="item1">
+   <div class="activity-item activity-calendar one">
+      <div class="calendar-item">
         <el-config-provider :locale="locale">
         <el-calendar ref="calendar">
           <template #header="{ date }">
-      <span class="calendar-h1">活动日历</span>
+      <span class="activity-title">活动日历</span>
       <el-button-group>
         <el-button size="small" @click="selectDate('prev-month')">
-          上一月
+          <el-icon><i-ep-CaretLeft /></el-icon>
         </el-button>
-        <el-button size="small" @click="selectDate('today')"><span>{{ date }}</span>今天</el-button>
+        <el-button size="small" @click="selectDate('today')"><span>{{ date }}</span></el-button>
         <el-button size="small" @click="selectDate('next-month')">
-          下一月
+          <el-icon><i-ep-CaretRight /></el-icon>
         </el-button>
       </el-button-group>
       </template>
@@ -149,17 +149,17 @@ onMounted(() => {
           </span>
       </p>
     </template>
-  </el-calendar>
-</el-config-provider>
+        </el-calendar>
+      </el-config-provider>
       </div>
-      <div class="item2">
+      <div class="item-two">
         <!-- <el-config-provider :locale="locale">
             <el-calendar v-model="value" />
           </el-config-provider> -->
       </div>
     </div>
-    <div class="grid-content ep-bg-purple two">
-      报名活动
+    <div class="activity-item ep-bg-purple two">
+      <span class="activity-title">报名活动</span>
       <el-table
     :data="activityData"
     style="width: 100%"
@@ -178,7 +178,7 @@ onMounted(() => {
     </el-table-column>
   </el-table>
     </div>
-   <div class="grid-content ep-bg-purple three">
+   <div class="activity-item three">
       <el-card>
     <template #header>
       <div class="card-header">
@@ -204,23 +204,35 @@ onMounted(() => {
 </template>
 <style scoped lang="scss">
 // @use '@/styles/main.scss';
-.worktable-page{
+.activity-page{
+  // height: 100%;
   display: flex;
-  flex-wrap: wrap; /* 允许子元素换行 */
-  gap: 10px; /* 子元素之间的间距 */
-  // border:1px solid red;
-  .grid-content{
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: rem(10);
+  // padding-bottom: rem(20);
+  .activity-item{
+    display: flex;
+    flex-direction: column;
     flex:1;
-    min-width: 300px;
-    height: 300px;
+    min-width: rem(280);
+    // height: 300px;
   }
   .is-selected {
   color: #1989fa;
 }
-.one{
-  height: calc(100vh - var(--header-height));
-  display: flex;
-  flex-direction: column
+.activity-calendar{
+  padding-right: 1.4vw;
+  // height: 100%;
+  // display: flex;
+  // flex-direction: column;
+  border-right:2px solid var(--white-blue);
+  .calendar-item{
+    border-bottom:2px solid var(--white-blue);
+  }
+  .item-two{
+    // flex:1;
+  }
 }
 .two{
   height: calc(100vh - var(--header-height));
@@ -242,45 +254,51 @@ onMounted(() => {
   }
   background-color: #FFF8F2;
 }
+.activity-title{
+  color: var(--black);
+  @extend .title;
+}
 .el-calendar{
   flex:1;
-  height: 0px;
   // width: 353px;
   // min-width: 100px;
-  color: #5B91AD;
+  color:var(--blue);
+  :deep(.el-calendar__header) {
+    padding: 0;
+    flex-direction: column;
+    align-items: center;
+    .el-button-group {
+      width: 100%;
+      @extend .flex-between;
+      font-size: rem(16);
+      padding-top: rem(5);
+      .el-button {
+        // color: #5B91AD;
+      }
+    }
+  }
   :deep(.el-calendar__body){
     width: 100%;
-    height: 314px;
+    height: rem(314);
     padding: 0;
+    font-size: rem(16);
+    text-align: center;
+    :deep(.el-calendar-table){
+    } 
   }
   :deep(.el-calendar-table thead th){
-        height: 42px;
+        height: rem(30);
+        font-size: rem(16);
         padding: 0;
     }
-    :deep(.el-calendar-table .el-calendar-day){
-      height: calc((353px - 42px)/6);
-      padding: 0;
+    :deep(.el-calendar-table tbody){
+        height:100%;
     }
-  :deep(.el-calendar__header){
-    width: 100%;;
-    padding: 0;
-    height: 9.2vh;
-    min-height: 35px;
-  }
-// :deep(.el-calendar__header) {
-//   flex-direction: column;
-//   align-items: center;
-//   .el-button-group {
-//     // margin-top: 10px;
-//     .el-button {
-//       color: #5B91AD;
-//     }
-//   }
-// }
-// .calendar-h1{
-//   color: #454D54;
-//   font-size: 20px;
-// }
+    :deep(.el-calendar-table .el-calendar-day){
+      height:calc(rem(314)/7);
+      // padding: 0;
+    }
+}
 // :deep(.el-calendar-table thead th){
 //  color: #5B91AD;
 // }
@@ -291,7 +309,6 @@ onMounted(() => {
 //   font-size: 12px;
 //   color: #F1BA78;
 // }
-}
 // .el-row {
 //   margin-bottom: 20px;
 // }
@@ -312,9 +329,9 @@ onMounted(() => {
 // .item1{
 //   border:1px solid red;
 // }
-.item2{
-  border:1px solid red;
-}
+// .item2{
+//   border:1px solid red;
+// }
 @media (max-width: 768px) {
     .worktable-item{
       flex-direction: column;

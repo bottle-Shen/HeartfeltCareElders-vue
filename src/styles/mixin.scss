@@ -22,10 +22,10 @@ $breakpoint: (
 );
 // 将断点值暴露为 CSS 自定义属性
 :root{
-    --breakpoint-mobile-device: #{map-get($breakpoint, 'mobile-device')};
-    --breakpoint-desktop-device: #{map-get($breakpoint, 'desktop-device')};
-    --breakpoint-hd-device: #{map-get($breakpoint, 'hd-device')};
-    --breakpoint-max-device: #{map-get($breakpoint, 'max-device')};
+    --breakpoint-mobile-device: #{map.get($breakpoint, 'mobile-device')};
+    --breakpoint-desktop-device: #{map.get($breakpoint, 'desktop-device')};
+    --breakpoint-hd-device: #{map.get($breakpoint, 'hd-device')};
+    --breakpoint-max-device: #{map.get($breakpoint, 'max-device')};
 };
 $breakpoint-size: (
     0:0px,
@@ -189,26 +189,17 @@ $breakpoint-size: (
     }
 }
 
-//Flex 布局 - 垂直居中
-@mixin flex-center {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-//Flex 布局 - 两端对齐
-@mixin flex-between {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-// Flex 布局 - 垂直排列
-@mixin flex-column {
-    display: flex;
-    flex-direction: column;
-}
+
+
+
 // 阴影效果
 @mixin shadow {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+// 圆角边框
+@mixin rounded-border {
+    border-radius: 10px; // 设置圆角半径
+    // border: 1px solid rgba(0, 0, 0, 0.1); // 设置边框样式
 }
 // 渐变背景
 @mixin gradient {
@@ -242,20 +233,4 @@ $breakpoint-size: (
 //指针事件
 @mixin pointer-events-none {
     pointer-events: none;
-}
-//常用工具类
-@mixin width($width) {
-    width: $width;
-}
-
-@mixin height($height) {
-    height: $height;
-}
-//内边距和外边距
-@mixin padding($padding) {
-    padding: $padding;
-}
-
-@mixin margin($margin) {
-    margin: $margin;
 }

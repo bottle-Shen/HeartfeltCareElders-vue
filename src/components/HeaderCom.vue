@@ -2,11 +2,19 @@
 // import  SearchCom from './SearchCom.vue'
 import { useStore } from 'vuex';
 import UserInfoCom from './UserInfoCom.vue'
-
+import { Search } from '@element-plus/icons-vue'
+const searchQuery = ref(""); // 搜索关键词
+// const emit = defineEmits(["search"]);
+// const handleSearch = () => {
+//   if (searchQuery.value.trim()) {
+//     emit("search", searchQuery.value); // 触发搜索事件
+//     console.log('触发搜索事件');
+//   }
+// };
 const store = useStore();
 
 // 直接从 store 中获取 getters
-const token = computed(() => store.getters['user/getToken']);
+const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);
 const user = computed(() => store.getters['user/getUser']);
 // console.log('token', token)
 // const searchQuery = ref(""); // 搜索关键词
@@ -36,21 +44,20 @@ const toggleHeaderMenu=() => {
 </script>
 <template>
   <div class="element-header h-full flex-center title">
-    <div class="logo title-big">
+    <div class="logo">
       <!-- <img src="../assets/images/LOGO.png" /> -->
        智护长者
     </div>
-    <div class="search">
-      <SearchCom @search="handleSearch"></SearchCom>
-    </div>
-    <div v-if="token" class="info flex-end">
+    <el-input class="search h-full" @keyup.enter="handleSearch" v-model="searchQuery" placeholder="请输入搜索内容" :prefix-icon="Search" />
+    <!-- <SearchCom class="search" @search="handleSearch"/> -->
+    <div v-if="isAuthenticated" class="info flex-end">
       <el-icon class="info-items">
         <i-ep-Tools/>
       </el-icon>
       <el-icon class="info-items">
         <i-ep-BellFilled />
       </el-icon>
-      <div class="relative info-items">
+      <div class="info-items avatar">
           <el-avatar class="w-full h-full" :src="user.avatar" />
           <UserInfoCom class="userInfo-com"/>
       </div>
@@ -64,17 +71,44 @@ const toggleHeaderMenu=() => {
 </template>
 <style scoped lang="scss">
 .element-header{
-  margin: 0 var(--side-width);
+  margin: 0 rem(40);
     .logo{
         flex: 1.15;
-        img{
-          width: 40%;
-          object-fit: contain;
-        }
+        @extend .title-big;
+        // img{
+        //   width: 40%;
+        //   object-fit: contain;
+        // }
     }
     .search{
       flex: 2.28;
       height: rem(46);
+      // 搜索边框
+      :deep(.el-input__wrapper) {
+          border-radius: 50px;
+          box-shadow: 0 0 0 1px var(--blue) inset;
+      }
+      // 搜索边框高亮
+      :deep(.el-input__wrapper.is-focus) {
+          box-shadow: 0 0 0 1px var(--dark-blue) inset;
+      }
+      // 输入框文字
+      :deep(.el-input__inner){
+        color: var(--dark-blue);
+      }
+      // 输入框提示文字
+      :deep(.el-input__inner)::placeholder {
+          color: var(--dark-blue-rgb);
+      }
+      // 搜索图标
+      :deep(.el-input__prefix){
+          color:var(--blue);
+          font-size:rem(23);
+      }
+      // 搜索图标高亮
+      :deep(.el-input__wrapper.is-focus)>.el-input__prefix {
+          color:var(--dark-blue);
+      }
     }
     .info{
     flex: 1.12;
@@ -83,26 +117,26 @@ const toggleHeaderMenu=() => {
       width: rem(52);
       height: rem(52);
     }
+    .avatar{
+      position: relative;
+      .userInfo-com{
+      position: absolute;
+      top: var(--header-height);
+      right: 0;
+      display: none; // 默认隐藏
+      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+      }
+      @include hover {
+        &:hover .userInfo-com {
+          display: block;
+        }
+      }
+    }
     .el-icon{
-      // width: rem(52);
-      // height: rem(52);
-      // padding: 8px 8px 8px 0;
       background-color: var(--orange);
       color: var(--white);
       border-radius: 50%;
     }
-      
-      .userInfo-com{
-        position: absolute;
-        top: var(--header-height);
-        right: 0;
-        display: none; // 默认隐藏
-        box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-      }
-       :hover .userInfo-com {
-        display: block; // 鼠标悬浮时显示
-      }
-
   }
   .header-menu{
     display: none;
@@ -128,26 +162,28 @@ const toggleHeaderMenu=() => {
     //   }
     // }
     @include mobile{
+      margin: 0 2.1vw;
       .logo,.info{
         display: none;
+      }
+      .search{
+        height: rem(35);
       }
       .header-menu{
       display: block;
       font-size: rem(28);
-      margin-left: 10px;
+      margin-left: rem(10);
       color: var(--blue);
       &:active {
         color: var(--blue-rgb);
       }
     }
-        // flex-direction: column;
-        // justify-content: center;
-        .info{
-          :hover .userInfo-com{
-            display: none;
-          }
-        }
+    .avatar{
+      .userInfo-com{
+        display: none;
+      }
     }
+  }
 }
 
 </style>

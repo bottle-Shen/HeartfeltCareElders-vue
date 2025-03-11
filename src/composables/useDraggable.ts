@@ -19,13 +19,21 @@ export function useDraggable(initialPosition: { x: number; y: number }, widthRef
   const startX = ref(0); // 记录拖拽开始时的 X 坐标
   const startY = ref(0); // 记录拖拽开始时的 Y 坐标
   const hasMoved = ref(false); // 用于判断是否触发了拖拽
-
+  const windowHeight = ref(window.innerHeight);// 视口高度
   // 监听宽度和高度的变化
 //   watchEffect(() => {
 //     console.log("按钮宽度和高度更新:", widthRef.value, heightRef.value);
 //   });
+  // 更新视口高度
+const updateWindowHeight = () => {
+  windowHeight.value = window.innerHeight;
+  // 更新按钮位置
+  position.value.y = windowHeight.value * 0.932; // 93.2vh 转换为像素值
+};
   // 开始拖拽
-const startDrag = (event: MouseEvent | TouchEvent) => {
+  const startDrag = (event: MouseEvent | TouchEvent) => {
+  // 设置其他元素的 pointer-events 为 none,不影响拖拽
+    document.body.style.pointerEvents = 'none';
     isDragging.value = true;
     // 获取按钮当前的位置
     // const buttonX = position.value.x;
@@ -89,6 +97,8 @@ const startDrag = (event: MouseEvent | TouchEvent) => {
 
   // 结束拖拽
   const endDrag = () => {
+    // 恢复其他元素的 pointer-events
+    document.body.style.pointerEvents = 'auto';
     // console.log("endDrag");
     isDragging.value = false;
         // 自动吸附到最近的边缘
@@ -112,6 +122,17 @@ const startDrag = (event: MouseEvent | TouchEvent) => {
     document.removeEventListener("touchend", endDrag);
   };
 
+  onMounted(() => {
+    // 初始化视口高度
+    updateWindowHeight();
+    // 监听窗口大小变化
+    window.addEventListener('resize', updateWindowHeight);
+  });
+
+  onUnmounted(() => {
+    // 移除监听器
+    window.removeEventListener('resize', updateWindowHeight);
+  });
   return {
     position, // 按钮位置
     isDragging, // 是否正在拖拽

@@ -1,4 +1,5 @@
 export interface HealthData {
+  id: number;
   blood_cholesterol: number;//总胆固醇 (mmol/L)
   blood_glucose: number;//血糖 (mmol/L)
   blood_triglyceride: number;//甘油三酯 (mmol/L)

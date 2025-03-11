@@ -1,6 +1,6 @@
 @use '@/styles/base.module' as *;
 
-// flex布局-垂直居中
+// Flex 布局 -垂直居中
 .flex-center {
     display: flex;
     align-items: center;
@@ -11,19 +11,20 @@
     display: flex;
     align-items: center;
 }
+// Flex 布局 - 两端对齐
 .flex-between {
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
-
+// Flex 布局 - 水平居中且结束
 .flex-end {
     display: flex;
     align-items: center;
     justify-content: flex-end;
 }
 
-// 向下列
+// Flex 布局 - 垂直排列
 .flex-col {
     display: flex;
     flex-direction: column;
@@ -44,20 +45,16 @@
     position: relative;
 }
 // 固定位置
-.fixed-top {
-    position: fixed; // 固定顶部
-    top: 0;
-    // left: 0;
-    // right: 0;
-    z-index: 999; // 确保在内容上方
-}
-.fixed-bottom {
-    position: fixed; // 固定底部
-    bottom: 0;
-    // left: 0;
-    // right: 0;
-    z-index: 999; // 确保在内容上方
-}
+// .fixed-top {
+//     position: fixed; // 固定顶部
+//     top: 0;
+//     z-index: 999; // 确保在内容上方
+// }
+// .fixed-bottom {
+//     position: fixed; // 固定底部
+//     bottom: 0;
+//     z-index: 999; // 确保在内容上方
+// }
 // 绝对定位
 .absolute{
     position: absolute;

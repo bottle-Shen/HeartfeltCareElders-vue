@@ -9,7 +9,7 @@ const handleSelect = (index: string) => {
       router.push('/index');
       break;
     case '2':
-      router.push('/worktable');
+      router.push('/activity');
       break;
     case '3':
       router.push('/knowledge');
@@ -35,37 +35,37 @@ const handleSelect = (index: string) => {
 
 <template>
   <el-menu
-    default-active="2"
+    default-active="1"
     :collapse="true"
     @select="handleSelect"
   >
-    <el-menu-item index="1" class="set-title">
-      <el-icon class="set-icon"><i-ep-TrendCharts /></el-icon>
-      <el-icon class="set-span">数据走势图</el-icon>
+    <el-menu-item index="1">
+      <el-icon><i-ep-TrendCharts /></el-icon>
+      <el-icon>数据走势图</el-icon>
     </el-menu-item>
-    <el-menu-item index="2" class="set-title">
-      <el-icon class="set-icon"><i-ep-Guide /></el-icon>
-      <el-icon class="set-span">活动日程</el-icon>
+    <el-menu-item index="2">
+      <el-icon><i-ep-Guide /></el-icon>
+      <el-icon>活动日程</el-icon>
     </el-menu-item>
-    <el-menu-item index="3" class="set-title">
-      <el-icon class="set-icon"><i-ep-Reading /></el-icon>
-      <el-icon class="set-span">知识小仓库</el-icon>
+    <el-menu-item index="3">
+      <el-icon><i-ep-Reading /></el-icon>
+      <el-icon>知识小仓库</el-icon>
     </el-menu-item>
-    <el-menu-item index="4" class="set-title">
-      <el-icon class="set-icon"><i-ep-ChatRound /></el-icon>
-      <el-icon class="set-span">互动贴吧</el-icon>
+    <el-menu-item index="4">
+      <el-icon><i-ep-ChatRound /></el-icon>
+      <el-icon>互动贴吧</el-icon>
     </el-menu-item>
-    <el-menu-item index="5" class="set-title">
-      <el-icon class="set-icon"><i-ep-FirstAidKit /></el-icon>
-      <el-icon class="set-span">咨询服务</el-icon>
+    <el-menu-item index="5">
+      <el-icon><i-ep-FirstAidKit /></el-icon>
+      <el-icon>咨询服务</el-icon>
     </el-menu-item>
-    <el-menu-item index="6" class="set-title">
-      <el-icon class="set-icon"><i-ep-MessageBox /></el-icon>
-      <el-icon class="set-span">健康档案</el-icon>
+    <el-menu-item index="6">
+      <el-icon><i-ep-MessageBox /></el-icon>
+      <el-icon>健康档案</el-icon>
     </el-menu-item>
-    <el-menu-item index="7" class="set-title">
-      <el-icon class="set-icon"><i-ep-User /></el-icon>
-      <el-icon class="set-span">个人主页</el-icon>
+    <el-menu-item index="7">
+      <el-icon><i-ep-User /></el-icon>
+      <el-icon>个人主页</el-icon>
     </el-menu-item>
   </el-menu>
   <!-- <div class="sidebar-bottom">
@@ -82,58 +82,56 @@ const handleSelect = (index: string) => {
 }
 .el-menu-item{
   height: rem(75.6);
-  padding: 0 clamp(var(--min-side-width),15%,var(--side-width));
+  padding: 0 2.1vw;
+  // padding: 0 clamp(var(--min-side-width),15%,var(--side-width));
   color:var(--blue);
-}
-.el-menu--collapse {
-  // width: 99%;
-  border: 0;
-}
-// .el-menu-vertical-demo:not(.el-menu--collapse) {
-//   width: 200px;
-//   min-height: 400px;
-// }
-// .sidebar-bottom{
-//   position: fixed;
-//   bottom: 0;
-// }
-.set-title{
-  .set-icon{
+  .el-icon:nth-child(1){
     width: rem(45);
     height: rem(45);
     @extend .title;
-    color: #fff;
+    color: var(--white);
     background-color: var(--orange);
-    border-radius: 10px;
+    @include rounded-border;
   }
-  .set-span{
-  margin-left: 0.5vw;
-  @extend .title;
-  font-style: normal;
-  display: flex;
-  justify-content: flex-start;
+  .el-icon:nth-child(2){
+    width: auto; /* 移除固定宽度 */
+    display: inline-block;
+    font-style: normal;
+    padding-left: rem(20);
+    @extend .body-s;
+  }
+  @include hover{
+    &:hover{
+      background-color: var(--white-blue-rgb);
+    }
+  }
+  &:active {
+      background-color: var(--white-blue-rgb);
   }
 }
-.set-title:nth-of-type(2)>.set-icon{
-    background-color: var(--dark-purple);
-  }
-  .set-title:nth-of-type(3)>.set-icon{
-    color: var(--blue);
-    background-color: var(--white-blue);
-  }
-  .set-title:last-child>.set-icon{
-    color: var(--orange);
-    background-color: var(--orange-light);
-  }
+.el-menu--collapse {
+  border: 0;//清除element默认边框
+}
+.el-menu-item:nth-child(2)>.el-icon:first-child{
+  background-color: var(--dark-purple);
+}
+.el-menu-item:nth-child(3)>.el-icon:first-child{
+  color: var(--blue);
+  background-color: var(--white-blue);
+}
+.el-menu-item:last-child>.el-icon:first-child{
+  color: var(--orange);
+  background-color: var(--orange-light);
+}
 @include mobile {
-  .set-title{
+.el-menu-item{
   flex-direction: column;
   justify-content: center;
-  .set-span{
-    margin-top: 5px;
-    font-size: 12px;
-    justify-content: center;
+  .el-icon:nth-child(2){
+    margin-top: rem(5);
+    font-size: rem(12);
+    padding-left: 0;
   }
-}
+};
 }
 </style>
