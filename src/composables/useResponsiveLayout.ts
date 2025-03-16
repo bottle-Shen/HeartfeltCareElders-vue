@@ -1,7 +1,10 @@
 import variables from '@/styles/variables.module.scss';
+import { useStore } from 'vuex';
 export function useResponsiveLayout() {
+    const store = useStore();
+    const isAsideVisible = computed(() => store.getters['asideVisible/isAsideVisible']);
     const isHeaderVisible = ref(true);
-    const isAsideVisible = ref(true);
+    // const isAsideVisible = ref(true);
 
 // 头部大小变化
 const adjustHeaderStyle = () => {
@@ -49,8 +52,9 @@ const adjustMainStyle = () => {
 };
 // 切换侧边栏显示/隐藏
 const toggleAside = () => {
-    isAsideVisible.value = !isAsideVisible.value;
-    console.log('isAsideVisible.value',isAsideVisible.value)
+    // isAsideVisible.value = !isAsideVisible.value;
+    // console.log('isAsideVisible.value',isAsideVisible.value)
+    store.commit('asideVisible/TOGGLE_ASIDE');
     adjustMainStyle(); // 调整 main 样式
 };
 

@@ -27,9 +27,9 @@ $fonts: (
 // 3.颜色变量
 $colors: (
     "black": #000000,
+    "white": #FFFFFF,
     "blue": #1C7FC7,
     "white-blue": #CAEEFF,
-    "white": #FFFFFF,
     "cream": #fff8f2,
     "dark-blue": #3f627b,
     "darker-blue": #001A33,
@@ -38,13 +38,14 @@ $colors: (
     "bg-two":#F0F2FF,
     "purple": #F0F2FF,
     "dark-purple": #8C8FE3,
-    "red": #d84b37,
+    "red": #ff0000,
     "green": #0db166,
     "yellow": #f6c138,
     "orange":#F68D14,
     "pink":#e27391,
     "dark-yellow": #EFF500,
     "coral": #FFA78F,
+    "gray":#9E9FA3,
     "transparent": transparent,
 );
 $light: var(--cream);

@@ -94,7 +94,7 @@ request.interceptors.response.use(
               // 清除 Vuex 中的令牌
               store.commit('user/setToken', { access_token: '', refresh_token: '' });
               // 提示用户重新登录
-              ElMessage.error('您的会话已过期，请重新登录');
+              // ElMessage.error('您的会话已过期，请重新登录');
               // 如果刷新令牌失败，可以跳转到登录页面或提示用户重新登录
               const router = useRouter();
               store.dispatch('user/logout',{router});

@@ -40,12 +40,10 @@ const {
 </script>
 
 <template>
-    <el-container>
-      <el-header>
-        <HeaderCom/>
-      </el-header>
-    </el-container>
-    <el-container>
+  <el-container>
+    <el-header>
+      <HeaderCom/>
+    </el-header>
       <Transition name="slide-x">
         <el-aside v-if="isAsideVisible">
         <SidebarCom/>

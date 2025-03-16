@@ -88,7 +88,7 @@ const handleSelect = (index: string) => {
   .el-icon:nth-child(1){
     width: rem(45);
     height: rem(45);
-    @extend .title;
+    @extend .body;
     color: var(--white);
     background-color: var(--orange);
     @include rounded-border;
@@ -98,7 +98,7 @@ const handleSelect = (index: string) => {
     display: inline-block;
     font-style: normal;
     padding-left: rem(20);
-    @extend .body-s;
+    @extend .body;
   }
   @include hover{
     &:hover{

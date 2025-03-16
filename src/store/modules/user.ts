@@ -40,6 +40,10 @@ export const userModule: Module<UserState, RootState> = {
       state.user.avatar = avatar;
       ls.set('user', state.user);
     },
+    setBackground(state, background: string) {
+      state.user.background_image = background;
+      ls.set('user', state.user);
+    },
     clearToken(state) {
       state.token.access_token = '';
       state.token.refresh_token = '';
@@ -55,7 +59,7 @@ export const userModule: Module<UserState, RootState> = {
     userInfo({ commit }, response: IUserInfo) {
       commit('setUser', response);
     },
-    logout({ commit },{router}) {
+    logout({ commit }) {
       commit('clearToken');// 清除 Vuex 中的令牌
       commit('setUser', {} as IUserInfo);// 清除 Vuex 中的用户信息
       // 清空会话存储中的信息
@@ -64,7 +68,7 @@ export const userModule: Module<UserState, RootState> = {
       ls.remove('refresh_token');
       ls.remove('user'); // 清空加密存储中的用户信息
       // 跳转到登录页面
-      router.push('/login');
+      // router.push('/login');
     },
     // 定期清理存储的数据
     clearOldData({ state }) {
@@ -96,6 +100,7 @@ export const userModule: Module<UserState, RootState> = {
     getUser: (state) => state.user,
     getUserId: (state) => state.user.id,
     isAuthenticated: (state) => !!state.token.access_token, // 如果 access_token 存在，则认为用户已登录
+    getUserType: (state) => state.user.user_type,// 获取用户类型
     // getUserName: (state) => state.user.username,
     // getUserAvatar: (state) => state.user.avatar,
     // getUserRole: (state) => state.user.role,

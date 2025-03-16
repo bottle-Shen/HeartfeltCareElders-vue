@@ -71,3 +71,50 @@ export const updateUserInfo = (params: UserInfoFormType): Promise<IUserInfo> => 
     throw error; // 抛出错误，以便在调用方处理
   });
 };
+
+// 用户头像上传
+export const uploadAvatar = (file: File) => {
+  const formData = new FormData();
+  formData.append('avatar', file);
+  return request({
+    url: `users/upload_avatar/`,
+    method: 'POST',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }).then(response => {
+      if (response.status === 200) {
+        // ElMessage.success('头像上传成功');
+        return response.data.data.avatar;
+      } else {
+        // ElMessage.error('上传失败');
+        return Promise.reject(new Error('上传失败'));
+      }
+  }).catch(error => {
+    throw error; // 抛出错误，以便在调用方处理
+  });
+}
+// 用户上传背景图
+export const uploadBackground = (file: File) => {
+  const formData = new FormData();
+  formData.append('background_image', file);
+  return request({
+    url: `users/upload_background/`,
+    method: 'POST',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }).then(response => {
+      if (response.status === 200) {
+        // ElMessage.success('头像上传成功');
+        return response.data.data.background_image;
+      } else {
+        // ElMessage.error('上传失败');
+        return Promise.reject(new Error('上传失败'));
+      }
+  }).catch(error => {
+    throw error; // 抛出错误，以便在调用方处理
+  });
+}

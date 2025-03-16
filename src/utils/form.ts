@@ -43,7 +43,8 @@ export const userInfo = reactive<UserInfoFormType>({
     account: '',
     background_image: '',//背景图片
     signature: '',//个性签名
-    last_login:'',
+    last_login: '',
+    address:'',// 所在地
   },
   //老人
   elderly_id: 0,
@@ -78,7 +79,8 @@ export const userInfoForm = ref<IUserInfo>({
   signature: '',
     age: 0,
   account: '',
-  last_login:'',
+  last_login: '',
+  address:'',
   elderly_id: 0, // 对于老人类型
   emergency_contact: '',
   emergency_phone: '',

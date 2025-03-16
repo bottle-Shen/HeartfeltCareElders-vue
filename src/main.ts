@@ -33,9 +33,9 @@ app.config.globalProperties.$request = request;
 app.use(router)
 app.use(store)
 // 注册全局防抖指令
-app.directive('debounceClick', useDebounceDirective(500));
+app.directive('debounce', useDebounceDirective(500));
 // 注册全局节流指令
-app.directive('throttleClick', useThrottleDirective(500));
+app.directive('throttle', useThrottleDirective(500));
 
 
 app.mount('#app')

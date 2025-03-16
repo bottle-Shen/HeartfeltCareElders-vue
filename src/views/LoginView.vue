@@ -136,7 +136,7 @@ onBeforeRouteLeave(() => {
       <el-form-item prop="captcha" v-show="showVerificationCode">
          <div class="flex-center flex-two">
           <el-input class="flex-three" placeholder="请输入验证码" v-model="form.captcha" />
-         <el-button class="flex-one" type="primary" v-debounceClick:click="sendSms" :disabled="!form.phone||isCounting" :loading="isCounting">
+         <el-button class="flex-one" type="primary" v-debounce:click="sendSms" :disabled="!form.phone||isCounting" :loading="isCounting">
           {{ isCounting ? `${countdown}秒后重新获取` : '获取验证码' }}
         </el-button>
          </div>
@@ -174,7 +174,7 @@ onBeforeRouteLeave(() => {
       </el-form-item>
       <!-- 提交按钮 -->
       <el-form-item>
-        <el-button v-show="LoginButton" class="primary-button" type="primary" v-debounceClick:click="submitForm" :disabled="!form.phone && !form.account || !form.password1 && !form.captcha ">登录</el-button>
+        <el-button v-show="LoginButton" class="primary-button" type="primary" v-debounce:click="submitForm" :disabled="!form.phone && !form.account || !form.password1 && !form.captcha ">登录</el-button>
       </el-form-item>
       <!-- 上一步按钮 -->
       <!-- <el-form-item v-show="currentStep > 1 && currentStep < 4">

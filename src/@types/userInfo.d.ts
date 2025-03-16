@@ -15,6 +15,7 @@ export interface user {
   background_image: string;// 背景图片
   signature: string;// 个性签名
   last_login: string;
+  address:string;// 地址
 }
 
 // 定义用户请求参数类型

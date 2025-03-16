@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { getDocument } from '@/api/document';
 import type { HealthData } from '@/@types/healthdata'
+import { useStore } from 'vuex'
+const store = useStore()
+const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);// 获取用户是否登录
 
 interface documentData {
     created_at: string,
@@ -76,6 +79,7 @@ onMounted(() => {
 </script>
 <template>
     <div class="knowledge-page">
+    <div v-if="isAuthenticated">
         <ul>
             <li v-for="(url, index) in paginatedData" :key="index">
                 <a :href="url" target="_blank" class="download-link">
@@ -92,8 +96,17 @@ onMounted(() => {
             <button @click="nextPage" :disabled="currentPage >= Math.ceil(documentURL.length / pageSize)">下一页</button>
         </div>
     </div>
+    <!-- 未登录 -->
+    <div v-else class="not-logged-in">
+      <div class="noFound-item">
+        未登录，<router-link class="link" to="/login">登录</router-link>后查看健康档案
+      </div>
+    </div>
+    </div>
 </template>
 
 <style scoped lang="scss">
-
+.knowledge-page{
+    padding-top:2.1vh;
+}
 </style>

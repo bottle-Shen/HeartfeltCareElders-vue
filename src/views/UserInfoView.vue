@@ -1,22 +1,59 @@
 <script setup lang="ts">
 import { userInfo,userInfoForm } from '@/utils/form'
 import type { user,UserInfoFormType,IUserInfo, elderlyInfoResponse, familyInfoResponse, caregiverInfoResponse } from '@/@types/userInfo'
-import { getUserInfo, updateUserInfo } from '@/api/userInfo';
+import { getUserInfo, updateUserInfo,uploadAvatar,uploadBackground } from '@/api/userInfo';
 import { hidePhoneNumber } from '@/utils/modules/hidePhoneNumber';
-import { ElMessage } from 'element-plus'
+// import { formRules } from '@/utils/formRules'
+import { ElMessage, ElDialog } from 'element-plus'
+import type { TabsPaneContext } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import type { UploadProps } from 'element-plus'
+import type { UploadProps,UploadFile } from 'element-plus'
 import { useStore } from 'vuex';
+import { countdown, isCounting, sendSms } from '@/utils/modules/captchaUtils'
+import { UserLikePost, getUserSocial } from '@/api/social'
+const activeName = ref('first')
+
+const handleClick = (tab: TabsPaneContext, event: Event) => {
+  console.log(tab, event)
+}
+const getUserSocialData = async () => {
+  const response = await getUserSocial()
+  // console.log('用户帖子数据', response)
+  if (response) {
+    store.commit('post/setUserPosts', response); // 在组件中存储到 Vuex
+  }
+  // socialData.value = response
+  // console.log('用户帖子数据', socialData.value)
+}
+const getUserLikeData = async () => {
+  const response = await UserLikePost()
+  if (response) {
+    store.commit('post/setLikedPosts', response); // 在组件中存储到 Vuex
+  }
+}
+// 格式化日期
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString(); // 根据本地语言格式化日期
+};
 
 const store = useStore()
 const isShow = ref(false)// 是否显示用户信息页面
 const isLoading = ref(true)// 是否加载中
 const isEditMode = ref(false)// 响应式控制是否处于编辑模式
 const ruleFormRef = ref()// 表单引用
-const imageUrl = ref('')// 头像上传的预览地址
+const backgroundUrl = ref<string | null>(null)// 背景图上传的预览地址
+const backgroundFile = ref<File | null>(null); // 用于保存背景图文件对象
+const avatarFile = ref<File | null>(null); // 用于保存文件对象
+const avatarUrl = ref<string | null>(null); // 用于保存头像预览 URL
+const isPreviewDialogVisible = ref(false); // 控制弹窗显示
+const currentUploadType = ref<string | null>(null); // 当前上传类型：'avatar' 或 'background'
 const showRealNameAuthCom = ref(false)
 const signatureDefaultText = "用一段简单的个性介绍，展示您的独特风采~"// 定义个性签名默认文本
-
+const showVerificationCode = ref(false); // 是否显示验证码相关字段
+// 获取用户帖子和点赞帖子的数据
+const userPosts = computed(() => store.state.post.userPosts);
+const likedPosts = computed(() => store.state.post.likedPosts);
 // 定义 SEX_CHOICES 为对象数组
 const SEX_CHOICES = [
   { value: '男' },
@@ -35,14 +72,17 @@ const userType = computed(() => ({
 const checkLoginStatus = () => {
   if (!store.state.user.token.access_token) {
     isShow.value = false;
-    ElMessage.error('请先登录！');
+    // ElMessage.error('请先登录！');
     return false;
   }
   return true;
 };
-// 在组件加载时检查登录状态
+
 onMounted(() => {
-  checkLoginStatus();
+  checkLoginStatus();// 在组件加载时检查登录状态
+  fetchUserInfo();// 初始化用户信息
+  getUserSocialData();
+  getUserLikeData();
 });
 
 const changedParams = ref<UserInfoFormType>({
@@ -169,30 +209,20 @@ const saveUserInfo = async () => {
   }
 };
 
-onMounted(fetchUserInfo);
 
 
 
 const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${store.state.user.token.access_token}`
 }));
-
-    const handleAvatarSuccess: UploadProps['onSuccess'] = async (
-      response,
+// 头像上传成功（仅本地预览）
+const handleAvatarSuccess: UploadProps['onSuccess'] = async (
       file
-    ) => {
-      // imageUrl.value = URL.createObjectURL(uploadFile.raw!)
-
-      if (response.code === '200') {
-        ElMessage.success('头像上传成功');
-        imageUrl.value = URL.createObjectURL(file.raw!);
-        store.commit('user/setAvatar', imageUrl.value);
-      } else {
-        ElMessage.error(response.message || '上传失败');
-      }
+) => {
+      avatarUrl.value = URL.createObjectURL(file.raw!); // 更新头像预览
 }
-
-const beforeAvatarUpload: UploadProps['beforeUpload'] = (file) => {
+// 头像上传前验证
+const beforeAvatarUpload: UploadProps['beforeUpload'] = (file: File) => {
   const isJPG = file.type === "image/jpeg";
   const isPNG = file.type === "image/png";
   const isLt2M = file.size / 1024 / 1024 < 2;
@@ -205,10 +235,131 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (file) => {
       }
       return true
 }
-const handleAvatarError: UploadProps['onError'] = () => {  
-  ElMessage.error("头像上传失败，请稍后再试");
+// 头像选择后生成本地预览
+const handleAvatarChange = (uploadFile: UploadFile) => {
+  const rawFile = uploadFile.raw; // 获取原始文件对象
+  if (!rawFile) {
+    ElMessage.error("无法获取上传的文件，请确保选择了有效的文件。");
+    return;
+  }
+
+  const isValid = beforeAvatarUpload(rawFile);
+  if (!isValid) {
+    ElMessage.error("文件不符合要求，请选择 JPG 或 PNG 格式且大小不超过 2MB 的文件。");
+    return;
+  }
+
+  avatarUrl.value = URL.createObjectURL(rawFile); // 更新头像预览
+  avatarFile.value = rawFile;// 保存文件
+  currentUploadType.value = 'avatar'; // 设置当前上传类型为头像
+  isPreviewDialogVisible.value = true; // 显示弹窗
+};
+// 保存头像
+const saveAvatar = async () => {
+  if (!avatarFile.value) {
+        ElMessage.error("请先上传头像");
+        return;
+    }
+  // 确保 avatarFile.value 是 File 类型
+  if (!(avatarFile.value instanceof File)) {
+      ElMessage.error("无法识别的文件类型");
+      return;
+  }
+  // 调用 uploadAvatar 函数上传头像
+  const uploadedUrl = await uploadAvatar(avatarFile.value);
+  userInfoForm.value.avatar = uploadedUrl; // 更新本地头像地址
+  // 更新 Vuex 中的头像地址
+  store.commit("user/setAvatar", uploadedUrl);
+  isPreviewDialogVisible.value = false;// 关闭弹窗
+  // 退出编辑模式
+  // isEditMode.value = false;
+  // ElMessage.success("头像更新成功");
+};
+
+// 保存当前上传的内容
+const saveCurrentUpload = async () => {
+  if (currentUploadType.value === 'avatar') {
+    await saveAvatar();
+  } else if (currentUploadType.value === 'background') {
+    await saveBackground();
+  }
+};
+
+// 取消编辑
+const cancelEdit = () => {
+  avatarUrl.value = null; // 清空头像预览
+  avatarFile.value = null;// 清空文件
+  backgroundUrl.value = null; // 清空背景图预览
+  backgroundFile.value = null;// 清空文件
+  isPreviewDialogVisible.value = false;// 关闭弹窗
+  isEditMode.value = false; // 退出编辑模式
+};
+// 弹窗关闭时的回调
+const handleDialogClose = () => {
+  cancelEdit();// 取消编辑
+};
+// 背景图上传成功（仅本地预览）
+const handleBackgroundSuccess: UploadProps['onSuccess'] = async (
+      file
+    ) => {
+      backgroundUrl.value = URL.createObjectURL(file.raw!); // 更新背景图预览
 }
 
+// 背景图上传前验证
+const beforeBackgroundUpload: UploadProps['beforeUpload'] = (file: File) => {
+  const isJPG = file.type === "image/jpeg";
+  const isPNG = file.type === "image/png";
+  const isLt2M = file.size / 1024 / 1024 < 2;
+      if (!isJPG && !isPNG) {
+        ElMessage.error("上传背景图片只能是 JPG 或 PNG 格式!");
+        return false
+      } else if (!isLt2M) {
+        ElMessage.error("上传背景图片大小不能超过 2MB!");
+        return false
+      }
+      return true
+}
+
+// 背景图选择后生成本地预览
+const handleBackgroundChange = (uploadFile: UploadFile) => {
+  const rawFile = uploadFile.raw; // 获取原始文件对象
+  if (!rawFile) {
+    ElMessage.error("无法获取上传的文件，请确保选择了有效的文件。");
+    return;
+  }
+
+  const isValid = beforeBackgroundUpload(rawFile);
+  if (!isValid) {
+    ElMessage.error("文件不符合要求，请选择 JPG 或 PNG 格式且大小不超过 2MB 的文件。");
+    return;
+  }
+
+  backgroundUrl.value = URL.createObjectURL(rawFile); // 更新头像预览
+  backgroundFile.value = rawFile;// 保存文件
+  currentUploadType.value = 'background'; // 设置当前上传类型为背景图
+  isPreviewDialogVisible.value = true; // 显示弹窗
+};
+// 保存背景图
+const saveBackground = async () => {
+  if (!backgroundFile.value) {
+        ElMessage.error("请先上传背景图");
+        return;
+    }
+  // 确保 avatarFile.value 是 File 类型
+  if (!(backgroundFile.value instanceof File)) {
+      ElMessage.error("无法识别的文件类型");
+      return;
+  }
+  // 调用 uploadBackground 函数上传背景图
+  const uploadedUrl = await uploadBackground(backgroundFile.value);
+  userInfoForm.value.background_image = uploadedUrl; // 更新本地背景图地址
+  // 更新 Vuex 中的头像地址
+  store.commit("user/setBackground", uploadedUrl);
+  isPreviewDialogVisible.value = false;// 关闭弹窗
+  // 退出编辑模式
+  // isEditMode.value = false;
+  // ElMessage.success("头像更新成功");
+};
 const disabledDate = (time: Date) => {
   return time.getTime() > Date.now()
 }
@@ -218,301 +369,542 @@ const submitRealNameAndIdCard = () => {
 };
 
 // 接收子组件传递的实名认证信息
-const handleRealNameAuthSuccess = (real_name: string, id_card: string) => {
-  changedParams.value.user.real_name = real_name;
-  changedParams.value.user.id_card = id_card;
-  // 调用更新接口
-  saveUserInfo();
-  showRealNameAuthCom.value = false
+// const handleRealNameAuthSuccess = (real_name: string, id_card: string) => {
+//   changedParams.value.user.real_name = real_name;
+//   changedParams.value.user.id_card = id_card;
+//   // 调用更新接口
+//   saveUserInfo();
+//   showRealNameAuthCom.value = false
+// };
+const toggleEditMode = () => {
+  if (!isEditMode.value) {
+    // 进入编辑模式
+    showVerificationCode.value = false; // 隐藏验证码相关字段
+  } else {
+    // 退出编辑模式
+    showVerificationCode.value = false; // 隐藏验证码相关字段
+  }
+  isEditMode.value = !isEditMode.value;
 };
+onBeforeRouteLeave(() => {
+  // 清空倒计时
+  isCounting.value = false;
+  countdown.value = 60;
+});
 
 </script>
 <template>
   <!-- 加载中 -->
-  <div v-if="isLoading">
-    <LoadingCom></LoadingCom>
+  <div v-if="isLoading" class="loading-container">
+    <LoadingCom />
   </div>
+
   <!-- 用户信息已加载 -->
-    <div class="userInfo-page" v-else-if="isShow">
-      <div class="userInfo-bac">
-        <img src="@/assets/images/19_piano1_4k.jpg" alt="">
+  <div class="userInfo-page" v-else-if="isShow">
+   <div class="userInfo-left">
+     <!-- 弹窗组件 -->
+    <el-dialog
+      v-model="isPreviewDialogVisible"
+      :title="currentUploadType === 'avatar' ? '确认头像' : '确认背景图'"
+      :before-close="handleDialogClose"
+      :modal="true"
+      :append-to="'.el-container'"
+    >
+      <div v-if="currentUploadType === 'avatar'" class="preview-avatar-container">
+        <img v-if="avatarUrl" :src="avatarUrl" class="preview-avatar" />
+        <div v-else class="no-avatar">未选择头像</div>
       </div>
-            <!-- 头像 -->
-            <el-form-item label="头像" prop="avatar">
-              <!-- 编辑模式下显示上传按钮，否则显示头像 -->
-              <template v-if="isEditMode">
-                <el-upload
-                  class="avatar-uploader"
-                  action="http://localhost:8000/api/v1/users/upload_avatar/"
-                  :show-file-list="false"
-                  :on-success="handleAvatarSuccess"
-                  :before-upload="beforeAvatarUpload"
-                  :on-error="handleAvatarError"
-                  :headers="uploadHeaders"
-                  name="avatar"
-                >
-                <img v-if="imageUrl" :src="imageUrl" class="avatar" />
-                <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-                </el-upload>
-              </template>
-              <template v-else>
-                <img :src="userInfoForm.avatar" class="avatar" width="60px">
-              </template>
-            </el-form-item>
-            <div class="title">个人资料</div>
-            
-            
-            <el-form 
-            ref="ruleFormRef"
-            status-icon
-            class="demo-ruleForm"
+      <div v-else class="preview-background-container">
+        <img v-if="backgroundUrl" :src="backgroundUrl" class="preview-background" />
+        <div v-else class="no-background">未选择背景图</div>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="cancelEdit">取消</el-button>
+          <el-button type="primary" @click="saveCurrentUpload">保存</el-button>
+        </span>
+      </template>
+    </el-dialog>
+    <!-- <div class="title">个人资料</div> -->
+
+    <el-form
+      ref="ruleFormRef"
+      :model="changedParams"
+      status-icon
+      class="demo-ruleForm"
+    >
+    <!-- 背景图 -->
+    <div class="background-container">
+      <template v-if="!isEditMode">
+        <!-- 非编辑模式：显示当前背景图 -->
+        <img :src="userInfoForm.background_image" class="background"/>
+      </template>
+      <template v-else>
+        <!-- 编辑模式：显示上传组件 -->
+        <el-upload
+          class="background background-uploader"
+          action=""
+          :show-file-list="false"
+          :on-change="handleBackgroundChange"
+          :on-success="handleBackgroundSuccess"
+          :before-upload="beforeBackgroundUpload"
+          :headers="uploadHeaders"
+          name="background"
+        >
+          <!-- 如果有新的背景图预览，则显示新的背景图；否则显示当前背景图 -->
+          <img v-if="backgroundUrl" :src="backgroundUrl" class="background" />
+          <img v-else :src="userInfoForm.background_image" class="background" />
+          <!-- 在头像上显示“+”号 -->
+          <el-icon class="uploader-icon"><Plus /></el-icon>
+        </el-upload>
+      </template>
+    </div>
+
+    <!-- 头像 -->
+    <div class="avatar-container">
+      <template v-if="!isEditMode">
+        <!-- 非编辑模式：显示当前头像 -->
+        <img :src="userInfoForm.avatar" class="avatar"/>
+      </template>
+      <template v-else>
+        <!-- 编辑模式：显示上传组件 -->
+        <el-upload
+          class="avatar avatar-uploader"
+          action=""
+          :show-file-list="false"
+          :on-change="handleAvatarChange"
+          :on-success="handleAvatarSuccess"
+          :before-upload="beforeAvatarUpload"
+          :headers="uploadHeaders"
+          name="avatar"
+        >
+          <!-- 如果有新的头像预览，则显示新的头像；否则显示当前头像 -->
+          <img v-if="avatarUrl" :src="avatarUrl" class="avatar" />
+          <img v-else :src="userInfoForm.avatar" class="avatar" />
+          <!-- 在头像上显示“+”号 -->
+          <el-icon class="uploader-icon"><Plus /></el-icon>
+        </el-upload>
+      </template>
+    </div>
+      <!-- 用户名 -->
+      <el-form-item prop="username">
+        <template v-if="isEditMode">
+          <el-input placeholder="请输入用户名" v-model="changedParams.user.username" />
+        </template>
+        <template v-else>
+          <div>{{ userInfoForm.username }}</div>
+        </template>
+      </el-form-item>
+
+      <!-- 性别 -->
+      <el-form-item prop="sex">
+        <template v-if="isEditMode">
+          <el-radio-group v-model="changedParams.user.sex">
+            <el-radio
+              v-for="choice in SEX_CHOICES"
+              :key="choice.value"
+              :value="choice.value"
+            >
+              {{ choice.value }}
+            </el-radio>
+          </el-radio-group>
+        </template>
+        <template v-else>
+          <div>{{ userInfoForm.sex }}</div>
+        </template>
+      </el-form-item>
+
+      <!-- 绑定手机号 -->
+      <!-- <el-form-item prop="phone">
+        <template v-if="isEditMode">
+          <el-input placeholder="请输入手机号" v-model="changedParams.user.phone" />
+          <el-button
+            v-if="changedParams.user.phone"
+            type="primary"
+            @click="sendSms"
+            :disabled="isCounting"
+            :loading="isCounting"
           >
-            <!-- 用户名 -->
-            <el-form-item label="用户名" prop="username">
-              <!-- 编辑模式下显示输入框，否则显示用户名 -->
-              <template v-if="isEditMode">
-                <el-input v-model="changedParams.user.username"></el-input>
-              </template>
-              <template v-else>
-                <div>{{ userInfoForm.username }}</div>
-              </template>
-            </el-form-item>
-            <!-- 性别 -->
-            <el-form-item label="性别" prop="sex">
-              <template v-if="isEditMode">
-                <el-radio-group v-model="changedParams.user.sex">
-                  <el-radio
-        v-for="choice in SEX_CHOICES"
-        :key="choice.value"
-        :value="choice.value"
-      >
-        {{ choice.value }}
-      </el-radio>
-                </el-radio-group>
-              </template>
-              <template v-else>
-                <div>{{ userInfoForm.sex }}</div>
-              </template>
-            </el-form-item>
-            <!-- 绑定手机号 -->
-            <el-form-item label="绑定手机号" prop="phone">
-              <template v-if="isEditMode">
-                <el-input v-model="changedParams.user.phone"></el-input>
-              </template>
-              <template v-else>
-                <div>{{ hidePhoneNumber(userInfoForm.phone) }}</div>
-              </template>
-            </el-form-item>
-            <!-- 常用手机号 -->
-            <el-form-item label="常用手机号" prop="common_phone">
-              <template v-if="isEditMode">
-                <el-input v-model="changedParams.user.common_phone"></el-input>
-              </template>
-              <template v-else>
-                <div>{{ hidePhoneNumber(userInfoForm.common_phone) }}</div>
-              </template>
-            </el-form-item>
-            <!-- 真实姓名 -->
-             <!-- <el-form-item label="真实姓名" prop="real_name">
-              <template v-if="isEditMode">
-                <el-input v-model="changedParams.user.real_name"></el-input>
-              </template>
-              <template v-else>
-                <div>{{ userInfoForm.real_name }}</div>
-              </template>
-            </el-form-item> -->
-            <!-- 身份证号 -->
-            <!-- <el-form-item label="身份证号" prop="id_card">
-              <template v-if="isEditMode">
-                <el-input v-model="changedParams.user.id_card"></el-input>
-              </template>
-              <template v-else>
-                <div>{{ userInfoForm.id_card }}</div>
-              </template>
-            </el-form-item> -->
-             <!-- 出生日期 -->
-             <el-form-item label="出生日期" prop="birthday">
-              <template v-if="isEditMode">
-                <!-- <el-input v-model="changedParams.user.birthday"></el-input> -->
-                <el-col :span="11">
-                  <el-date-picker
-                  v-model="changedParams.user.birthday"
-                  type="date"
-                  placeholder="请选择您的出生日期"
-                  :disabled-date="disabledDate"
-                  format="YYYY-MM-DD"
-                  value-format="YYYY-MM-DD"
-                  style="width: 100%"
-                  />
-                </el-col>
-              </template>
-              <template v-else>
-                <div>{{ userInfoForm.birthday }}</div>
-              </template>
-             </el-form-item>
-             <!-- 个性签名 -->
-              <el-form-item label="个性签名" prop="signature">
-              <template v-if="isEditMode">
-                <el-input v-model="changedParams.user.signature" :placeholder="signatureDefaultText"></el-input>
-              </template>
-              <template v-else>
-                <div>{{ userInfoForm.signature || signatureDefaultText }}</div>
-              </template>
-             </el-form-item>
-             <!-- 所在地 -->
-              <AddressSelectorCom></AddressSelectorCom>
-             <!-- 根据用户类型显示不同的信息 -->
-             <div class="elderly-item" v-if="isElderlyUserInfo(userInfoForm)">
-            <div>
-              <!-- 紧急联系人 -->
-            <el-form-item label="紧急联系人" prop="emergency_contact">
-              <template v-if="isEditMode">
-                <el-input v-model="changedParams.emergency_contact"></el-input>
-              </template>
-              <template v-else>
-                <div>{{ userInfoForm.emergency_contact }}</div>
-              </template>
-           </el-form-item>
-           <!-- 紧急联系人电话 -->
-           <el-form-item label="紧急联系人电话" prop="emergency_phone">
-              <template v-if="isEditMode">
-                <el-input v-model="changedParams.emergency_phone"></el-input>
-              </template>
-              <template v-else>
-                <div>{{ userInfoForm.emergency_phone }}</div>
-              </template>
-            </el-form-item>
-            <!-- 健康状况 -->
-             <el-form-item label="健康状况" prop="health_status">
-              <template v-if="isEditMode">
-                <el-input v-model="changedParams.health_status"></el-input>
-              </template>
-              <template v-else>
-                <div>{{ userInfoForm.health_status }}</div>
-              </template>
-             </el-form-item>
-            </div>
-             </div>
-             <div class="family-item" v-else-if="isFamilyUserInfo(userInfoForm)">
-              <!-- 与老人关系 -->
-               <el-form-item label="与老人关系" prop="relation">
-                <template v-if="isEditMode">
-                <!-- <el-input v-model="changedParams.relation"></el-input> -->
-                 <el-select v-model="changedParams.relation" placeholder="please select your zone">
-                  <el-option label="母女/母子" value="母女/母子" />
-                  <el-option label="父女/父子" value="父女/父子" />
-                  <el-option label="爷孙" value="爷孙" />
-                  <el-option label="其它" value="其它" />
-                </el-select>
-              </template>
-              <template v-else>
-                <div>{{ userInfoForm.relation }}</div>
-              </template>
-               </el-form-item>
-              <!-- 现在家庭住址 -->
-              <el-form-item label="现在家庭住址" prop="common_address">
-              <template v-if="isEditMode">
-                <el-input v-model="changedParams.common_address"></el-input>
-              </template>
-              <template v-else>
-                <div>{{ userInfoForm.common_address }}</div>
-              </template>
-             </el-form-item>
-             </div>
-             <div class="caregiver-item" v-else-if="isCaregiverUserInfo(userInfoForm)">
-              <!-- 部门 -->
-               <el-form-item label="部门" prop="department">
-              <template v-if="isEditMode">
-                <el-input v-model="changedParams.department"></el-input>
-              </template>
-              <template v-else>
-                <div>{{ userInfoForm.department }}</div>
-              </template>
-             </el-form-item>
-              <!-- 职位 -->
-               <el-form-item label="职位" prop="position">
-              <template v-if="isEditMode">
-                <el-input v-model="changedParams.position"></el-input>
-              </template>
-              <template v-else>
-                <div>{{ userInfoForm.position }}</div>
-              </template>
-             </el-form-item>
-             </div>
-             <div class="noFound-item" v-else>
-              <div>
-                <div>未找到用户信息</div>
-              </div>
-             </div>
-            <!-- 修改和保存按钮 -->
-            <el-form-item>
-              <!-- 修改按钮，点击后进入编辑模式 -->
-              <el-button type="primary" @click="isEditMode = true">修改</el-button>
-              <!-- 保存按钮，点击后保存信息并退出编辑模式 -->
-              <el-button type="primary" @click="saveUserInfo">保存</el-button>
-            </el-form-item>
-          </el-form>
-          <div v-if="!changedParams.user.real_name || !changedParams.user.id_card" type="primary">
-            <!-- 如果用户未实名认证，显示前往实名认证按钮 -->
-             <el-button type="primary" @click="submitRealNameAndIdCard">前往实名认证</el-button>
-          </div>
-            <!-- 如果用户已实名认证，显示“已实名”状态和“点击更换”按钮 -->
-          <div v-else>
-            <span>已实名</span>
-            <el-button type="primary" @click="submitRealNameAndIdCard">点击更换</el-button>
-          </div>
-          <!-- 实名认证组件 -->
-            <RealNameAuthCom
-              v-show="showRealNameAuthCom"
-              @real-name-auth-success="handleRealNameAuthSuccess"
-            ></RealNameAuthCom>
+            {{ isCounting ? `${countdown}秒后重新获取` : "获取验证码" }}
+          </el-button>
+        </template>
+        <template v-else>
+          <div>{{ hidePhoneNumber(userInfoForm.phone) }}</div>
+        </template>
+      </el-form-item> -->
+
+      <!-- 常用手机号 -->
+      <!-- <el-form-item prop="common_phone">
+        <template v-if="isEditMode">
+          <el-input placeholder="请输入常用手机号" v-model="changedParams.user.common_phone" />
+          <el-button
+            v-if="changedParams.user.common_phone"
+            type="primary"
+            @click="sendSms"
+            :disabled="isCounting"
+            :loading="isCounting"
+          >
+            {{ isCounting ? `${countdown}秒后重新获取` : "获取验证码" }}
+          </el-button>
+        </template>
+        <template v-else>
+          <div>{{ hidePhoneNumber(userInfoForm.common_phone) }}</div>
+        </template>
+      </el-form-item> -->
+
+      <!-- 出生日期 -->
+      <el-form-item prop="birthday">
+        <template v-if="isEditMode">
+          <el-date-picker
+            v-model="changedParams.user.birthday"
+            type="date"
+            placeholder="请选择您的出生日期"
+            :disabled-date="disabledDate"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            style="width: 100%"
+          />
+        </template>
+        <template v-else>
+          <div>{{ userInfoForm.birthday }}</div>
+        </template>
+      </el-form-item>
+
+      <!-- 个性签名 -->
+      <el-form-item prop="signature">
+        <template v-if="isEditMode">
+          <el-input
+            v-model="changedParams.user.signature"
+            :placeholder="signatureDefaultText"
+          />
+        </template>
+        <template v-else>
+          <div>{{ userInfoForm.signature || signatureDefaultText }}</div>
+        </template>
+      </el-form-item>
+
+      <!-- 所在地 -->
+      <el-form-item prop="address">
+        <template v-if="isEditMode">
+          <AddressSelectorCom v-model="changedParams.user.address" />
+        </template>
+        <template v-else>
+          <div>{{ userInfoForm.address }}</div>
+        </template>
+      </el-form-item>
+
+      <!-- 根据用户类型显示不同的信息 -->
+      <div class="elderly-item" v-if="isElderlyUserInfo(userInfoForm)">
+        <!-- 紧急联系人 -->
+        <el-form-item prop="emergency_contact">
+          <template v-if="isEditMode">
+            <el-input placeholder="请填写紧急联系人" v-model="changedParams.emergency_contact" />
+          </template>
+          <template v-else>
+            <div>{{ userInfoForm.emergency_contact }}</div>
+          </template>
+        </el-form-item>
+
+        <!-- 紧急联系人电话 -->
+        <el-form-item prop="emergency_phone">
+          <template v-if="isEditMode">
+            <el-input placeholder="请填写紧急联系人电话" v-model="changedParams.emergency_phone" />
+          </template>
+          <template v-else>
+            <div>{{ userInfoForm.emergency_phone }}</div>
+          </template>
+        </el-form-item>
+
+        <!-- 健康状况 -->
+        <!-- <el-form-item label="健康状况" prop="health_status">
+          <template v-if="isEditMode">
+            <el-input v-model="changedParams.health_status" />
+          </template>
+          <template v-else>
+            <div>{{ userInfoForm.health_status }}</div>
+          </template>
+        </el-form-item> -->
+      </div>
+
+      <div class="family-item" v-else-if="isFamilyUserInfo(userInfoForm)">
+        <!-- 与老人关系 -->
+        <el-form-item label="与老人关系" prop="relation">
+          <template v-if="isEditMode">
+            <el-select v-model="changedParams.relation">
+              <el-option label="母女/母子" value="母女/母子" />
+              <el-option label="父女/父子" value="父女/父子" />
+              <el-option label="爷孙" value="爷孙" />
+              <el-option label="其它" value="其它" />
+            </el-select>
+          </template>
+          <template v-else>
+            <div>{{ userInfoForm.relation }}</div>
+          </template>
+        </el-form-item>
+
+        <!-- 现在家庭住址 -->
+        <el-form-item label="现在家庭住址" prop="common_address">
+          <template v-if="isEditMode">
+            <el-input v-model="changedParams.common_address" />
+          </template>
+          <template v-else>
+            <div>{{ userInfoForm.common_address }}</div>
+          </template>
+        </el-form-item>
+      </div>
+
+      <div class="caregiver-item" v-else-if="isCaregiverUserInfo(userInfoForm)">
+        <!-- 部门 -->
+        <el-form-item label="部门" prop="department">
+          <template v-if="isEditMode">
+            <el-input v-model="changedParams.department" />
+          </template>
+          <template v-else>
+            <div>{{ userInfoForm.department }}</div>
+          </template>
+        </el-form-item>
+
+        <!-- 职位 -->
+        <el-form-item label="职位" prop="position">
+          <template v-if="isEditMode">
+            <el-input v-model="changedParams.position" />
+          </template>
+          <template v-else>
+            <div>{{ userInfoForm.position }}</div>
+          </template>
+        </el-form-item>
+      </div>
+
+      <div class="noFound-item" v-else>
+        <div>未找到用户信息</div>
+      </div>
+
+      <!-- 操作按钮 -->
+      <el-form-item class="button-group">
+        <template v-if="!isEditMode">
+          <el-button type="primary" @click="toggleEditMode">修改资料</el-button>
+        </template>
+        <template v-else>
+          <el-button type="primary" @click="saveUserInfo">保存</el-button>
+          <el-button @click="toggleEditMode">取消</el-button>
+        </template>
+      </el-form-item>
+    </el-form>
+
+    <!-- 实名认证 -->
+    <!-- <div v-if="!changedParams.user.real_name || !changedParams.user.id_card">
+      <el-button type="primary" @click="submitRealNameAndIdCard">前往实名认证</el-button>
     </div>
-    <!-- 未登录 -->
     <div v-else>
-        <div class="noFound-item">未登录，请前往<router-link class="link" to="/login">登录</router-link></div>
+      <span>已实名</span>
+      <el-button type="primary" @click="submitRealNameAndIdCard">点击更换</el-button>
+    </div> -->
+   </div>
+   <div class="userInfo-right">
+      <el-tabs v-model="activeName" class="demo-tabs" @tab-click="handleClick">
+        <el-tab-pane label="我的发布" name="first">
+          <ul class="userpost-list" v-if="userPosts.length > 0">
+            <li class="userpost-item" v-for="post in userPosts" :key="post.id">
+              <h3 class="title">{{ post.title }}</h3>
+              <p class="body-s text">{{ post.content }}</p>
+              <div class="userpost-item-bottom">
+                <span class="userpost-item-bottom-like">
+                <svg t="1741824137804" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2618" width="200" height="200"><path d="M667.787 117.333c165.077 0 270.88 132.374 270.88 310.528 0 138.251-125.099 290.507-371.574 461.59a96.768 96.768 0 0 1-110.186 0C210.432 718.368 85.333 566.112 85.333 427.86c0-178.154 105.803-310.528 270.88-310.528 59.616 0 100.054 20.832 155.787 68.096 55.744-47.253 96.17-68.096 155.787-68.096z m0 63.147c-41.44 0-70.262 15.19-116.96 55.04-2.166 1.845-14.4 12.373-17.942 15.381a32.32 32.32 0 0 1-41.77 0c-3.542-3.018-15.776-13.536-17.942-15.381-46.698-39.85-75.52-55.04-116.96-55.04-126.026 0-206.88 100.779-206.88 246.219 0 110.901 113.526 248.544 344.299 408.128a32.352 32.352 0 0 0 36.736 0C761.141 675.253 874.667 537.6 874.667 426.699c0-145.44-80.854-246.219-206.88-246.219z" p-id="2619" fill="#2c2c2c"></path></svg>
+                {{ post.likes_count }}
+                </span>
+                发布时间：{{ formatDate(post.created_at) }}
+              </div>
+            </li>
+          </ul>
+          <p v-else>暂无发布内容</p>
+        </el-tab-pane>
+        <el-tab-pane label="喜欢" name="second">
+          <ul class="userpost-list" v-if="userPosts.length > 0">
+            <li class="userpost-item" v-for="post in likedPosts" :key="post.id">
+              <h3>{{ post.title }}</h3>
+              <p>{{ post.content }}</p>
+              <div class="userpost-item-bottom">
+                <span class="userpost-item-bottom-like">
+                <svg t="1741824137804" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2618" width="200" height="200"><path d="M667.787 117.333c165.077 0 270.88 132.374 270.88 310.528 0 138.251-125.099 290.507-371.574 461.59a96.768 96.768 0 0 1-110.186 0C210.432 718.368 85.333 566.112 85.333 427.86c0-178.154 105.803-310.528 270.88-310.528 59.616 0 100.054 20.832 155.787 68.096 55.744-47.253 96.17-68.096 155.787-68.096z m0 63.147c-41.44 0-70.262 15.19-116.96 55.04-2.166 1.845-14.4 12.373-17.942 15.381a32.32 32.32 0 0 1-41.77 0c-3.542-3.018-15.776-13.536-17.942-15.381-46.698-39.85-75.52-55.04-116.96-55.04-126.026 0-206.88 100.779-206.88 246.219 0 110.901 113.526 248.544 344.299 408.128a32.352 32.352 0 0 0 36.736 0C761.141 675.253 874.667 537.6 874.667 426.699c0-145.44-80.854-246.219-206.88-246.219z" p-id="2619" fill="#2c2c2c"></path></svg>
+                {{ post.likes_count }}
+                </span>
+                发布时间：{{ formatDate(post.created_at) }}
+              </div>
+            </li>
+          </ul>
+          <p v-else>暂无喜欢内容</p>
+        </el-tab-pane>
+        <el-tab-pane label="足迹" name="third">我的足迹</el-tab-pane>
+        <el-tab-pane label="活动" name="fourth">我的活动</el-tab-pane>
+      </el-tabs>
+   </div>
+  </div>
+
+  <!-- 未登录 -->
+  <div v-else class="not-logged-in">
+    <div class="noFound-item">
+      未登录，请前往<router-link class="link" to="/login">登录</router-link>
     </div>
+  </div>
 </template>
 <style scoped lang="scss">
 // @use '@/styles/main.scss';
+.loading-container,.userInfo-page,.not-logged-in{
+  padding-top:2.1vh;
+}
+.demo-tabs > .el-tabs__content {
+  padding: 32px;
+  color: #6b778c;
+  font-size: 32px;
+  font-weight: 600;
+}
 .userInfo-page{
+  height: 100%;
   position: relative;
-  .userInfo-bac{
-    position: absolute;
-    top: 0;
-    right: 0;
-    img{
-      width: 500px;
+  // color:var(--dark-blue);
+  .text{
+    padding: rem(5) 0;
+    color:var(--gray);
+  }
+.icon{
+  width: rem(20);
+  height: rem(20);
+}
+  .userInfo-left{
+    .el-form-item__content{
+
+    }
+    .button-group{
+      position: absolute;
+      right: 0;
+      bottom:0;
+      display: flex;
+      :deep(.el-form-item__content){
+        justify-content: flex-end;
+        padding-right: rem(10);
+        padding-bottom: rem(10);
+      }
     }
   }
-      .avatar-uploader .avatar {
-          width: 178px;
-          height: 178px;
-          display: block;
+  .userInfo-right{
+    .el-tabs__header{
+      display: flex;
+    }
+    :deep(.el-tabs__nav){
+        width: 100%;
+        justify-content: space-around;
+    }
+    :deep(.el-tabs__content){
+      box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
+    }
+    .userpost-list{
+      .userpost-item{
+        cursor: pointer;
+        border-bottom: 1px solid #ccc;
+        padding: rem(10);
+        .userpost-item-bottom{
+          @extend .flex-between;
+          @extend .body-s;
         }
-        .avatar-uploader .el-upload {
-          border: 1px dashed var(--el-border-color);
-          border-radius: 6px;
-          cursor: pointer;
-          position: relative;
-          overflow: hidden;
-          transition: var(--el-transition-duration-fast);
-        }
-
-        .avatar-uploader .el-upload:hover {
-          border-color: var(--el-color-primary);
-        }
-        .el-icon.avatar-uploader-icon {
-          font-size: 28px;
-          color: #8c939d;
-          width: 178px;
-          height: 178px;
-          text-align: center;
-        }
-
-      .demo-ruleForm{
-        
       }
+    }
+    .userpost-item-bottom-like{
+      display: flex;
+    }
+  }
+  .el-form{
+    overflow: hidden; // 隐藏溢出部分
+    text-overflow: ellipsis; // 溢出时显示省略号
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.1);
+    padding: 0 rem(20);
+    padding-bottom: rem(20);
+  }
+  .el-form-item{
+    width: 50%;
+    // display: block;
+    :deep(.el-form-item__content){
+      width: 30%;
+    }
+  }
+  .background-container{
+    width: 80%;
+    height: rem(200);
+    position: absolute;
+    right: 0;
+    .el-upload{
+      width: 100%;
+      height: 100%;
+    }
+    .background{
+      width: 100%;
+      height: 100%;
+      object-fit: cover; // 保持图片比例并覆盖整个区域
+      object-position: right; // 图片从右侧开始
+      // transition: opacity 0.5s ease; // 渐变动画
+    }
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(to left, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));
+      z-index: 0; // 渐变层在图片上方
+    }
+    .background-uploader {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    right: 0;
+    :deep(.el-upload){
+      width: 100%;
+      height: 100%;
+    }
+  }
 
+  .background-uploader-icon {
+    font-size: rem(28);
+    color: #8c939d;
+  }
+  }
+
+.avatar-container {
+  width: rem(100);
+  height: rem(100);
+  padding-top: rem(30);
+  display: flex;
+  flex-direction: column;
+  margin-bottom: rem(20);
+  .avatar{
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    position: relative;
+  }
+  .avatar-uploader {
+    cursor: pointer;
+    @extend .flex-center;
+    overflow: hidden;
+    z-index: 3;
+  }
+}
+.uploader-icon {
+    font-size: rem(28);
+    color: var(--white);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1; // 确保“+”号在头像上方
+  }
+.el-button{
+  @extend .button;
+}
 @media (max-width: 768px) {
     
   }

@@ -6,6 +6,8 @@ import { useStore } from 'vuex'
 import type { ActivityData, ActivitiesByDate,userActivityData } from "@/@types/activities"
 const locale = ref(zhCn)
 const store = useStore()
+const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);// 获取用户是否登录
+// const getUserType = computed(() => store.getters['user/getUserType']);// 获取用户类型
 // 定义活动数据的响应式变量
 const activityData = ref<ActivityData[]>([])
 // 按日期分类的活动数据
@@ -171,9 +173,13 @@ onMounted(() => {
     <el-table-column prop="end_time" label="结束时间" />
     <el-table-column label="立即参与" fixed="right">
        <!-- 为按钮绑定点击事件，并传递当前行的数据 -->
+        <!-- 根据用户是否登录显示不同的按钮 -->
       <template #default="scope">
-          <el-button v-if="!hasRegistered(scope.row.id)" v-debounceClick:click="()=>activityBtn(scope.row.id)">确认报名</el-button>
-          <el-button v-else v-debounceClick:click="()=>cancelActivity(scope.row.id)" type="danger">取消报名</el-button>
+          <div v-if = "isAuthenticated">
+            <el-button v-if="!hasRegistered(scope.row.id)" v-debounce:click="()=>activityBtn(scope.row.id)">确认报名</el-button>
+            <el-button v-else v-debounce:click="()=>cancelActivity(scope.row.id)" type="danger">取消报名</el-button>
+          </div>
+          <el-button v-else type="info" disabled>请登录后操作</el-button>
         </template>
     </el-table-column>
   </el-table>
@@ -219,17 +225,16 @@ onMounted(() => {
     // height: 300px;
   }
   .is-selected {
-  color: #1989fa;
+  // color: #1989fa;
 }
 .activity-calendar{
-  padding-right: 1.4vw;
+  padding-right: 1vw;
   // height: 100%;
   // display: flex;
   // flex-direction: column;
   border-right:2px solid var(--white-blue);
-  .calendar-item{
-    border-bottom:2px solid var(--white-blue);
-  }
+  border-bottom:2px solid var(--white-blue);
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
   .item-two{
     // flex:1;
   }

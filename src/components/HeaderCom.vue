@@ -43,7 +43,7 @@ const toggleHeaderMenu=() => {
 };
 </script>
 <template>
-  <div class="element-header h-full flex-center title">
+  <div class="element-header h-full flex-center">
     <div class="logo">
       <!-- <img src="../assets/images/LOGO.png" /> -->
        智护长者
@@ -63,8 +63,8 @@ const toggleHeaderMenu=() => {
       </div>
     </div>
     <div v-else class="info flex-end">
-      <router-link class="link" to="/register">注册</router-link>
-      &nbsp;|&nbsp;<router-link class="link" to="/login">登录</router-link>
+      <router-link class="link title" to="/register">注册</router-link>
+      &nbsp;<b class="title">|</b>&nbsp;<router-link class="link title" to="/login">登录</router-link>
     </div>
     <i-ep-Menu @click="toggleHeaderMenu" class="header-menu"/>
   </div>

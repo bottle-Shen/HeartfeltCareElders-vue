@@ -31,7 +31,7 @@ const router = createRouter({
           name: 'index',
           component: () => import('../views/HomeView.vue')
         },
-        {// 工作台
+        {// 活动日程
           path: '/activity',
           name: 'activity',
           component: () => import('../views/ActivityView.vue')
@@ -60,6 +60,11 @@ const router = createRouter({
           path: '/interact',
           name: 'interact',
           component: () => import('../views/InteractView.vue')
+        },
+        {// 单页社交互动帖子
+          path: '/interact/:id',
+          name: 'interactDetail',
+          component: () => import('../views/InteractDetailView.vue'),
         },
         {// 健康知识库
           path: '/knowledge',

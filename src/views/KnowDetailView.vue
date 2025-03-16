@@ -3,6 +3,7 @@ import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { getKnowledgeById } from "@/api/knowledge";
 import type { IKnowledge } from "@/@types/knowledge";
+import { formatDate } from '@/utils'
 
 const route = useRoute();
 const router = useRouter(); // 获取路由实例
@@ -21,29 +22,53 @@ onMounted(async () => {
     }
 });
 onUnmounted(() => {
-    sessionStorage.removeItem("scrollPosition"); // 清除滚动位置
+    // sessionStorage.removeItem("scrollPosition"); // 清除滚动位置
 });
 </script>
 <template>
     <div class="knowledge-detail">
         <!-- 返回按钮 -->
-        <button @click="goBack" class="back-button">返回</button>
-        <h1>{{ knowledge?.title }}</h1>
-        <img :src="knowledge?.image" :alt="knowledge?.title" class="knowledge-image" />
-        <p>{{ knowledge?.content }}</p>
+        <button @click="goBack" class="back-button header">返回</button>
+        <div class="content">
+            <h1 class="h2">{{ knowledge?.title }}</h1>
+            <p class="time">发布时间：{{ formatDate(knowledge?.create_time) }}</p>
+            <img :src="knowledge?.image" :alt="knowledge?.title"/>
+            <p>{{ knowledge?.content }}</p>
+        </div>
     </div>
 </template>
 
 <style lang="scss" scoped>
+.header{
+    padding: 1.4vw 0;
+    @extend .title;
+}
+.content{
+    // display: flex;
+    // flex-direction: column;
+    // justify-content: center;
+    p{
+        text-indent: 2em;// 首行首字缩进
+    }
+    img{
+        width: rem(200);
+        float: left;
+    }
+    .time{
+        display: flex;
+        justify-content: flex-end;
+        @extend .body-s;
+    }
+}
 .knowledge-detail {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
+    // max-width: 800px;
+    // margin: 0 auto;
+    // padding: 20px;
 }
 
 .knowledge-image {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
+    // max-width: 100%;
+    // height: auto;
+    // border-radius: 8px;
 }
 </style>

@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import type { CascaderProps } from 'element-plus'
 import areaData from '@/assets/area.json'
-
+// 定义 areaData 的类型
+type AreaData = {
+  [province: string]: {
+    [city: string]: string[]
+  }
+}
 const selectedAddress = ref([]); // 用于绑定级联选择器的选中值
 // let id = 0
 const props: CascaderProps = {
@@ -42,7 +47,7 @@ const props: CascaderProps = {
 <template>
   <div>
     <!-- 所在地 -->
-     <el-form-item label="所在地" prop="address">
+     <el-form-item prop="address">
        <el-cascader 
        :props="props"
        v-model="selectedAddress"

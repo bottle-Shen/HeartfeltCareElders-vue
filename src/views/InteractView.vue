@@ -30,106 +30,199 @@
 //   });
 // }
 // import type {SocialData} from '@/@types/social'
-import { socket,CommentContent,socialData,UserLikePost,getUserSocial,getSocial,initializeWebSocket, likePost,addComment, addPost,getComments } from '@/api/social'
+import { addPost } from '@/api/social'
 import { useStore } from 'vuex'
+import { useInfiniteScroll } from '@/utils'
 const store = useStore()
-const userId = store.getters['user/getUserId']
-console.log('userId', userId)
-
+const userId = store.getters['user/getUserId']//获取用户id
+const isAuthenticated = computed(() => store.getters['user/isAuthenticated'])//判断用户是否登录
+const showPostForm = ref(false); // 控制表单弹窗的显示
+const socialData = computed(() => store.state.post.socialData)// 获取帖子数据
+const containerRef = ref<HTMLElement | null>(null)// 滚动容器的引用
+const loading = computed(() => store.state.post.loading)// 获取加载状态
+const finished = computed(() => store.state.post.finished)// 获取加载完成状态
+// 初始化帖子数据
 const getSocialData = async () => {
-  const response = await getSocial()
-  socialData.value = response
-  console.log('帖子数据', socialData.value)
+  await store.dispatch('post/fetchSocialData')
 }
-const getCommentsData = async () => {
-  socialData.value.forEach(async (post) => {
-    const response = await getComments(post.id);
-    post.comments = response; // 将评论数据绑定到帖子对象
-    console.log('评论数据', post);
-  });
-}
+// 使用无限滚动逻辑
+const { handleScroll, cleanup, restoreScrollPosition } = useInfiniteScroll(containerRef,
+  async() => {
+    // 获取当前状态
+    const { finished, loading } = store.state.post;
 
+    // 如果已经加载完成或正在加载中，则不触发加载更多
+    if (finished || loading) {
+      return;
+    }
+
+    // 调用加载更多数据的动作
+    await store.dispatch('post/loadMoreData');
+} , 300)
+// 表单数据
+const postForm = ref({
+  title: '',
+  content: '',
+})
+// 表单验证规则
+const postFormRules = {
+  title: [
+    { required: true, message: '请输入帖子标题', trigger: 'blur' },
+    { min: 3, max: 50, message: '标题长度应在3到50个字符之间', trigger: 'blur' }
+  ],
+  content: [
+    { required: true, message: '请输入帖子内容', trigger: 'blur' },
+    { min: 5, max: 500, message: '内容长度应在5到500个字符之间', trigger: 'blur' }
+  ]
+}
+// 发布帖子
 const addPostBtn = async() => {
   await addPost({
-    title: '标题',
-    content: '内容',
+    title: postForm.value.title,
+    content: postForm.value.content,
     user_id:userId,
   })
-}
-const getUserSocialData = async () => {
-  const response = await getUserSocial()
-  // socialData.value = response
-  // console.log('用户帖子数据', socialData.value)
-}
-const getUserLikeData = async () => {
-  const response = await UserLikePost()
-  // socialData.value = response
-  // console.log('用户点赞过的帖子数据', socialData.value)
+  ElMessage.success('帖子发布成功')
+  showPostForm.value = false// 关闭表单弹窗
+  postForm.value = { title: '', content: '' }// 清空表单
 }
 
-// onMounted(() => {
-//   getSocialData()
-//   socialData.value.forEach(post => {
-//     console.log('初始化 WebSocket 连接');
-//         initializeWebSocket(post.id); // 初始化 WebSocket 连接
-//     console.log('初始化 WebSocket 连接j结束');
+// 关闭表单弹窗
+const handleClose = () => {
+  showPostForm.value = false
+}
 
-//   });
-// })
+// 在组件中只初始化一个 WebSocket 连接
 onMounted(() => {
-  console.log('onMounted 钩子已触发');
-  getSocialData().then(() => {
-    console.log('数据加载完成，初始化 WebSocket 连接');
-    socialData.value.forEach(post => {
-      console.log(`初始化 WebSocket 连接，帖子ID: ${post.id}`);
-      initializeWebSocket(post.id,userId); // 初始化 WebSocket 连接
-    });
-  }).catch((error) => {
-    console.error('加载帖子数据失败', error);
-  });
+  getSocialData()
+  restoreScrollPosition()
+  const scrollContainer = containerRef.value;
+  if (scrollContainer) {
+    scrollContainer.addEventListener("scroll", handleScroll)
+  } else {
+    window.addEventListener("scroll", handleScroll)
+  }
 });
 onUnmounted(() => {
-  if (socket) {
-    socket.close();
+  const scrollContainer = containerRef.value
+  if (scrollContainer) {// 移除滚动事件监听
+    scrollContainer.removeEventListener("scroll", handleScroll)
+  } else {
+    window.removeEventListener("scroll", handleScroll)
   }
+  cleanup()// 清理资源
 });
 </script>
 <template>
-    <div class="interact-page">
-        社交互动区
-        <ul v-for="post in socialData" :key="post.id">
-          <li>{{ post.title }}</li>
-          <li>{{ post.content }}</li>
-          <li>
-            <el-button type="primary" @click="likePost(post.id,post)">点赞</el-button>
-            <span>{{ post.likes_count }}</span>
-          </li>
-          <li><span>评论数:{{ post.comments_count }}</span></li>
-          <li>
-            <ul v-for="comment in post.comments" :key="comment.id">
-               <li>
-                {{ comment.user.username }}
-              </li>
-              <li>
-                {{ comment.comment_content }}
-              </li>
-              <li>
-                {{ comment.created_at }}
-              </li>
-            </ul>
-          </li>
-          <li>
-            <el-input v-model="CommentContent" placeholder="评论内容" />
-            <el-button type="primary" @click="addComment(post.id,CommentContent,userId)">评论</el-button>
-          </li>
-        </ul>
-        <el-button type="primary" @click="addPostBtn">发布帖子</el-button>
-        <el-button type="primary" @click="getCommentsData">获取评论</el-button>
-        <el-button type="primary" @click="getUserSocialData">获取用户帖子</el-button>
-        <el-button type="primary" @click="getUserLikeData">获取用户点赞过的帖子</el-button>
+  <div class="interact-page h-full">
+    <div class="header">
+      <h1>快来发布属于你的帖子吧~</h1>
+      <div class="actions-bar">
+        <el-button v-if = "isAuthenticated" type="primary" @click="showPostForm = true">点我发布</el-button>
+        <el-button v-else type="info" disabled>请登录后操作</el-button>
+      </div>
     </div>
+    <!-- 发布帖子的表单 -->
+    <el-dialog
+      title="发布帖子"
+      v-model="showPostForm"
+      :before-close="handleClose"
+    >
+      <el-form
+        ref="postFormRef"
+        :model="postForm"
+        :rules="postFormRules"
+      >
+        <el-form-item label="标题" prop="title">
+          <el-input
+            v-model="postForm.title"
+            placeholder="请输入帖子标题"
+            maxlength="50"
+            show-word-limit
+          ></el-input>
+        </el-form-item>
+
+        <el-form-item label="内容" prop="content">
+          <el-input
+            type="textarea"
+            v-model="postForm.content"
+            placeholder="请输入帖子内容"
+            maxlength="500"
+            show-word-limit
+            :rows="15"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showPostForm = false">取消</el-button>
+          <el-button type="primary" @click="addPostBtn">发布</el-button>
+        </span>
+      </template>
+    </el-dialog>
+    <div ref="containerRef" class="post-list">
+      <div v-for="(post,index) in socialData" :key="post.id" class="post-item">
+        <keep-alive>
+        <router-link :to="`/interact/${post.id}`">
+          <!-- 添加对post和post.user的校验，否则在重新回到列表页时user字段为undefined报错。 -->
+          <CardsCom v-if="post && post.user" :post="post" :index="index"></CardsCom>
+        </router-link></keep-alive>
+      </div>
+      <!-- 加载状态 -->
+        <LoadingCom v-if="loading" class="loading"/>
+        <!-- 没有更多数据 -->
+        <div v-if="finished" class="finished">没有更多数据了</div>
+    </div>
+  </div>
 </template>
 
 <style scoped lang="scss">
-
+.interact-page {
+  .loading{
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .header {
+    @extend .flex-between;
+    padding: 2.1vh 0;
+    .el-button{
+      // @extend .button;
+    }
+  }
+  .post-list{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap:rem(0) rem(80);
+    // padding-left: rem(20);
+    // padding-top: rem(20);
+    position: fixed;
+    // right: 0;
+    // top: 0;
+    max-height: 80vh; //高度限制
+    overflow: auto;
+  }
+:deep(.el-dialog){
+  width:80%;
+  min-width: rem(300);
+  height: 70% !important;
+  min-height: rem(500);
+ .el-form{
+    width: 100%;
+  }
+  .el-button{
+    @extend .button;
+  }
+  
+}
+  .post-item {
+    max-width: rem(315);
+    padding-bottom: rem(30);
+    // padding-right: rem(80);
+    // padding: rem(30) 0;
+  }
+}
 </style>

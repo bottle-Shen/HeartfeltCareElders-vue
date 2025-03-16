@@ -1,5 +1,55 @@
 @use '@/styles/base.module' as *;
 //-------------样式类-------------
+:deep(.el-overlay) {
+    z-index: 9999 !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    .el-overlay-dialog {
+        // width: 30%;
+        // height: 80%;
+        background-color: var(--white);
+        box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+
+        .el-dialog {
+            padding: rem(30);
+            height: 100%;
+
+            // display: flex;
+            // flex-direction: column;
+            .el-dialog__header {
+                display: flex;
+                justify-content: space-between;
+            }
+
+            .el-dialog__body {
+                display: flex;
+                justify-content: center;
+            }
+
+            .el-dialog__footer {
+                .dialog-footer {
+                    width: 100%;
+                    display: flex;
+                    justify-content: center;
+                }
+            }
+        }
+
+        .preview-avatar {
+            width: rem(178);
+            height: rem(178);
+            border-radius: 50%;
+        }
+        .preview-background{
+            width: rem(178);
+        }
+    }
+}
 // ----------全局字体样式----------
 html {
     // font-size: rem(16);
@@ -26,9 +76,9 @@ body{
     font-size: rem(16);
     font-weight: 400;
     // 隐藏滚动条
-    ::-webkit-scrollbar {
-        display: none;
-    }
+    // ::-webkit-scrollbar {
+    //     display: none;
+    // }
     @include mobile {
         font-size: rem(10);
     }
@@ -66,7 +116,31 @@ b,strong{
 .primary-font {//设置主字体
     font-family: var(--primary-font);
 }
+.avatar{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
 
+.color-0 {
+    background: radial-gradient(farthest-corner at center, var(--white-blue) 0%,
+            var(--transparent) 95%);
+}
+
+.color-1 {
+    background: radial-gradient(farthest-corner at center, var(--green-rgb) -60%,
+            var(--transparent) 95%);
+}
+
+.color-2 {
+    background: radial-gradient(farthest-corner at center, var(--yellow-rgb) -20%,
+            var(--transparent) 95%);
+}
+
+.color-3 {
+    background: radial-gradient(farthest-corner at center, var(--coral-rgb) -10%,
+            var(--transparent) 95%);
+}
 // 样式
 .text,
 .title,
@@ -83,17 +157,23 @@ b,strong{
 .title {//标题样式，使用 clamp() 使字体大小响应式
     font-size: clamp(8px, 2.5vw, 22px);
     @extend .font-regular;
+    cursor: pointer;
+    @include hover {
+        &:hover {
+            color: var(--blue);
+        }
+    }
 }
 
 
 .body {//正文样式，使用 @extend 继承工具类，并通过 @include desktop 提供响应式调整。
     // @extend .font-light;
-    // font-size: rem(16);
+    font-size: rem(22);
     // font-weight: 400;
 }
 
 .body-s {
-    font-size: rem(22);
+    font-size: rem(16);
     // @include desktop {
     //     font-size: rem(20);
     // }
@@ -125,11 +205,11 @@ b,strong{
 
 .h2 {//大标题样式
     // @extend .primary-font, .uppercase;
-    font-size: rem(36);
+    font-size: rem(32);
+    text-align: center;
     // line-height: 1.2;
     // text-transform: uppercase;
     // font-weight: 300;
-    text-align: center;
     // margin-bottom: rem(-32);
 
     // @include desktop {
@@ -156,10 +236,12 @@ b,strong{
 // }
 .link{
     // font-size: rem(14);
-    color: var(--blue);
+    // color: var(--blue);
     cursor: pointer;
-    &:hover{
-        color: var(--dark-blue);
+    @include hover{
+        &:hover {
+            color: var(--blue);
+        }
     }
 }
 // ------按钮样式开始------
@@ -167,49 +249,23 @@ b,strong{
     // height: rem(48);
     background-color: var(--blue);
     color: var(--white);
-    border: 1px solid var(--primary-blue);
-    // padding: 10px 20px;
+    padding: 0 rem(5);
     cursor: pointer;
     font-size: rem(14);
     // letter-spacing: 0.2em;
-    // @include rounded-border;
-    // @include shadow;
-    // @include mixin.mobile{
-    //     color: aqua;
-    //     // font-size: rem(10);
+    @include rounded-border;
+    @include shadow;
+    @include mobile{
+        color: aqua;
+        // font-size: rem(10);
+    }
+    // @include hover {
+    //     &:hover {
+    //         color: var(--blue);
+    //         background-color: transparent;
+    //     }
     // }
 }
-// 按钮样式不同状态
-// 按钮禁用样式
-// @include base.create-class(button, disabled){
-//     background-color: gray;
-//     cursor: not-allowed;
-//     pointer-events: none;
-// }
-
-// @include base.create-class(button, active) {
-//     background-color: red;
-//     cursor: not-allowed;
-//     pointer-events: none;
-// }
-// @include base.create-class(button, hover) {
-//     background-color: blue;
-//     cursor: not-allowed;
-//     pointer-events: none;
-// }
-// // 不同主题样式按钮
-// @include base.create-class(button, primary){
-//     @extend .button;
-//     background-color: var(--primary-blue);
-// }
-// @include base.create-class(button, secondary){
-//     @extend .button;
-//     background-color: var(--secondary-blue);
-// }
-// @include base.create-class(button, tertiary){
-//     @extend .button;
-//     background-color: var(--tertiary-blue);
-// }
 
 .primary-button {
     border-radius: 50px;
@@ -234,7 +290,6 @@ b,strong{
 }
 .el-main-hidden {// 侧边栏隐藏main占满左侧
     margin-left: 0;
-    width: 100vw;
     padding: 0 2.1vw;
 }
 //------定义移动端样式类------
@@ -243,3 +298,12 @@ b,strong{
     padding-right: 1.4vw;
 }
 //------定义main样式类结束------
+//------全局加载样式类开始------
+.isLoading {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+//------全局加载样式类结束------

@@ -8,9 +8,10 @@ export const getKnowledge = (params: { page?: number, search?: string }) => {
     method: 'GET',
     params,
   }).then(response => {
-      console.log(response)
     return response.data;
-  });
+  }).catch((error) => {
+    console.error(error)
+  })
 }
 
 // 获取单个知识

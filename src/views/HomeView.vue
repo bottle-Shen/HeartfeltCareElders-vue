@@ -3,7 +3,7 @@ import { getHealthData, getSSEUrl } from '@/api/healthData'
 import { useStore } from 'vuex'
 import * as echarts from 'echarts';
 import type{ HealthData } from '@/@types/healthdata'
-import { exampleHealthData }from '@/utils/exampleData'
+import { exampleHealthData } from '@/utils/exampleData'// 导入响应式布局逻辑
 // const store = useStore()
 // interface CountHealthData{
 //   count: number;//总数据条数
@@ -13,7 +13,10 @@ import { exampleHealthData }from '@/utils/exampleData'
 const store = useStore();
 // 直接从 store 中获取 getters
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);
+const getUserType = computed(() => store.getters['user/getUserType']);
+const isAsideVisible = computed(() => store.getters['asideVisible/isAsideVisible']);
 const healthData = ref<HealthData[]>([]); // 用于存储健康数据
+const hasHealthData = ref(false); // 用于标记是否有健康数据
 // 存储所有提取的数据
 const healthMetrics = reactive({
   height: [] as number[],
@@ -90,9 +93,21 @@ const extractHealthData = () => {
 const initCharts = () => {
   nextTick(() => {
     // 使用markRaw将echarts图表实例标记---echarts管理的状态和数据与vue的响应式会产生冲突,取消vue的响应式让echarts自动更新。
+    if (BMIChart.value) {
+      BMIChart.value.dispose();
+    }
     BMIChart.value = markRaw(echarts.init(document.getElementById('height-weight') as HTMLElement));
+    if (bloodPressureChart.value) {
+      bloodPressureChart.value.dispose();
+    }
     bloodPressureChart.value = markRaw(echarts.init(document.getElementById('blood-pressure') as HTMLElement));
+    if (bloodGlucoseChart.value) {
+      bloodGlucoseChart.value.dispose();
+    }
     bloodGlucoseChart.value = markRaw(echarts.init(document.getElementById('blood-glucose') as HTMLElement));
+    if (healthStateChart.value) {
+      healthStateChart.value.dispose();
+    }
     healthStateChart.value = markRaw(echarts.init(document.getElementById('health-status') as HTMLElement)); 
   });
 };
@@ -171,10 +186,6 @@ const bmiChartOptions = computed(() =>({
           shadowBlur: 5,// 增加模糊效果，使阴影更柔和
           shadowOffsetX: 2,
           shadowOffsetY: 2,
-        },
-        animation: {
-          duration: 1000,// 入场动画持续时间
-          easing: 'cubicInOut',// 入场动画缓动效果
         },
       },
       {
@@ -420,16 +431,19 @@ const fetchHealthData = async () => {
       // 如果用户已登录，加载真实数据
       const response = await getHealthData();
       healthData.value = response.results;
+      hasHealthData.value = healthData.value.length > 0; // 标记是否有健康数据
     } else {
       // 如果用户未登录，使用示例数据
       healthData.value = exampleHealthData;
+      hasHealthData.value = true; // 示例数据始终有数据
     }
-    extractHealthData();
-    // 使用图表
-    initCharts(); // 初始化图表
-    await nextTick(); // 确保图表初始化完成
-    updateCharts(); // 更新图表
-    console.log('健康数据',healthData.value)
+    if (hasHealthData.value) {
+      extractHealthData(); // 提取数据
+      initCharts(); // 初始化图表
+      await nextTick(); // 确保图表初始化完成
+      updateCharts(); // 更新图表
+    }
+    console.log('健康数据', healthData.value);
   } catch (error) {
     console.error('获取健康数据失败:', error);
   }
@@ -475,9 +489,10 @@ const updateFontSize = () => {
     }
   });
 }
+// 监听视口大小变化
 const resizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {
   void entries; // 明确忽略 entries 参数
-  resizeCharts(); // 在回调中调用 resizeCharts
+  resizeCharts(); // 调整图表大小
 });
 const resizeCharts = () => {
   if (bloodGlucoseChart.value) {
@@ -496,41 +511,70 @@ const resizeCharts = () => {
 };
 // SSE 监听逻辑
 const eventSource = ref<EventSource | null>(null); // 显式指定类型
-
+let stopWatch: () => void; // 用于存储 watch 的停止函数
 onMounted(() => {
   initCharts();
   fetchHealthData();// 在组件加载时获取健康数据
   // 获取 SSE URL
-  const sseUrl = getSSEUrl();
+  // const sseUrl = getSSEUrl();
   // 创建 EventSource 连接
-  eventSource.value = new EventSource(sseUrl);
-  eventSource.value.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      console.log("收到服务器推送的消息:", message);
+  // eventSource.value = new EventSource(sseUrl);
+  // eventSource.value.onmessage = (event) => {
+  //     const message = JSON.parse(event.data);
+  //     console.log("收到服务器推送的消息:", message);
 
-      // 根据消息类型更新数据
-      if (message.type === 'health_data_update') {
-          console.log("数据更新，重新加载数据...");
-          fetchHealthData(); // 重新加载数据
-      }
-  };
+  //     // 根据消息类型更新数据
+  //     if (message.type === 'health_data_update') {
+  //         console.log("数据更新，重新加载数据...");
+  //         fetchHealthData(); // 重新加载数据
+  //     }
+  // };
 
-  eventSource.value.onerror = (error) => {
-      console.error("SSE 连接错误:", error);
-      eventSource.value?.close(); // 安全地关闭连接
-  };
+  // eventSource.value.onerror = (error) => {
+  //     console.error("SSE 连接错误:", error);
+  //     eventSource.value?.close(); // 安全地关闭连接
+  // };
   resizeObserver.observe(document.body);
+  // 设置 watch 的停止函数
+  stopWatch = watch(isAsideVisible, () => {
+  // 监听 isAsideVisible 变化,重绘图表
+  console.log('侧边栏状态变化', isAsideVisible.value);
+  resizeCharts();
+});
 })
 onUnmounted(() => {
-  eventSource.value?.close();// 关闭 EventSource 连接
+  eventSource.value?.close(); // 关闭 EventSource 连接
   resizeObserver.disconnect(); // 停止监听
+  stopWatch(); // 停止 watch 监听 isAsideVisible
 });
+// 绑定用户
+const bindHealthData  = async () => {
+  // try {
+  //   const response = await bindHealthDataToUser();
+  //   console.log('绑定成功', response);
+  //   fetchHealthData(); // 重新加载数据
+  // } catch (error) {
+  //   console.error('绑定失败', error);
+  // }
+}
 </script>
 
 <template>
-  <div>
     <h1>{{ isAuthenticated ? '健康数据' : '示例数据-非真实用户' }}</h1>
-    <div class="header-container">
+    <div v-if="!hasHealthData" class="no-data-message">
+        <p v-if="isAuthenticated">
+        <!-- 根据用户类型显示不同的提示信息 -->
+        <template v-if="getUserType === 1">
+          暂无健康数据，请联系机构人员或管理员。
+        </template>
+        <template v-else-if="getUserType === 2 || getUserType === 3">
+          您的账号未绑定任何健康数据，请先绑定健康数据。
+          <button @click="bindHealthData" class="bind-button">绑定健康数据</button>
+        </template>
+        </p>
+    </div>
+    <div v-else> 
+        <div class="header-container">
         <span class="icon-btn" @click="backBtn"><el-icon><i-ep-Back /></el-icon></span>
       <transition name="slide-x" mode="out-in">
         <!-- out-in确保在transition切换时,上一页内容完全离开后再渲染新的内容 -->
@@ -632,8 +676,8 @@ onUnmounted(() => {
       </ul>
       </transition>
        <span class="icon-btn" @click="nextBtn"><el-icon><i-ep-Right /></el-icon></span>
-    </div>
-    <div class="body-container">
+        </div>
+        <div class="body-container">
       <div class="body-item">
         <div id="blood-glucose" class="item-one" style="width: 100%; height: 100%;"></div>
       </div>
@@ -645,7 +689,7 @@ onUnmounted(() => {
             <p>根据近期的 {{ healthMetrics.healthStatus.length }} 条数据记录显示：</p>
             <!-- 显示建议 -->
             <div v-if="healthSuggestion">
-              <p>其中，您的{{ healthSuggestion }}</p>
+              <p>其中，{{ healthSuggestion }}</p>
             </div>
           </div>
           <p v-else>
@@ -656,15 +700,15 @@ onUnmounted(() => {
       <!-- <div class="body-item">
         {{ healthMetrics.healthStatus[0] }}
       </div> -->
-    </div>
-    <div class="footer-container">
+        </div>
+        <div class="footer-container">
       <div id="height-weight" class="footer-item" style="width: 100%; height: 100%;"></div>
       <div id="blood-pressure" class="footer-item" style="width: 100%; height: 100%;"></div>
         <!-- <li id="blood-glucose" class="health-data-item blood-glucose"></li>
       <li id="blood-lipid" class="health-data-item blood-lipid"></li>
       <li id="heart-rate" class="health-data-item heart-rate"></li> -->
+        </div>
     </div>
-  </div>
 </template>
 
 <style lang="scss" scoped>
@@ -748,19 +792,11 @@ h1{
     border-radius: 20px;
     box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.1);
     &:first-child{
-      // flex:1;
       width: 18.5vw;
-      height: rem(306);
-    }
-    &:nth-child(2){
-      // flex:2;
-      width: 38.8vw;
-      // min-width: 744px;
-
+      min-width: rem(200);
     }
     &:last-child{
-      // flex:1;
-      width: 17.9vw;
+      width: 38.8vw;
       // min-width: 344px;
     }
     .item-two{
