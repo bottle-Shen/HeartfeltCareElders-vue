@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { useStore } from 'vuex';
-
+import { useRouter } from 'vue-router'
 const store = useStore();
 const user = computed(() => store.getters['user/getUser']);
 const router = useRouter();
 const logoutBtn = () => {
-  store.dispatch('user/logout', { router });
+  store.dispatch('user/logout', router );
 };
 </script>
 <template>

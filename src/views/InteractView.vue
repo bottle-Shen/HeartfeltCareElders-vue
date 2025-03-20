@@ -29,16 +29,17 @@
 //     }
 //   });
 // }
-// import type {SocialData} from '@/@types/social'
+import type {SocialData} from '@/@types/social'
 import { addPost } from '@/api/social'
 import { useStore } from 'vuex'
 import { useInfiniteScroll } from '@/utils'
+
 const store = useStore()
 const userId = store.getters['user/getUserId']//获取用户id
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated'])//判断用户是否登录
 const showPostForm = ref(false); // 控制表单弹窗的显示
 const socialData = computed(() => store.state.post.socialData)// 获取帖子数据
-const containerRef = ref<HTMLElement | null>(null)// 滚动容器的引用
+const socialDataContainerRef = ref<HTMLElement | null>(null)// 滚动容器的引用
 const loading = computed(() => store.state.post.loading)// 获取加载状态
 const finished = computed(() => store.state.post.finished)// 获取加载完成状态
 // 初始化帖子数据
@@ -46,7 +47,10 @@ const getSocialData = async () => {
   await store.dispatch('post/fetchSocialData')
 }
 // 使用无限滚动逻辑
-const { handleScroll, cleanup, restoreScrollPosition } = useInfiniteScroll(containerRef,
+const { cleanup: cleanupSocialData, restoreScrollPosition: restoreSocialDataScroll,
+  addScrollListeners: addSocialDataListeners,
+  removeScrollListeners: removeSocialDataScroll
+ } = useInfiniteScroll(socialDataContainerRef,
   async() => {
     // 获取当前状态
     const { finished, loading } = store.state.post;
@@ -58,12 +62,20 @@ const { handleScroll, cleanup, restoreScrollPosition } = useInfiniteScroll(conta
 
     // 调用加载更多数据的动作
     await store.dispatch('post/loadMoreData');
-} , 300)
+} , 300,'socialDataScrollPosition')
+
+const recordViewHistory = (post: SocialData) => {
+  // 记录观看历史
+  store.dispatch('post/addToViewHistory', post);
+};
 // 表单数据
 const postForm = ref({
   title: '',
   content: '',
-})
+  coverImage: null as File | null, // 封面图文件对象
+  video: null as File | null, // 视频文件对象
+  images: [] as File[], // 多张图片文件对象
+});
 // 表单验证规则
 const postFormRules = {
   title: [
@@ -73,44 +85,175 @@ const postFormRules = {
   content: [
     { required: true, message: '请输入帖子内容', trigger: 'blur' },
     { min: 5, max: 500, message: '内容长度应在5到500个字符之间', trigger: 'blur' }
+  ],
+  coverImage: [
+    { required: true, message: '封面图不能为空', trigger: 'change' }
   ]
 }
+
+const videoFileList = ref([]);
+const imageFileList = ref([]);
+
+// 封面图上传验证
+const onCoverImageChange = (event: Event) => {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (file && file.type.startsWith('image/')) {
+    postForm.value.coverImage = file; // 直接存储文件对象
+  } else {
+    ElMessage.error('请选择有效的图片文件');
+  }
+};
+
+// 视频上传验证
+const beforeVideoUpload = (file:File) => {
+  console.log("触发视频上传验证", file);
+  const isVideo = file.type.startsWith('video/');
+  if (!isVideo) {
+    ElMessage.error('只能上传视频文件');
+  }
+  return isVideo;
+};
+// 视频文件发生变化时
+const handleVideoChange = (file, fileList) => {
+  console.log("视频文件发生变化", file, fileList);
+  if (beforeVideoUpload(file.raw)) {// 手动调用beforeVideoUpload
+    postForm.value.video = file.raw; // 存储视频文件对象
+  }
+  videoFileList.value = fileList; // 同步到 videoFileList
+};
+
+// 多图片上传验证
+const beforeImageUpload = (file) => {
+  console.log("触发图片上传验证", file);
+  const isImage = file.type.startsWith('image/');
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件');
+  }
+  return isImage;
+};
+// 图片组文件发生变化时
+const handleImageChange = (file, fileList) => {
+  console.log("图片组文件发生变化", file, fileList);
+  postForm.value.images = fileList.map((item: any) => item.raw); // 更新图片文件列表
+  imageFileList.value = fileList; // 同步到 imageFileList
+};
+// 图片移除时
+const handleImageRemove = (file, fileList) => {
+  console.log("移除图片", file);
+  postForm.value.images = fileList.map((item: any) => item.raw); // 更新图片文件列表
+  imageFileList.value = fileList; // 同步到 imageFileList
+};
+// 视频上传
+const handleVideoSuccess = (file) => {
+  postForm.value.video = file.raw; // 存储文件对象
+};
+
+// 多图片上传
+const handleImageSuccess = (response, file) => {
+  postForm.value.images.push(file); // 存储文件对象
+};
+
+const handleVideoRemove = (file, fileList) => {
+  postForm.value.video = null;
+};
+
+
 // 发布帖子
-const addPostBtn = async() => {
-  await addPost({
+const addPostBtn = async () => {
+  if (!postForm.value.coverImage) {
+    ElMessage.error('封面图不能为空');
+    return;
+  }
+  if (postForm.value.video && postForm.value.images.length > 0) {
+    ElMessage.error('您只能选择上传图片组或视频，但不能同时上传两者');
+    return;
+  }
+  console.log('检查图片组',postForm.value.images); // 检查图片组
+  // console.log(postForm.value.video); // 检查视频
+
+  // 创建 FormData 对象
+  const formData = new FormData();
+  formData.append('title', postForm.value.title);
+  formData.append('content', postForm.value.content);
+  // formData.append('user_id', userId.toString());
+  formData.append('image', postForm.value.coverImage); // 封面图文件对象
+  // 添加多张图片
+  if (postForm.value.images.length > 0) {
+    postForm.value.images.forEach((img:File) => {
+      formData.append(`images`, img); // 确保这里正确添加了文件
+    });
+  }
+
+  // 添加视频
+  if (postForm.value.video) {
+    formData.append('video', postForm.value.video); // 视频文件对象
+  }
+
+  // 调用 API 发布帖子
+  try {
+    await addPost(formData);
+    ElMessage.success('帖子发布成功');
+    showPostForm.value = false; // 关闭表单弹窗
+    postForm.value = { title: '', content: '', coverImage: null, video: null, images: [] }; // 清空表单
+  } catch (error) {
+    console.error('帖子发布失败：', error);
+    ElMessage.error('帖子发布失败，请稍后再试');
+  }
+}
+const saveToDraft = () => {
+  const draftData = {
     title: postForm.value.title,
     content: postForm.value.content,
-    user_id:userId,
-  })
-  ElMessage.success('帖子发布成功')
-  showPostForm.value = false// 关闭表单弹窗
-  postForm.value = { title: '', content: '' }// 清空表单
-}
+    // 不保存文件对象，因为它们无法存储到 localStorage
+  };
 
+  // 从 localStorage 获取现有的草稿列表
+  const drafts = JSON.parse(localStorage.getItem('drafts') || '[]');
+
+  // 添加新的草稿
+  drafts.push(draftData);
+
+  // 保存到 localStorage
+  localStorage.setItem('drafts', JSON.stringify(drafts));
+
+  ElMessage.success('帖子已保存到草稿箱');
+};
+const handleClose = (done:() => void) => {
+  if (postForm.value.title || postForm.value.content || postForm.value.coverImage || postForm.value.video || postForm.value.images.length > 0) {
+    ElMessageBox.confirm('您有未保存的帖子内容，是否保存到草稿箱？', '提示', {
+      confirmButtonText: '保存到草稿箱',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(() => {
+      // 保存到草稿箱
+      saveToDraft();
+      done();
+    }).catch(() => {
+      // 用户取消保存
+      done();
+    });
+  } else {
+    done();
+  }
+};
 // 关闭表单弹窗
-const handleClose = () => {
-  showPostForm.value = false
-}
+// const handleClose = () => {
+//   showPostForm.value = false
+// }
 
 // 在组件中只初始化一个 WebSocket 连接
 onMounted(() => {
-  getSocialData()
-  restoreScrollPosition()
-  const scrollContainer = containerRef.value;
-  if (scrollContainer) {
-    scrollContainer.addEventListener("scroll", handleScroll)
-  } else {
-    window.addEventListener("scroll", handleScroll)
-  }
+    getSocialData()
+    restoreSocialDataScroll()// 恢复滚动位置
+    addSocialDataListeners()
+    store.commit('loading/SET_LOADING', false);
+
 });
 onUnmounted(() => {
-  const scrollContainer = containerRef.value
-  if (scrollContainer) {// 移除滚动事件监听
-    scrollContainer.removeEventListener("scroll", handleScroll)
-  } else {
-    window.removeEventListener("scroll", handleScroll)
-  }
-  cleanup()// 清理资源
+  // 移除滚动事件监听
+  removeSocialDataScroll()
+  // 清理资源
+  cleanupSocialData()
 });
 </script>
 <template>
@@ -133,6 +276,10 @@ onUnmounted(() => {
         :model="postForm"
         :rules="postFormRules"
       >
+      <el-form-item label="封面图" prop="coverImage" required>
+        <input type="file" @change="onCoverImageChange" accept="image/*">
+        <!-- <img  alt="封面图" style="max-width: 100%; height: auto;"> -->
+      </el-form-item>
         <el-form-item label="标题" prop="title">
           <el-input
             v-model="postForm.title"
@@ -152,6 +299,40 @@ onUnmounted(() => {
             :rows="15"
           ></el-input>
         </el-form-item>
+
+        <el-form-item label="视频" prop="video">
+        <el-upload
+          ref="videoUpload"
+          :limit="1"
+          list-type="text"
+          accept="video/*"
+          :on-success="handleVideoSuccess"
+          :before-upload="beforeVideoUpload"
+          :on-remove="handleVideoRemove"
+          :on-change="handleVideoChange"
+          :auto-upload="false"
+          :file-list="videoFileList"
+        >
+          <el-button style="position: relative; margin: -5px"><i class="el-icon-circle-plus-outline" style="color: #66b1ff;">上传视频</i></el-button>
+        </el-upload>
+      </el-form-item>
+
+      <el-form-item label="图片" prop="images">
+        <el-upload
+          ref="imageUpload"
+          :limit="5"
+          list-type="picture-card"
+          accept="image/*"
+          :on-success="handleImageSuccess"
+          :before-upload="beforeImageUpload"
+          :on-remove="handleImageRemove"
+          :on-change="handleImageChange"
+          :auto-upload="false"
+          :file-list="imageFileList"
+        >
+          <i class="el-icon-plus"></i>
+        </el-upload>
+      </el-form-item>
       </el-form>
 
       <template #footer>
@@ -161,10 +342,10 @@ onUnmounted(() => {
         </span>
       </template>
     </el-dialog>
-    <div ref="containerRef" class="post-list">
+    <div ref="socialDataContainerRef" class="post-list">
       <div v-for="(post,index) in socialData" :key="post.id" class="post-item">
         <keep-alive>
-        <router-link :to="`/interact/${post.id}`">
+        <router-link :to="`/interact/${post.id}`" @click="recordViewHistory(post)">
           <!-- 添加对post和post.user的校验，否则在重新回到列表页时user字段为undefined报错。 -->
           <CardsCom v-if="post && post.user" :post="post" :index="index"></CardsCom>
         </router-link></keep-alive>
@@ -179,12 +360,6 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .interact-page {
-  .loading{
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-  }
   .header {
     @extend .flex-between;
     padding: 2.1vh 0;

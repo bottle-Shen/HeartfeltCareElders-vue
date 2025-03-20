@@ -109,14 +109,14 @@ onBeforeRouteLeave(() => {
 </script>
 <template>
   <div class="bg flex-center">
-    <el-form
+    <div class="form-container">
+      <el-form
     :model="form"
     ref="ruleFormRef"
     status-icon
-    class="form-bg"
     :rules="formRules"
   >
-  <h1 class="h1 title">登录</h1>
+  <h1 class="h1">登录</h1>
       <div>
         <!-- 用户身份选择 -->
         <el-form-item class="radio-group" label="请选择您的真实身份">
@@ -134,9 +134,9 @@ onBeforeRouteLeave(() => {
       </el-form-item>
       <!-- 验证码 -->
       <el-form-item prop="captcha" v-show="showVerificationCode">
-         <div class="flex-center flex-two">
-          <el-input class="flex-three" placeholder="请输入验证码" v-model="form.captcha" />
-         <el-button class="flex-one" type="primary" v-debounce:click="sendSms" :disabled="!form.phone||isCounting" :loading="isCounting">
+         <div class="flex-center captcha-group">
+          <el-input class="captcha" placeholder="请输入验证码" v-model="form.captcha" />
+         <el-button class="get-captcha primary-button" type="primary" v-debounce:click="sendSms" :disabled="!form.phone||isCounting" :loading="isCounting">
           {{ isCounting ? `${countdown}秒后重新获取` : '获取验证码' }}
         </el-button>
          </div>
@@ -152,67 +152,79 @@ onBeforeRouteLeave(() => {
       <div class="flex-between">
       <!-- 切换按钮 -->
       <el-form-item v-show="showprevStep">
-        <el-button class="link-button" type="primary" @click="prevStep">返回</el-button>
+        <el-button class="link-button" link @click="prevStep">返回</el-button>
       </el-form-item>
       <!-- 切换按钮 -->
       <el-form-item v-show="showPasswordMethod">
-        <el-button class="link-button" type="primary" @click="togglePasswordLogin">{{ isPasswordLogin ? "使用密码登录" :"使用验证码登录"}}</el-button>
+        <el-button class="link-button" link @click="togglePasswordLogin">{{ isPasswordLogin ? "使用密码登录" :"使用验证码登录"}}</el-button>
       </el-form-item>
       <!-- 切换按钮 -->
       <el-form-item v-show="showAccountMethod">
-        <el-button class="link-button" type="primary" @click="toggleAccountLogin">{{ isAccountLogin ? "使用账号登录":"使用手机号登录" }}</el-button>
+        <el-button class="link-button" link @click="toggleAccountLogin">{{ isAccountLogin ? "使用账号登录":"使用手机号登录" }}</el-button>
       </el-form-item>
       </div>
       <!-- 切换注册 -->
       <el-form-item class="text">
-        <span>没有账号？去<router-link to="/register" class="link" @click="handleRegisterClick">注册</router-link></span>
-        <span><router-link class="link" to="/reset">忘记密码</router-link></span>
+        <span>没有账号？去<router-link to="/register" class="link-button" @click="handleRegisterClick">注册</router-link></span>
+        <span><router-link class="link-button" to="/reset">忘记密码</router-link></span>
       </el-form-item>
       <!-- 提交按钮 -->
       <el-form-item>
-        <el-button v-show="nextButton" class="primary-button" type="primary" @click="nextStep">同意并继续</el-button>
+        <el-button v-show="nextButton" class="primary-button submit-button" type="primary" @click="nextStep">同意并继续</el-button>
       </el-form-item>
       <!-- 提交按钮 -->
       <el-form-item>
-        <el-button v-show="LoginButton" class="primary-button" type="primary" v-debounce:click="submitForm" :disabled="!form.phone && !form.account || !form.password1 && !form.captcha ">登录</el-button>
+        <el-button v-show="LoginButton" class="primary-button submit-button" type="primary" v-debounce:click="submitForm" :disabled="!form.phone && !form.account || !form.password1 && !form.captcha ">登录</el-button>
       </el-form-item>
-      <!-- 上一步按钮 -->
-      <!-- <el-form-item v-show="currentStep > 1 && currentStep < 4">
-        <el-button type="primary" @click="prevStep">上一步</el-button>
-      </el-form-item> -->
       </div>
     </el-form>
+    </div>
   </div>
 </template>
 <style scoped lang="scss">
-// @use '@/styles/index.scss';
+.form-container{
+  min-width: rem(300);
+  @extend .flex-center;
+  border-radius: 30% 10px 20% 20%;
+  background-color: var(--white);
+  width:rem(650);/* 确保有明确的宽度 */
+  margin: 0 rem(20);
+}
 :deep(.el-form-item__content){//:deep()穿透
   @extend .flex-between;
 }
 h1{
   color: var(--dark-blue);
-  margin-bottom: 30px;
+  margin-bottom: rem(30);
 }
 .radio-group > :deep(.el-form-item__content){
   justify-content: flex-end;
 }
-// :deep(.el-form-item__label){
-//   @extend .label;
-// }
+:deep(.el-form-item__label){
+  // @extend .label;
+}
 .el-form{
-  border-radius: 30% 10px 20% 20%;
-  width:650px;/* 确保有明确的宽度 */
-  padding: 30px 80px 50px;
+  width:80%;/* 确保有明确的宽度 */
+  padding:rem(30) rem(60) rem(50);
   .el-input{
-    @extend .input;
+    height: rem(48);
+  }
+  .captcha-group{
+    flex:2;
+    .captcha{
+      flex:3;
+    }
+    .get-captcha{
+      height: rem(48);
+      flex:1;
+    }
   }
   .el-button{
-    @extend .button;// 继承全局按钮样式
+    // @extend .button;// 继承全局按钮样式
     @extend .w-full;
   }
   @include mobile{
-      width:80%;/* 确保有明确的宽度 */
-      padding: 3% 2% 5%;
+     padding: 5% 2% 10%;
   }
 }
 </style>

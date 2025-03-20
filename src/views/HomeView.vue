@@ -16,7 +16,7 @@ const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);
 const getUserType = computed(() => store.getters['user/getUserType']);
 const isAsideVisible = computed(() => store.getters['asideVisible/isAsideVisible']);
 const healthData = ref<HealthData[]>([]); // 用于存储健康数据
-const hasHealthData = ref(false); // 用于标记是否有健康数据
+const hasHealthData = ref(true); // 用于标记是否有健康数据
 // 存储所有提取的数据
 const healthMetrics = reactive({
   height: [] as number[],
@@ -46,7 +46,7 @@ const healthStatusPriority = [
   { status: "严重", priority: 1, suggestion: "有些不太乐观，还请定期检查身体健康，关注健康状况哦！" },
   { status: "加油", priority: 2, suggestion: "加强健康管理，您还有很大的上升空间~" },
   { status: "一般", priority: 3, suggestion: "保持良好生活习惯，定期监测健康指标，或许您会有更大的进步哟！" },
-  { status: "良好", priority: 4, suggestion: "您的身体健康已经很不错了，还请继续保持健康生活方式，定期体检。" },
+  { status: "良好", priority: 4, suggestion: "您的身体状态已经很不错了，还请继续保持健康的生活方式，定期体检。" },
   { status: "优秀", priority: 5, suggestion: "您的身体状态已经非常棒了，还请继续保持。" },
 ];
 // 健康状态建议
@@ -87,7 +87,7 @@ const extractHealthData = () => {
   healthMetrics.bodyFat = healthData.value.map((item) => item.body_fat);
   healthMetrics.bloodOxygen = healthData.value.map((item) => item.blood_oxygen_saturation);
   healthMetrics.healthStatus = healthData.value.map((item) => item.health_status);
-  console.log(healthMetrics);
+  // console.log(healthMetrics);
 }
 // 初始化图表
 const initCharts = () => {
@@ -443,9 +443,10 @@ const fetchHealthData = async () => {
       await nextTick(); // 确保图表初始化完成
       updateCharts(); // 更新图表
     }
-    console.log('健康数据', healthData.value);
+    // console.log('健康数据', healthData.value);
   } catch (error) {
     console.error('获取健康数据失败:', error);
+    ElMessage.error('获取健康数据失败');
   }
 };
 const charts = [bloodGlucoseChart, BMIChart, bloodPressureChart];
@@ -512,9 +513,17 @@ const resizeCharts = () => {
 // SSE 监听逻辑
 const eventSource = ref<EventSource | null>(null); // 显式指定类型
 let stopWatch: () => void; // 用于存储 watch 的停止函数
-onMounted(() => {
-  initCharts();
-  fetchHealthData();// 在组件加载时获取健康数据
+onMounted(async() => {
+  try {
+        store.commit('loading/SET_LOADING', true); // 设置全局加载状态为 true
+        initCharts();
+        await fetchHealthData();// 在组件加载时获取健康数据
+    } catch (error) {
+        console.error('加载健康数据失败:', error);
+        ElMessage.error('加载健康数据失败，请稍后重试');
+    } finally {
+        store.commit('loading/SET_LOADING', false); // 设置全局加载状态为 false
+    }
   // 获取 SSE URL
   // const sseUrl = getSSEUrl();
   // 创建 EventSource 连接
@@ -538,7 +547,7 @@ onMounted(() => {
   // 设置 watch 的停止函数
   stopWatch = watch(isAsideVisible, () => {
   // 监听 isAsideVisible 变化,重绘图表
-  console.log('侧边栏状态变化', isAsideVisible.value);
+  // console.log('侧边栏状态变化', isAsideVisible.value);
   resizeCharts();
 });
 })

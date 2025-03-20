@@ -98,7 +98,8 @@ const handleSelect = (index: string) => {
     display: inline-block;
     font-style: normal;
     padding-left: rem(20);
-    @extend .body;
+    @extend .body-big;
+    // font-size: rem(22);
   }
   @include hover{
     &:hover{

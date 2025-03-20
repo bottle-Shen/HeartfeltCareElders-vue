@@ -3,6 +3,13 @@ import {countdown,isCounting,sendSms,clearCountdown} from '@/utils/modules/captc
 import { reset } from '@/api/resetPassword'
 import { resetForm, form } from '@/utils/form'
 import { formRules } from '@/utils/formRules'
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
+const goBack = () => {
+  router.go(-1); // 返回上一页
+};
 
 const resetPassword = async () => {
   await reset({
@@ -36,8 +43,9 @@ onBeforeRouteLeave(() => {
 });
 </script>
 <template>
-  <div class="reset-page bg flex-center flex-col">
-    <el-form
+  <div class="bg flex-center">
+    <div class="form-container">
+      <el-form
     :model="form"
     ref="ruleFormRef"
     status-icon
@@ -66,30 +74,51 @@ onBeforeRouteLeave(() => {
        />
       <!-- 验证码 -->
       <el-form-item prop="captcha">
-         <div class="flex-center flex-two">
-          <el-input class="flex-three" placeholder="请输入验证码" v-model="form.captcha" />
-         <el-button class="flex-one" type="primary" v-debounceClick:click="sendSms" :disabled="!form.phone||isCounting" :loading="isCounting">
+         <div class="flex-center captcha-group">
+          <el-input class="captcha" placeholder="请输入验证码" v-model="form.captcha" />
+         <el-button class="get-captcha primary-button" type="primary" v-debounce:click="sendSms" :disabled="!form.phone||isCounting" :loading="isCounting">
           {{ isCounting ? `${countdown}秒后重新获取` : '获取验证码' }}
         </el-button>
          </div>
       </el-form-item>
+      <!-- 返回按钮 -->
+      <el-form-item class="tip" >
+        <el-button class="link-button" link @click="goBack">返回</el-button>
+      </el-form-item>
     <!-- 提交按钮 -->
       <el-form-item>
-        <el-button class="primary-button" type="primary" v-debounceClick:click="submitForm" :disabled="!form.userType||!form.phone || !form.password1 || !form.password2 || !form.captcha" >确认修改</el-button>
+        <el-button class="primary-button submit-button" type="primary" v-debounce:click="submitForm" :disabled="!form.userType||!form.phone || !form.password1 || !form.password2 || !form.captcha" >确认修改</el-button>
       </el-form-item>
   </el-form>
+    </div>
   </div>
 </template>
 <style scoped lang="scss">
-.reset-page {
-    .el-form{
-      background-color: var(--white);
-        border-radius: 30% 10px 20% 20%;
-        width:650px;/* 确保有明确的宽度 */
-        padding: 30px 80px 50px;
-        h1{
-          margin-bottom: 30px;
-        }
+.form-container{
+  min-width: rem(300);
+  @extend .flex-center;
+  border-radius: 30% 10px 20% 20%;
+  background-color: var(--white);
+  width:rem(650);/* 确保有明确的宽度 */
+  margin: 0 rem(20);
+}
+.el-form{
+  width:80%;/* 确保有明确的宽度 */
+  padding:rem(30) rem(60) rem(50);
+  h1{
+    color: var(--dark-blue);
+    margin-bottom: rem(30);
+  }
+  .captcha-group{
+    flex:2;
+    .captcha{
+      flex:3;
+    }
+    .get-captcha{
+      height: rem(48);
+      flex:1;
+    }
+  }
       .el-form-item{
         @extend .flex-center;
       }
@@ -98,20 +127,20 @@ onBeforeRouteLeave(() => {
         }
       
       :deep(.el-form-item__label){
-        @extend .label;
+        // @extend .label;
       }
       .el-input{
-        @extend .input;
+        height: rem(48);
       }
         .el-button{
-          @extend .button;// 继承全局按钮样式
+          // @extend .button;// 继承全局按钮样式
           @extend .w-full;
         }
-    }
-    @media (max-width: 768px) {
-    .el-form{
-      width: 95%;
-    }
-  }
+        .link-button{
+          justify-content: flex-start;
+        }
+        @include mobile{
+        padding: 5% 2% 10%;
+      }
 }
 </style>

@@ -78,9 +78,9 @@
 
 // 背景
 .bg {
-    min-height: 100vh;//设置最小高度为视口高度
-    min-height: calc(var(--vh, 1vh) * 100);//兼容性写法，用于处理某些浏览器可能不支持 100vh 的情况。
-    // background-color: var(--bg-blue);
+    width: 100vw;
+    height: 100vh;//设置最小高度为视口高度
+    background-color: var(--bg-one);
     // @include base.mobile {
     //     // 如果需要在移动端设置背景渐变，可以在这里添加
     //     // background-color:red;

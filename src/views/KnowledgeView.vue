@@ -4,7 +4,7 @@ import { useStore } from 'vuex'
 // 定义响应式数据
 const store = useStore()
 const knowledgeData = computed(() => store.state.knowledge.knowledgeData)
-const containerRef = ref<HTMLElement | null>(null)// 滚动容器的引用
+const knowledgeDataContainerRef = ref<HTMLElement | null>(null)// 滚动容器的引用
 const loading = computed(() => store.state.knowledge.loading)// 获取加载状态
 const finished = computed(() => store.state.knowledge.finished)// 获取加载完成状态
 
@@ -13,37 +13,39 @@ const getKnowledge = async () => {
   await store.dispatch('knowledge/fetchKnowledgeData')
 }
 // 使用无限滚动逻辑
-const { handleScroll, cleanup, restoreScrollPosition } = useInfiniteScroll(containerRef, getKnowledge, 300)
+const {  cleanup: cleanupKnowledgeData,
+  restoreScrollPosition: restoreKnowledgeDataScroll,
+  addScrollListeners: addKnowledgeDataListeners,
+   removeScrollListeners: removeKnowledgeDataListeners
+} = useInfiniteScroll(knowledgeDataContainerRef,
+  getKnowledge, 300,'knowledgeDataContainerRef')
 
 // 挂载时添加滚动事件监听
 onMounted(() => {
-    getKnowledge().then(() => {
-        restoreScrollPosition()
-    })
-    const scrollContainer = containerRef.value;
-  if (scrollContainer) {
-    scrollContainer.addEventListener("scroll", handleScroll)
-  } else {
-    window.addEventListener("scroll", handleScroll)
+  try {
+    store.commit('loading/SET_LOADING', true); // 设置全局加载状态为 true
+    getKnowledge(); // 加载健康知识数据
+  } catch (error) {
+    console.error('加载健康知识失败:', error);
+    ElMessage.error('加载健康知识失败，请稍后重试');
+  } finally {
+    store.commit('loading/SET_LOADING', false); // 设置全局加载状态为 false
   }
+    restoreKnowledgeDataScroll()
+    addKnowledgeDataListeners()
 });
 
 // 卸载时移除滚动事件监听
 onUnmounted(() => {
-    const scrollContainer = containerRef.value
-  if (scrollContainer) {
-    scrollContainer.removeEventListener("scroll", handleScroll)
-  } else {
-    window.removeEventListener("scroll", handleScroll)
-  }
-  cleanup()// 清理资源
+  removeKnowledgeDataListeners()
+  cleanupKnowledgeData()
 });
 </script>
 <template>
     <div class="knowledge-page">
         <h1>健康知识库</h1>
         <!-- 知识列表 -->
-         <div ref="containerRef" class="knowledge-list">
+         <div ref="knowledgeDataContainerRef" class="knowledge-list">
             <ul class="cards" v-for="(knowledge,index) in knowledgeData" :key="knowledge.id">
             <li class="card" :class="`color-${index % 4}`">
                 <router-link :to="`/knowledge/${knowledge.id}`">
@@ -112,11 +114,5 @@ h1{
 }
 }
 
-}
-.loading{
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
 }
 </style>

@@ -4,7 +4,9 @@ import { useRoute } from "vue-router";
 import { getKnowledgeById } from "@/api/knowledge";
 import type { IKnowledge } from "@/@types/knowledge";
 import { formatDate } from '@/utils'
-
+import { useStore } from 'vuex'
+// 定义响应式数据
+const store = useStore()
 const route = useRoute();
 const router = useRouter(); // 获取路由实例
 const knowledge = ref<IKnowledge | null>(null);
@@ -14,11 +16,15 @@ const goBack = () => {
 };
 
 onMounted(async () => {
-    const id = route.params.id as unknown as number;
     try {
+        // store.commit('loading/SET_LOADING', true); // 设置全局加载状态为 true
+        const id = route.params.id as unknown as number;
         knowledge.value = await getKnowledgeById(id);
     } catch (error) {
-        console.error("Failed to fetch knowledge:", error);
+        console.error('加载健康知识失败:', error);
+        ElMessage.error('加载健康知识失败，请稍后重试');
+    } finally {
+        // store.commit('loading/SET_LOADING', false); // 设置全局加载状态为 false
     }
 });
 onUnmounted(() => {

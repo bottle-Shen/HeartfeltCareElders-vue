@@ -1,18 +1,29 @@
 <script setup lang="ts">
 import { Search } from '@element-plus/icons-vue'
+defineProps({
+  placeholder: {
+    type: String,
+    default: "请输入搜索内容",
+  },
+});
 const searchQuery = ref(""); // 搜索关键词
-const emit = defineEmits(["search"]);
+const emit = defineEmits(["search","clear"]);
 const handleSearch = () => {
-  if (searchQuery.value.trim()) {
-    emit("search", searchQuery.value); // 触发搜索事件
-    console.log('触发搜索事件');
-  }
+  emit("search", searchQuery.value.trim()); // 触发搜索事件
+  // console.log('触发搜索事件');
 };
+// 监听搜索框内容变化
+watch(searchQuery, (newVal) => {
+  // console.log('监听', searchQuery)
+  if (!newVal.trim()) {
+    emit("clear"); // 触发 clear 事件
+  }
+});
 // const input = ref('')
 </script>
 <template>
     <!-- <div> -->
-      <el-input class="h-full" @keyup.enter="handleSearch" v-model="searchQuery" placeholder="请输入搜索内容" :prefix-icon="Search" />
+      <el-input class="h-full" @keyup.enter="handleSearch" v-model="searchQuery" :placeholder="placeholder" :prefix-icon="Search" />
     <!-- </div> -->
 </template>
 <style lang="scss" scoped>

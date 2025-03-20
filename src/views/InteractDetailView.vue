@@ -81,10 +81,9 @@ const initializeWebSocketConnection = (postId: number, userId: number) => {
 };
 
 onMounted(async () => {
-  // 设置全局加载状态为 true
-  store.commit('loading/SET_LOADING', true);
-
   try {
+    // 设置全局加载状态为 true
+    store.commit('loading/SET_LOADING', true);
     // 初始化用户点赞记录
     await store.dispatch('post/initializeLikedPosts');
 
@@ -132,24 +131,36 @@ onUnmounted(() => {
 </script>
 <template>
   <!-- 如果 isLoading 为 true，显示加载提示 -->
-    <div v-if="isLoading" class="isLoading">
+    <!-- <div v-if="isLoading" class="isLoading">
       <LoadingCom />
-    </div>
+    </div> -->
     <!-- 如果 isLoading 为 false，显示正常内容 -->
-  <div v-else class="interact-detail w-full h-full">
+  <div class="interact-detail w-full h-full body">
     <img class="image-bac w-full h-full" :src="post?.image" :alt="post?.title"/>
     <div class="interact-container">
     <!-- 返回按钮 -->
-    <button @click="goBack" class="back-button header">返回</button>
+    <button @click="goBack" class="back-button header title">返回</button>
     <div class="content w-full h-full">
       <span class="image-container w-full h-full">
-        <img :src="post?.image" :alt="post?.title"/>
+         <!-- 判断是否有图片组 -->
+          <el-carousel v-if="post?.images && post.images.length > 0"  trigger="click">
+            <el-carousel-item v-for="item in post?.images" :key="item.id">
+                <img :src="item.image" alt="Image" class="carousel-image" />
+            </el-carousel-item>
+          </el-carousel>
+          <!-- 判断是否有视频 -->
+           <video v-else-if="post?.video" controls class="video-player w-full h-full">
+             <source :src="post.video" type="video/mp4">
+              您的设备不支持视频播放。
+            </video>
+            <!-- 默认情况：显示封面图 -->
+             <img v-else :src="post?.image" :alt="post?.title"/>
       </span>
       <div class="post-info">
         <p>{{ post?.user.username }}</p>
         <p>{{ post?.title }}&nbsp;{{ post?.content }}</p>
       </div>
-      <p class="time">发布时间：{{ formatDate(post?.created_at) }}</p>
+      <p class="time body-s">发布时间：{{ formatDate(post?.created_at) }}</p>
     </div>
     <div class="actions">
       <div class="actions-item">
@@ -177,18 +188,23 @@ onUnmounted(() => {
     </div>
     </div>
     <div v-if="post?.isCommentsVisible" class="comment-container">
-      <ul class="comments" v-if="post?.comments && post?.comments.length > 0">
+      <div class="comments-section">
+        <ul class="comments" v-if="post?.comments && post?.comments.length > 0">
         <li v-for="comment in post?.comments" :key="comment.id" class="comment-item">
           <img :src="handleAvatarPath(comment.user.avatar)" alt="用户头像" class="avatar"/>
-          <p class="comment-content">{{ comment.comment_content }}</p>
-          <span class="timestamp">{{ formatDate(comment.created_at) }}</span>
+          <span class="comment-right">
+            <p class="username body-s">{{ comment.user.username }}</p>
+            <p class="comment-content">{{ comment.comment_content }}</p>
+            <p class="time body-s">{{ formatDate(comment.created_at) }}</p>
+          </span>
         </li>
       </ul>
       <div v-else class="no-comments">期待您的第一条评论~</div>
+      </div>
       <div class="comment-form">
       <el-input v-model="CommentContent" placeholder="评论内容" />
       <!-- <el-button type="primary" @click="addComment(postId, CommentContent, userId)">评论</el-button> -->
-      <el-button type="primary" @click="submitComment" :disabled="!CommentContent.trim()">评论</el-button>
+      <el-button class="primary-button" type="primary" @click="submitComment" :disabled="!isAuthenticated || !CommentContent.trim()">评论</el-button>
       </div>
     </div>
   </div>
@@ -199,7 +215,6 @@ onUnmounted(() => {
   display: flex;
   position: relative;
   color: var(--white);
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); // 添加文字阴影
   .like {
     position: relative;
     display: inline-block;
@@ -272,27 +287,41 @@ onUnmounted(() => {
   .header{
     padding-top: 1.4vw;
     position: absolute;
-    @extend .title;
     z-index: 1;
   }
   .content{
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); // 添加文字阴影
     position: relative;
     .image-container{
       display: flex;
       justify-content: center;
-      img{
-        object-fit: cover;
+      .el-carousel{
+        width: 100%;
+        height: 100%;
+        :deep(.el-carousel__container){
+          width: 100%;
+          height: 100%;
+          .carousel-image{
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+        }
       }
+      img{
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
     }
     .post-info{
       position: absolute;
-      bottom: 0;
+      bottom: rem(10);
     }
     .time{
       position: absolute;
-      bottom: 0;
+      bottom: rem(10);
       right: 0;
-      @extend .body-s;
     }
   }
     .actions{
@@ -308,7 +337,6 @@ onUnmounted(() => {
       display: flex;
       flex-direction: column;
       align-items: center;
-      @extend .body-s;
       padding-bottom: rem(10);
       .avatar-container{
         width: rem(45);
@@ -333,22 +361,43 @@ onUnmounted(() => {
     }
     }
     .comment-container{
+      width: clamp(rem(200), 50%, rem(350));
       margin-left: rem(15);
       padding: rem(10);
       z-index: 1;
       box-shadow: -4px 0 5px rgba(0, 0, 0, 0.1);
       display: flex;
       flex-direction: column;
+      .comments-section {
+        flex: 1; // 让评论列表占满剩余空间
+        overflow-y: auto; // 如果评论过多，允许滚动
+      }
       .comments{
-        width: 100%;
-        overflow: auto;
+        // width: 100%;
+        // overflow: auto;
         // position: fixed;
         // height: 100%;
-        li{
+        .comment-item{
+          display: flex;
           img{
             width: rem(35);
             height: rem(35);
             border-radius: 50%;
+          }
+          .comment-right{
+            width: 80%;
+            padding-left: rem(10);
+            .username{
+              @extend .ellipsis;
+              padding-bottom: rem(5);
+              color: var(--black);
+            }
+            .comment-content{
+              color: var(--black);
+            }
+            .time{
+              color:var(--white);
+            }
           }
         }
       }

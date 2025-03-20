@@ -7,7 +7,8 @@ export interface SocialData{
         username: string;
         avatar: string;
     };
-    image: string;//图片
+    image: string;//封面图
+    images: { id: number; image: string }[];// 图片组-轮播图
     video: string;//视频
     comments_count: number;//评论数
     likes_count: number;//点赞数
@@ -31,5 +32,8 @@ export interface CommentData {
 export interface addPostParams {
     title: string;
     content: string;
-    user_id:number
+    // user_id: number;
+    image: string;// 封面图
+    images: string[];// 图片列表
+    video: string;//视频
 }

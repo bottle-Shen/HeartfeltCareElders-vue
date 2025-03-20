@@ -4,6 +4,8 @@ import type { user,UserInfoFormType,IUserInfo, elderlyInfoResponse, familyInfoRe
 import { getUserInfo, updateUserInfo,uploadAvatar,uploadBackground } from '@/api/userInfo';
 import { hidePhoneNumber } from '@/utils/modules/hidePhoneNumber';
 // import { formRules } from '@/utils/formRules'
+import type { userActivityData } from "@/@types/activities"
+import { getUserActivityData } from '@/api/activities';
 import { ElMessage, ElDialog } from 'element-plus'
 import type { TabsPaneContext } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -11,26 +13,100 @@ import type { UploadProps,UploadFile } from 'element-plus'
 import { useStore } from 'vuex';
 import { countdown, isCounting, sendSms } from '@/utils/modules/captchaUtils'
 import { UserLikePost, getUserSocial } from '@/api/social'
-const activeName = ref('first')
+import { useInfiniteScroll } from '@/utils'
+import type {SocialData} from '@/@types/social'
+import router from '@/router';
 
+const activeName = ref('first')// 默认选中的标签页
+const userPostsContainerRef = ref<HTMLElement | null>(null)// 滚动容器的引用
+const userActivitiesData = ref<userActivityData[]>([])// 用户参加的活动数据
+const viewHistory = computed(() => store.getters['post/viewHistory']);// 仓库获取观看历史
+const paginatedViewHistory = computed(() => store.getters['post/paginatedViewHistory']);// 本地获取观看历史
+// 获取用户帖子和点赞帖子的数据
+const userPosts = computed(() => store.state.post.userPosts);
+const likedPosts = computed(() => store.state.post.likedPosts);
+// 加载状态和完成状态
+const loadingUserPosts = computed(() => store.state.post.loadingUserPosts);
+const finishedUserPosts = computed(() => store.state.post.finishedUserPosts);
+const loadingLikedPosts = computed(() => store.state.post.loadingLikedPosts);
+const finishedLikedPosts = computed(() => store.state.post.finishedLikedPosts);
+const loadingViewHistory = computed(() => store.state.post.loadingViewHistory);
+const finishedViewHistory = computed(() => store.state.post.finishedViewHistory);
 const handleClick = (tab: TabsPaneContext, event: Event) => {
-  console.log(tab, event)
-}
+  console.log(tab, event);
+  console.log(tab.props.name); // 使用 tab.props.name
+  // 清除当前数据
+  if (tab.props.name === 'first') {
+    store.commit('post/SET_USER_POSTS', []);
+    store.commit('post/SET_CURRENT_PAGE_USER_POSTS', 1);
+    store.commit('post/SET_LOADING_USER_POSTS', false);
+    store.commit('post/SET_FINISHED_USER_POSTS', false);
+  } else if (tab.props.name === 'second') {
+    store.commit('post/SET_LIKED_POSTS', []);
+     store.commit('post/SET_CURRENT_PAGE_LIKED_POSTS', 1);
+     store.commit('post/SET_LOADING_LIKED_POSTS', false);
+     store.commit('post/SET_FINISHED_LIKED_POSTS', false);
+  }
+   // 加载新数据
+  if (tab.props.name === 'first') {
+     store.dispatch('post/fetchUserPosts');
+  } else if (tab.props.name === 'second') {
+     store.dispatch('post/fetchLikedPosts');
+  }
+  // 清除滚动位置
+  const container = userPostsContainerRef.value;
+  if (container) {
+    container.scrollTop = 0; // 将滚动位置设置为顶部
+  }
+   // 移除滚动监听器和清理资源
+   removeUserPostListeners();
+   // 重新添加滚动监听器
+   addUserPostsListeners();
+};
+
+// 获取用户发布的帖子
 const getUserSocialData = async () => {
-  const response = await getUserSocial()
-  // console.log('用户帖子数据', response)
-  if (response) {
-    store.commit('post/setUserPosts', response); // 在组件中存储到 Vuex
-  }
-  // socialData.value = response
-  // console.log('用户帖子数据', socialData.value)
+  await store.dispatch('post/fetchUserPosts')
 }
+// 获取用户点赞的帖子
 const getUserLikeData = async () => {
-  const response = await UserLikePost()
-  if (response) {
-    store.commit('post/setLikedPosts', response); // 在组件中存储到 Vuex
-  }
+  await store.dispatch('post/fetchLikedPosts')
 }
+const fetchUserActivityData = async () => {
+  const response = await getUserActivityData();
+  // console.log('用户参加的活动数据', response);
+  // 处理用户活动数据
+  userActivitiesData.value = response.map((activity: userActivityData) => {
+    return {
+      ...activity,
+      event: {
+        ...activity.event,
+      },
+    }
+  })
+  store.commit('activities/setUserActivity', userActivitiesData.value)
+}
+// 使用无限滚动逻辑-用户发布的帖子-用户点赞的帖子
+const { cleanup: cleanupUserPosts,
+  restoreScrollPosition: restoreUserPostsScroll,
+  addScrollListeners: addUserPostsListeners,
+  removeScrollListeners:removeUserPostListeners
+} = useInfiniteScroll(
+  userPostsContainerRef,
+  async () => {
+    // 根据当前激活的标签页调用对应的加载更多数据的函数
+    if (activeName.value === 'first') {
+      await store.dispatch('post/loadMoreUserPosts');
+    } else if (activeName.value === 'second') {
+      await store.dispatch('post/loadMoreLikedPosts');
+    }else if (activeName.value === 'third') {
+      await store.dispatch('post/loadViewHistoryFromLocalStorage');
+    }
+  }, 300,'userPostsContainerRef')
+const recordViewHistory = (post: SocialData) => {
+  // 记录观看历史
+  store.dispatch('post/addToViewHistory', post);
+};
 // 格式化日期
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -38,7 +114,6 @@ const formatDate = (dateString: string) => {
 };
 
 const store = useStore()
-const isShow = ref(false)// 是否显示用户信息页面
 const isLoading = ref(true)// 是否加载中
 const isEditMode = ref(false)// 响应式控制是否处于编辑模式
 const ruleFormRef = ref()// 表单引用
@@ -51,9 +126,7 @@ const currentUploadType = ref<string | null>(null); // 当前上传类型：'ava
 const showRealNameAuthCom = ref(false)
 const signatureDefaultText = "用一段简单的个性介绍，展示您的独特风采~"// 定义个性签名默认文本
 const showVerificationCode = ref(false); // 是否显示验证码相关字段
-// 获取用户帖子和点赞帖子的数据
-const userPosts = computed(() => store.state.post.userPosts);
-const likedPosts = computed(() => store.state.post.likedPosts);
+
 // 定义 SEX_CHOICES 为对象数组
 const SEX_CHOICES = [
   { value: '男' },
@@ -67,22 +140,34 @@ const userType = computed(() => ({
   family_id: store.state.user.user.family_id,
   caregiver_id: store.state.user.user.caregiver_id,
 }));
-
-// 检查用户是否登录
-const checkLoginStatus = () => {
-  if (!store.state.user.token.access_token) {
-    isShow.value = false;
-    // ElMessage.error('请先登录！');
-    return false;
-  }
-  return true;
-};
+const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);// 获取用户是否登录
 
 onMounted(() => {
-  checkLoginStatus();// 在组件加载时检查登录状态
-  fetchUserInfo();// 初始化用户信息
-  getUserSocialData();
-  getUserLikeData();
+  try {
+    store.commit('loading/SET_LOADING', true); // 设置全局加载状态为 true
+    if (isAuthenticated.value) {
+        fetchUserInfo();// 初始化用户信息
+        getUserSocialData(); // 加载用户发布的帖子
+        getUserLikeData(); // 加载用户点赞的帖子
+        fetchUserActivityData()// 加载用户参加的活动数据
+    }
+  } catch (error) {
+    console.error('加载用户资料失败:', error);
+    ElMessage.error('加载用户资料失败，请稍后重试');
+  } finally {
+    store.commit('loading/SET_LOADING', false); // 设置全局加载状态为 false
+  }
+  // 确保 DOM 更新完成后再恢复滚动位置和添加监听器
+  nextTick(() => {
+    // 恢复滚动位置和添加滚动监听器
+    restoreUserPostsScroll();
+    addUserPostsListeners();
+  });
+});
+onUnmounted(() => {
+  // 移除滚动监听器和清理资源
+  removeUserPostListeners();
+  cleanupUserPosts();
 });
 
 const changedParams = ref<UserInfoFormType>({
@@ -128,34 +213,6 @@ const isFamilyUserInfo = (response: IUserInfo): response is familyInfoResponse =
 
 const isCaregiverUserInfo = (response: IUserInfo): response is caregiverInfoResponse => 'caregiver_id' in response;
 
-// watch(
-//   () => userInfo,
-//   (newValue) => {
-//     // 基础信息变化检测
-//     console.log('新值', newValue);
-//     // console.log('库里数据newValue', store.state.user);
-//     console.log('用户名', newValue.user.username);
-
-//       changedParams.value.user.username = newValue.user.username;
-
-//       changedParams.value.user.sex = newValue.user.sex;
-
-//     switch (userType.value.userType) {
-//       case 1:
-//         break;
-//       case 2:
-//         changedParams.value.relation = newValue.relation;
-//         changedParams.value.common_address = newValue.common_address;
-//         break;
-//       case 3:
-//         break;
-//       default:
-//         break;
-//     }
-//   }
-//   , { deep: true }
-// )
-
 // 加载用户信息
 const fetchUserInfo = async () => {
   try {
@@ -185,7 +242,7 @@ const fetchUserInfo = async () => {
       // 机构人员
       Object.assign(changedParams.value, response);
     }
-    isShow.value = true; // 显示用户信息页面
+    // isShow.value = true; // 显示用户信息页面
     console.log('获取到的用户信息：', userInfoForm.value);
   }catch (error) {
     console.error('获取用户信息失败：', error);
@@ -394,21 +451,15 @@ onBeforeRouteLeave(() => {
 
 </script>
 <template>
-  <!-- 加载中 -->
-  <div v-if="isLoading" class="loading-container">
-    <LoadingCom />
-  </div>
-
   <!-- 用户信息已加载 -->
-  <div class="userInfo-page" v-else-if="isShow">
-   <div class="userInfo-left">
+  <div ref="userPostsContainerRef" class="userInfo-page" v-if="isAuthenticated">
+    <div class="userInfo-left">
      <!-- 弹窗组件 -->
     <el-dialog
       v-model="isPreviewDialogVisible"
       :title="currentUploadType === 'avatar' ? '确认头像' : '确认背景图'"
       :before-close="handleDialogClose"
       :modal="true"
-      :append-to="'.el-container'"
     >
       <div v-if="currentUploadType === 'avatar'" class="preview-avatar-container">
         <img v-if="avatarUrl" :src="avatarUrl" class="preview-avatar" />
@@ -702,9 +753,9 @@ onBeforeRouteLeave(() => {
    </div>
    <div class="userInfo-right">
       <el-tabs v-model="activeName" class="demo-tabs" @tab-click="handleClick">
-        <el-tab-pane label="我的发布" name="first">
+        <el-tab-pane  label="我的发布" name="first">
           <ul class="userpost-list" v-if="userPosts.length > 0">
-            <li class="userpost-item" v-for="post in userPosts" :key="post.id">
+            <li class="userpost-item" v-for="post in userPosts" :key="post.id" @click="router.push(`/interact/${post.id}`),recordViewHistory(post)" >
               <h3 class="title">{{ post.title }}</h3>
               <p class="body-s text">{{ post.content }}</p>
               <div class="userpost-item-bottom">
@@ -716,11 +767,15 @@ onBeforeRouteLeave(() => {
               </div>
             </li>
           </ul>
-          <p v-else>暂无发布内容</p>
+          <!-- 加载状态 -->
+          <LoadingCom v-if="loadingUserPosts" class="loading"/>
+          <div v-if="finishedUserPosts" class="no-more-data">
+            没有更多数据
+          </div>
         </el-tab-pane>
         <el-tab-pane label="喜欢" name="second">
-          <ul class="userpost-list" v-if="userPosts.length > 0">
-            <li class="userpost-item" v-for="post in likedPosts" :key="post.id">
+          <ul class="userpost-list" v-if="likedPosts.length > 0">
+            <li class="userpost-item" v-for="post in likedPosts" :key="post.id" @click="router.push(`/interact/${post.id}`),recordViewHistory(post)">
               <h3>{{ post.title }}</h3>
               <p>{{ post.content }}</p>
               <div class="userpost-item-bottom">
@@ -732,10 +787,45 @@ onBeforeRouteLeave(() => {
               </div>
             </li>
           </ul>
-          <p v-else>暂无喜欢内容</p>
+          <!-- 加载状态 -->
+          <LoadingCom v-if="loadingLikedPosts" class="loading"/>
+          <div v-if="finishedLikedPosts" class="no-more-data">
+            没有更多数据
+          </div>
         </el-tab-pane>
-        <el-tab-pane label="足迹" name="third">我的足迹</el-tab-pane>
-        <el-tab-pane label="活动" name="fourth">我的活动</el-tab-pane>
+        <el-tab-pane label="足迹" name="third">
+          <ul class="userpost-list" v-if="paginatedViewHistory.length > 0">
+            <li class="userpost-item" v-for="post in viewHistory" :key="post.id">
+              <h3>{{ post.title }}</h3>
+              <p>{{ post.content }}</p>
+              <div class="userpost-item-bottom">
+                <span class="userpost-item-bottom-like">
+                <svg t="1741824137804" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2618" width="200" height="200"><path d="M667.787 117.333c165.077 0 270.88 132.374 270.88 310.528 0 138.251-125.099 290.507-371.574 461.59a96.768 96.768 0 0 1-110.186 0C210.432 718.368 85.333 566.112 85.333 427.86c0-178.154 105.803-310.528 270.88-310.528 59.616 0 100.054 20.832 155.787 68.096 55.744-47.253 96.17-68.096 155.787-68.096z m0 63.147c-41.44 0-70.262 15.19-116.96 55.04-2.166 1.845-14.4 12.373-17.942 15.381a32.32 32.32 0 0 1-41.77 0c-3.542-3.018-15.776-13.536-17.942-15.381-46.698-39.85-75.52-55.04-116.96-55.04-126.026 0-206.88 100.779-206.88 246.219 0 110.901 113.526 248.544 344.299 408.128a32.352 32.352 0 0 0 36.736 0C761.141 675.253 874.667 537.6 874.667 426.699c0-145.44-80.854-246.219-206.88-246.219z" p-id="2619" fill="#2c2c2c"></path></svg>
+                {{ post.likes_count }}
+                </span>
+                发布时间：{{ formatDate(post.created_at) }}
+              </div>
+            </li>
+          </ul>
+           <!-- 没有观看历史时显示暂无观看历史 -->
+          <p v-if="paginatedViewHistory.length === 0">暂无观看历史</p>
+          <!-- 加载状态 -->
+          <LoadingCom v-if="loadingViewHistory" class="loading"/>
+          <div v-if="paginatedViewHistory.length > 0 && finishedViewHistory" class="no-more-data">
+            没有更多数据
+          </div>
+        </el-tab-pane>
+        <el-tab-pane label="活动" name="fourth">
+          <ul class="userpost-list" v-if="userActivitiesData.length > 0">
+            <li class="userpost-item" v-for="activity in userActivitiesData" :key="activity.id">
+              <h3>{{ activity.event.title }}</h3>
+              <p>{{ activity.event.description }}</p>
+              <div class="userpost-item-bottom">
+                <span class="userpost-item-bottom-like"></span>
+              </div>
+            </li>
+          </ul>
+        </el-tab-pane>
       </el-tabs>
    </div>
   </div>
@@ -743,15 +833,21 @@ onBeforeRouteLeave(() => {
   <!-- 未登录 -->
   <div v-else class="not-logged-in">
     <div class="noFound-item">
-      未登录，请前往<router-link class="link" to="/login">登录</router-link>
+      未登录，请前往<router-link class="link-button" to="/login">登录</router-link>
     </div>
   </div>
 </template>
 <style scoped lang="scss">
 // @use '@/styles/main.scss';
-.loading-container,.userInfo-page,.not-logged-in{
+.userInfo-page,.not-logged-in{
   padding-top:2.1vh;
 }
+.demo-tabs {
+  position: relative;
+  z-index: 10;
+  transition: all 0.3s ease; /* 平滑过渡效果 */
+}
+
 .demo-tabs > .el-tabs__content {
   padding: 32px;
   color: #6b778c;
@@ -759,9 +855,13 @@ onBeforeRouteLeave(() => {
   font-weight: 600;
 }
 .userInfo-page{
+  width: 100%;
   height: 100%;
-  position: relative;
-  // color:var(--dark-blue);
+  position: absolute;
+  overflow: auto;
+  .userInfo-left,.userInfo-right{
+    width: 96%;
+  }
   .text{
     padding: rem(5) 0;
     color:var(--gray);
@@ -787,8 +887,13 @@ onBeforeRouteLeave(() => {
     }
   }
   .userInfo-right{
-    .el-tabs__header{
-      display: flex;
+    // position: fixed;
+    height: 100%;
+    // overflow: auto;
+    :deep(.el-tabs__header){
+      background-color: var(--white);
+      position: sticky;
+      top: rem(-20);
     }
     :deep(.el-tabs__nav){
         width: 100%;
@@ -798,6 +903,8 @@ onBeforeRouteLeave(() => {
       box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
     }
     .userpost-list{
+      // overflow: auto;
+      // height: 400px;
       .userpost-item{
         cursor: pointer;
         border-bottom: 1px solid #ccc;
@@ -905,8 +1012,5 @@ onBeforeRouteLeave(() => {
 .el-button{
   @extend .button;
 }
-@media (max-width: 768px) {
-    
-  }
 }
 </style>

@@ -1,6 +1,7 @@
 import type { Module } from 'vuex'
 import type { ActivityData,EventData,userActivityData } from '@/@types/activities'
 import type { RootState } from '@/store/index'
+import { getUserActivityData,searchUserActivity } from '@/api/activities';
 // import { getRefresh } from '@/api/refresh';
 
 
@@ -8,6 +9,7 @@ export interface ActivityState {
     activity: ActivityData;
     event: EventData;
     useractivity: userActivityData[];
+    searchUserActivity: userActivityData[];
 }
 
 export const ActivityModule: Module<ActivityState, RootState> = {
@@ -16,10 +18,14 @@ export const ActivityModule: Module<ActivityState, RootState> = {
       activity: {} as ActivityData,
       event: {} as EventData,
       useractivity: {} as userActivityData[],
+      searchUserActivity: [] as userActivityData[],
     },
     mutations: {
-        setUserActivity(state, useractivity: userActivityData[]) {
-            state.useractivity = useractivity;
+      setUserActivity(state, useractivity: userActivityData[]) {
+        state.useractivity = useractivity;
+      },
+      setSearchUserActivity(state, searchUserActivity: userActivityData[]) {
+        state.searchUserActivity = searchUserActivity;
       },
       addUserActivity(state, useractivity: userActivityData) {
         state.useractivity.push(useractivity);// 使用 push 方法添加新活动
@@ -43,16 +49,26 @@ export const ActivityModule: Module<ActivityState, RootState> = {
         },
     },
   actions: {
-    // login({ commit }, { access_token, refresh_token, user }: { access_token: string, refresh_token: string, user: IUserInfo }) {
-    //   commit('setToken', { access_token, refresh_token });
-    //   commit('setUser', user);
-    // },
-    // userInfo({ commit }, response: IUserInfo) {
-    //   commit('setUser', response);
-    // },
+    async fetchUserActivityData({ commit }) {
+      const userActivities = await getUserActivityData(); // 从后端获取数据
+      commit('setUserActivity', userActivities);
+    },
+    async searchUserActivity({ commit }, query: string) {
+      const result = await searchUserActivity(query);// 返回搜索结果
+      commit('setSearchUserActivity', result);
+    },
   },
   getters: {
-    // getToken: (state) => state.token,
-    // getUser: (state) => state.user
+    filteredActivities: (state) => (query:string) => {
+      if (!query) return state.useractivity;// 如果没有搜索关键词，显示所有活动
+      const lowerCaseQuery = query.toLowerCase();
+      return state.searchUserActivity.filter(activity =>
+        activity.event.title.toLowerCase().includes(lowerCaseQuery) ||
+        activity.event.description.toLowerCase().includes(lowerCaseQuery) ||
+        activity.event.location.toLowerCase().includes(lowerCaseQuery) ||
+        activity.event.start_time.includes(lowerCaseQuery) ||
+        activity.event.end_time.includes(lowerCaseQuery)
+      );
+    }
   }
 };

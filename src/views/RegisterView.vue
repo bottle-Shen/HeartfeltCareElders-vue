@@ -42,8 +42,9 @@ onBeforeRouteLeave(() => {
 });
 </script>
 <template>
-  <div class="register-page bg flex-center flex-col">
-    <el-form
+  <div class="bg flex-center">
+    <div class="form-container">
+      <el-form
     :model="form"
     ref="ruleFormRef"
     status-icon
@@ -67,9 +68,9 @@ onBeforeRouteLeave(() => {
       </el-form-item>
       <!-- 验证码 -->
       <el-form-item prop="captcha">
-         <div class="flex-center flex-two">
-          <el-input class="flex-three" placeholder="请输入验证码" v-model="form.captcha" />
-         <el-button class="flex-one" type="primary" v-debounceClick:click="sendSms" :disabled="!form.phone||isCounting" :loading="isCounting">
+         <div class="flex-center captcha-group">
+          <el-input class="captcha" placeholder="请输入验证码" v-model="form.captcha" />
+         <el-button class="get-captcha primary-button" type="primary" v-debounce:click="sendSms" :disabled="!form.phone||isCounting" :loading="isCounting">
           {{ isCounting ? `${countdown}秒后重新获取` : '获取验证码' }}
         </el-button>
          </div>
@@ -81,51 +82,65 @@ onBeforeRouteLeave(() => {
        />
       <!-- 切换登录 -->
       <el-form-item class="tip" >
-        <span>已有账号？去<router-link class="link" to="/login" @click="handleRegisterClick">登录</router-link></span>
-        <span><router-link class="link" to="/reset">忘记密码</router-link></span>
+        <span>已有账号？去<router-link class="link-button" to="/login" @click="handleRegisterClick">登录</router-link></span>
+        <span><router-link class="link-button" to="/reset">忘记密码</router-link></span>
       </el-form-item>
       <!-- 提交按钮 -->
       <el-form-item>
-        <el-button class="primary-button" type="primary" v-debounceClick:click="submitForm" :disabled="!form.phone || !form.password1 || !form.password2 || !form.captcha" >注册</el-button>
+        <el-button class="primary-button submit-button" type="primary" v-debounce:click="submitForm" :disabled="!form.phone || !form.password1 || !form.password2 || !form.captcha" >注册</el-button>
       </el-form-item>
     </el-form>
+    </div>
   </div>
 </template>
 <style scoped lang="scss">
-.register-page {
-    :deep(.tip .el-form-item__content){//:deep()穿透
-          @extend .flex-between;
-        }
-    .el-form{
-      background-color: var(--white);
-        border-radius: 30% 10px 20% 20%;
-        width:650px;/* 确保有明确的宽度 */
-        padding: 30px 80px 50px;
-        h1{
-          margin-bottom: 30px;
-        }
+:deep(.tip .el-form-item__content){//:deep()穿透
+      @extend .flex-between;
+    }
+.form-container{
+  min-width: rem(300);
+  @extend .flex-center;
+  border-radius: 30% 10px 20% 20%;
+  background-color: var(--white);
+  width:rem(650);/* 确保有明确的宽度 */
+  margin: 0 rem(20);
+}
+.el-form{
+  width:80%;/* 确保有明确的宽度 */
+  padding:rem(30) rem(60) rem(50);
+    h1{
+      color: var(--dark-blue);
+      margin-bottom: rem(30);
+    }
       .el-form-item{
         @extend .flex-center;
       }
+      .el-input{
+    height: rem(48);
+  }
+      .captcha-group{
+    flex:2;
+    .captcha{
+      flex:3;
+    }
+    .get-captcha{
+      height: rem(48);
+      flex:1;
+    }
+  }
       .radio-group > :deep(.el-form-item__content){
           justify-content: flex-end;
         }
       
       :deep(.el-form-item__label){
-        @extend .label;
-      }
-      .el-input{
-        @extend .input;
+        // @extend .label;
       }
         .el-button{
-          @extend .button;// 继承全局按钮样式
+          // @extend .button;// 继承全局按钮样式
           @extend .w-full;
         }
-    }
-    @media (max-width: 768px) {
-    .el-form{
-      width: 95%;
-    }
-  }
+      @include mobile{
+        padding: 5% 2% 10%;
+      }
 }
 </style>

@@ -11,6 +11,7 @@ declare module 'vue' {
     BottomCom: typeof import('./components/BottomCom.vue')['default']
     CardsCom: typeof import('./components/CardsCom.vue')['default']
     CarouselCom: typeof import('./components/CarouselCom.vue')['default']
+    DraftBoxCom: typeof import('./components/DraftBoxCom.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElButton: typeof import('element-plus/es')['ElButton']
@@ -76,6 +77,7 @@ declare module 'vue' {
     SidebarCom: typeof import('./components/SidebarCom.vue')['default']
     ThreeCom: typeof import('./components/ThreeCom.vue')['default']
     UserInfoCom: typeof import('./components/UserInfoCom.vue')['default']
+    UserPosts: typeof import('./components/UserPosts.vue')['default']
   }
   export interface ComponentCustomProperties {
     vInfiniteScroll: typeof import('element-plus/es')['ElInfiniteScroll']

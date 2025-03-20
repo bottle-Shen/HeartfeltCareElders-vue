@@ -59,7 +59,7 @@ export const userModule: Module<UserState, RootState> = {
     userInfo({ commit }, response: IUserInfo) {
       commit('setUser', response);
     },
-    logout({ commit }) {
+    logout({ commit }, router) {
       commit('clearToken');// 清除 Vuex 中的令牌
       commit('setUser', {} as IUserInfo);// 清除 Vuex 中的用户信息
       // 清空会话存储中的信息
@@ -68,7 +68,7 @@ export const userModule: Module<UserState, RootState> = {
       ls.remove('refresh_token');
       ls.remove('user'); // 清空加密存储中的用户信息
       // 跳转到登录页面
-      // router.push('/login');
+      router.push('/login'); // 跳转到登录页面
     },
     // 定期清理存储的数据
     clearOldData({ state }) {

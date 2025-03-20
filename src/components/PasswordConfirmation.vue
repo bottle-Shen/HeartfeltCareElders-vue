@@ -32,6 +32,6 @@ const handleConfirmPasswordInput = (value: string) => {
 </template>
 <style scoped lang="scss">
 .el-input{
-        @extend .input;
-      }
+    height: rem(48);
+}
 </style>

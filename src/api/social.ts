@@ -33,10 +33,11 @@ export const getSocialById = (id: number) => {
 }
 
 // 获取用户自己的帖子
-export const getUserSocial =()=> {
+export const getUserSocial =(params: { page?: number})=> {
     return request({
         url: `social/posts/my-posts/`,
         method: 'GET',
+        params,
     }).then(response => {
       if (response.status === 200) {
         return response.data
@@ -48,22 +49,41 @@ export const getUserSocial =()=> {
 
 
 // 发布帖子
-export const addPost = (params: addPostParams) => {
+export const addPost = (formData: FormData) => {
     return request({
         url: `social/posts/`,
         method: 'POST',
-        data: {
-            title: params.title,
-            content: params.content,
-            user_id:params.user_id
+        data: formData, // 直接传递 FormData 对象
+        headers: {
+            'Content-Type': 'multipart/form-data' // 确保设置正确的 Content-Type
         }
     }).then(response => {
-      // console.log(response.data)
-      return response.data
+        console.log('发布帖子',response);
+        return response.data;
     }).catch((error) => {
-      console.error(error)
-    })
+        console.error(error);
+        throw error; // 抛出错误，以便在调用处捕获
+    });
 }
+// export const addPost = (params: addPostParams) => {
+//     return request({
+//         url: `social/posts/`,
+//         method: 'POST',
+//         data: {
+//             title: params.title,
+//             content: params.content,
+//             // user_id:params.user_id,
+//             image: params.image,// 封面图
+//             images: params.images,// 图片列表
+//             video: params.video,//视频
+//         }
+//     }).then(response => {
+//       // console.log(response.data)
+//       return response.data
+//     }).catch((error) => {
+//       console.error(error)
+//     })
+// }
 
 // 点赞帖子
 export const likePost = (postId: number, post: SocialData,store:Store<PostState>) => {
@@ -87,10 +107,11 @@ export const likePost = (postId: number, post: SocialData,store:Store<PostState>
   });
 }
 // 获取用户点赞过的帖子
-export const UserLikePost = () => {
+export const UserLikePost = (params: { page?: number}) => {
     return request({
         url: `social/likes/my-likes/`,
         method: 'GET',
+        params,
     }).then(response => {
       if (response.status === 200) {
         // console.log('用户点赞的帖子:', response.data)
@@ -189,8 +210,8 @@ let currentPostId: number | null = null;
 export const isDataLoaded = ref(false); // 数据加载完成的标志
 // 初始化 WebSocket 连接
 export const initializeWebSocket = (postId: number,userId:number) => {
-  if (socket) {
-    socket.close();// 如果已有连接，先关闭
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.close();// 如果已有连接且处于OPEN状态，先关闭
   }
   // 如果帖子ID未变，无需重新连接
   if (currentPostId === postId) {
@@ -200,8 +221,28 @@ export const initializeWebSocket = (postId: number,userId:number) => {
   currentPostId = postId;// 更新当前帖子ID
   const wsUrl = getWebSocketUrl(postId);
   socket = new WebSocket(wsUrl);
+  // 心跳机制
+  const heartbeatInterval = 30000; // 每 30 秒发送一次心跳
+  let heartbeatTimeout: number;
+  const sendHeartbeat = () => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: 'heartbeat' }));
+      console.log('Heartbeat sent');
+    }
+  };
+  // 定期发送心跳
+  const startHeartbeat = () => {
+    heartbeatTimeout = setInterval(sendHeartbeat, heartbeatInterval);
+  };
+
+  // 清除心跳定时器
+  const stopHeartbeat = () => {
+    clearInterval(heartbeatTimeout);
+  };
+
   socket.onopen = () => {
     // console.log('WebSocket connection established');
+    startHeartbeat();// 开始心跳机制-发送心跳
     if (socket) {// 发送初始消息,告诉后端用户关注实时更新
       socket.send(JSON.stringify({
         type: "subscribe",
@@ -217,10 +258,15 @@ export const initializeWebSocket = (postId: number,userId:number) => {
   socket.onmessage = (event) => {
     try {
         const {type,message} = JSON.parse(event.data);
-      console.log('Parsed message:', type, message); // 打印解析后的消息
+        // console.log('Parsed message:', type, message); // 打印解析后的消息
       if (!isDataLoaded.value) {
         console.log('数据未加载完成');
         return;
+      }
+      if (type === "heartbeat") {
+        console.log('心跳消息');
+        stopHeartbeat(); // 清除当前心跳定时器
+        startHeartbeat(); // 重新开始心跳机制
       }
       if (type === "comment_message") {
         // 更新评论列表
@@ -278,10 +324,12 @@ export const initializeWebSocket = (postId: number,userId:number) => {
     }
   }
   socket.onclose = () => {
-    console.log('WebSocket connection closed');
+    console.log('WebSocket链接已关闭');
+    stopHeartbeat();// 停止心跳机制
   };
   socket.onerror = (error) => {
-    console.error('WebSocket error:', error);
+    console.error('WebSocket错误:', error);
+    stopHeartbeat();// 停止心跳机制
   };
   return socket;//  返回WebSocket实例
 }

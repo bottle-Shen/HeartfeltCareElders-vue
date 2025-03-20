@@ -3,7 +3,8 @@ import { debounce } from "./instruction";
 export const useInfiniteScroll = (
   containerRef: Ref<HTMLElement | null>,
   loadMoreData: () => Promise<void>,
-  delay: number = 300
+  delay: number = 300,
+  scrollKey: string = "defaultScrollPosition"
 ) => {
   // 使用 debounce 包装滚动事件处理函数
   const handleScroll = debounce(async () => {
@@ -17,20 +18,22 @@ export const useInfiniteScroll = (
       await loadMoreData();
     }
     // 监听滚动事件并保存滚动位置
-    sessionStorage.setItem("scrollPosition", scrollTop.toString());
+    sessionStorage.setItem(scrollKey,  scrollTop.toString());
   }, delay);
 
   // 清理函数
   const cleanup = () => {
     // 清理 debounce 的定时器
     handleScroll.cancel();
+    // 移除滚动事件监听器
+    removeScrollListeners();
   };
   // 恢复滚动位置
   const restoreScrollPosition = async () => {
     await nextTick(); // 确保 DOM 渲染完成
     const scrollContainer = containerRef.value;
     if (scrollContainer) {
-      const savedScrollPosition = sessionStorage.getItem("scrollPosition");
+      const savedScrollPosition = sessionStorage.getItem(scrollKey);
       // console.log("从 sessionStorage 获取的滚动位置:", savedScrollPosition);
       if (savedScrollPosition) {
         scrollContainer.scrollTop = parseInt(savedScrollPosition, 10);
@@ -41,9 +44,28 @@ export const useInfiniteScroll = (
     }
   };
 
+  const addScrollListeners = () => {
+    const container = containerRef.value;
+    if (container) {
+      container.addEventListener("scroll", handleScroll);
+    } else {
+      window.addEventListener("scroll", handleScroll);
+    }
+  };
+  const removeScrollListeners = () => {
+    const container = containerRef.value;
+    if (container) {
+      container.removeEventListener("scroll", handleScroll);
+    } else {
+      window.removeEventListener("scroll", handleScroll);
+    }
+  };
+
   return {
     handleScroll,
     cleanup,
-    restoreScrollPosition
+    restoreScrollPosition,
+    addScrollListeners,
+    removeScrollListeners,
   };
 };

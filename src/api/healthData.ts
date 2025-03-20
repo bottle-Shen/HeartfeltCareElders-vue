@@ -3,7 +3,7 @@ import request from '@/utils/request'
 export const getHealthData =()=> {
     return request({
         // url: `data/health_data/my-elderly/?limit=10`,//limit表示每页展示的数据条数,这里设置为10
-        url: `data/health_data/my-elderly/?limit=100`,//limit表示每页展示的数据条数,这里设置为10
+        url: `data/health_data/my-elderly/?limit=10`,//limit表示每页展示的数据条数,这里设置为10
         method: 'GET',
     }).then(response => {
       if (response.status === 200) {
