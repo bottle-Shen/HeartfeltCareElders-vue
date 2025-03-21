@@ -701,9 +701,6 @@ const bindHealthData  = async () => {
               <p>其中，{{ healthSuggestion }}</p>
             </div>
           </div>
-          <p v-else>
-            暂无健康状态数据。
-          </p>
         </div>
       </div>
       <!-- <div class="body-item">

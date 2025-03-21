@@ -16,12 +16,13 @@ import { UserLikePost, getUserSocial } from '@/api/social'
 import { useInfiniteScroll } from '@/utils'
 import type {SocialData} from '@/@types/social'
 import router from '@/router';
+import { useRoute} from 'vue-router';
 
+const route = useRoute();
 const activeName = ref('first')// 默认选中的标签页
 const userPostsContainerRef = ref<HTMLElement | null>(null)// 滚动容器的引用
 const userActivitiesData = ref<userActivityData[]>([])// 用户参加的活动数据
-const viewHistory = computed(() => store.getters['post/viewHistory']);// 仓库获取观看历史
-const paginatedViewHistory = computed(() => store.getters['post/paginatedViewHistory']);// 本地获取观看历史
+const viewHistory = computed(() => store.state.post.viewHistory);// 仓库获取观看历史
 // 获取用户帖子和点赞帖子的数据
 const userPosts = computed(() => store.state.post.userPosts);
 const likedPosts = computed(() => store.state.post.likedPosts);
@@ -33,25 +34,33 @@ const finishedLikedPosts = computed(() => store.state.post.finishedLikedPosts);
 const loadingViewHistory = computed(() => store.state.post.loadingViewHistory);
 const finishedViewHistory = computed(() => store.state.post.finishedViewHistory);
 const handleClick = (tab: TabsPaneContext, event: Event) => {
-  console.log(tab, event);
-  console.log(tab.props.name); // 使用 tab.props.name
+  // console.log(tab, event);
+  // console.log(tab.props.name); // 使用 tab.props.name
+  // 更新路由，添加当前激活的标签页名称作为查询参数
+  router.push({ path: router.currentRoute.value.path, query: { tab: tab.props.name } });
   // 清除当前数据
   if (tab.props.name === 'first') {
-    store.commit('post/SET_USER_POSTS', []);
-    store.commit('post/SET_CURRENT_PAGE_USER_POSTS', 1);
-    store.commit('post/SET_LOADING_USER_POSTS', false);
-    store.commit('post/SET_FINISHED_USER_POSTS', false);
+    store.commit('post/SET_USER_POSTS', []);// 清除用户帖子数据
+    store.commit('post/SET_CURRENT_PAGE_USER_POSTS', 1);// 重置当前页码
+    store.commit('post/SET_LOADING_USER_POSTS', false);// 重置加载状态
+    store.commit('post/SET_FINISHED_USER_POSTS', false);// 重置完成状态
+    store.commit('post/CLEAR_LOADED_PAGES_USER_POSTS');// 重置缓存页码
   } else if (tab.props.name === 'second') {
     store.commit('post/SET_LIKED_POSTS', []);
      store.commit('post/SET_CURRENT_PAGE_LIKED_POSTS', 1);
      store.commit('post/SET_LOADING_LIKED_POSTS', false);
-     store.commit('post/SET_FINISHED_LIKED_POSTS', false);
+    store.commit('post/SET_FINISHED_LIKED_POSTS', false);
+     store.commit('post/CLEAR_LOADED_PAGES_LIKED_POSTS');
   }
    // 加载新数据
   if (tab.props.name === 'first') {
      store.dispatch('post/fetchUserPosts');
   } else if (tab.props.name === 'second') {
      store.dispatch('post/fetchLikedPosts');
+  } else if (tab.props.name === 'third') {
+    getUserViewHistoryData();
+  } else if (tab.props.name === 'fourth') {
+    fetchUserActivityData();
   }
   // 清除滚动位置
   const container = userPostsContainerRef.value;
@@ -72,9 +81,14 @@ const getUserSocialData = async () => {
 const getUserLikeData = async () => {
   await store.dispatch('post/fetchLikedPosts')
 }
+// 获取用户观看历史
+const getUserViewHistoryData = async () => {
+  await store.dispatch('post/loadViewHistoryFromLocalStorage');
+}
+// 用户参加的活动
 const fetchUserActivityData = async () => {
   const response = await getUserActivityData();
-  // console.log('用户参加的活动数据', response);
+  console.log('用户参加的活动数据', response);
   // 处理用户活动数据
   userActivitiesData.value = response.map((activity: userActivityData) => {
     return {
@@ -100,7 +114,7 @@ const { cleanup: cleanupUserPosts,
     } else if (activeName.value === 'second') {
       await store.dispatch('post/loadMoreLikedPosts');
     }else if (activeName.value === 'third') {
-      await store.dispatch('post/loadViewHistoryFromLocalStorage');
+      await store.dispatch('post/loadMoreViewHistory');
     }
   }, 300,'userPostsContainerRef')
 const recordViewHistory = (post: SocialData) => {
@@ -121,19 +135,27 @@ const backgroundUrl = ref<string | null>(null)// 背景图上传的预览地址
 const backgroundFile = ref<File | null>(null); // 用于保存背景图文件对象
 const avatarFile = ref<File | null>(null); // 用于保存文件对象
 const avatarUrl = ref<string | null>(null); // 用于保存头像预览 URL
-const isPreviewDialogVisible = ref(false); // 控制弹窗显示
+const dialogVisible = ref(false); // 控制弹窗显示
 const currentUploadType = ref<string | null>(null); // 当前上传类型：'avatar' 或 'background'
 const showRealNameAuthCom = ref(false)
 const signatureDefaultText = "用一段简单的个性介绍，展示您的独特风采~"// 定义个性签名默认文本
 const showVerificationCode = ref(false); // 是否显示验证码相关字段
-
+const parentAddress = ref<string>(''); // 存储地址选择器的值
+// // 当前用户的 ID
+// const currentUserId = store.state.user.user.id;
+// console.log('当前用户的 ID:', currentUserId);
+// 监听 parentAddress 的变化，并同步到 changedParams
+watch(parentAddress, (newValue) => {
+  changedParams.value.user.address = newValue;
+  // console.log('parentAddress changed:', newValue);
+});
 // 定义 SEX_CHOICES 为对象数组
 const SEX_CHOICES = [
   { value: '男' },
   { value: '女'},
   { value: '保密'},
 ] 
-// 用户类型 和 不同类型用户ID 的计算属性
+// 用户类型和不同类型用户ID的计算属性
 const userType = computed(() => ({
   userType: store.state.user.user.user_type,
   elderly_id: store.state.user.user.elderly_id,
@@ -142,14 +164,24 @@ const userType = computed(() => ({
 }));
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);// 获取用户是否登录
 
-onMounted(() => {
+onMounted(async() => {
   try {
     store.commit('loading/SET_LOADING', true); // 设置全局加载状态为 true
+    // 从路由中读取当前激活的标签页名称
+    const currentTab = Array.isArray(route.query.tab) ? route.query.tab[0] : route.query.tab;
+    activeName.value = currentTab || 'first'; // 如果为空，使用默认值 'first'
     if (isAuthenticated.value) {
         fetchUserInfo();// 初始化用户信息
+        // 根据当前激活的标签页重新加载数据
+      if (activeName.value === 'first') {
         getUserSocialData(); // 加载用户发布的帖子
+      } else if (activeName.value === 'second') {
         getUserLikeData(); // 加载用户点赞的帖子
-        fetchUserActivityData()// 加载用户参加的活动数据
+      } else if (activeName.value === 'third') {
+        getUserViewHistoryData(); // 加载用户观看历史
+      } else if (activeName.value === 'fourth') {
+        fetchUserActivityData(); // 加载用户参加的活动数据
+      }
     }
   } catch (error) {
     console.error('加载用户资料失败:', error);
@@ -164,12 +196,13 @@ onMounted(() => {
     addUserPostsListeners();
   });
 });
+
 onUnmounted(() => {
   // 移除滚动监听器和清理资源
   removeUserPostListeners();
   cleanupUserPosts();
 });
-
+// 响应式数据
 const changedParams = ref<UserInfoFormType>({
   user: {
     user_type: store.state.user.user.user_type,
@@ -183,12 +216,12 @@ const changedParams = ref<UserInfoFormType>({
     signature: store.state.user.user.signature,
     age: store.state.user.user.age,
     common_phone: store.state.user.user.common_phone, 
+    address: store.state.user.user.address,
   } as Pick<user, keyof user>,
   //老人
       elderly_id: store.state.user.user.elderly_id, // 确保Vuex中存在elderly_id
       emergency_contact:store.state.user.emergency_contact,
       emergency_phone: store.state.user.emergency_phone,
-      health_status: store.state.user.health_status,
       caregiver:store.state.user.caregiver,
     //家属
       family_id: store.state.user.user.family_id, // 确保Vuex中存在family_id
@@ -199,7 +232,7 @@ const changedParams = ref<UserInfoFormType>({
         department: store.state.user.department,
         position: store.state.user.position,
 });
-
+// 用户类型
 const updateParams = (userType: number): UserInfoFormType => {
   changedParams.value.user.user_type = userType;
   return changedParams.value;
@@ -208,12 +241,10 @@ const params = updateParams(userType.value.userType);
 
 // 类型守卫函数
 const isElderlyUserInfo = (response: IUserInfo): response is elderlyInfoResponse =>  'elderly_id' in response;
-
 const isFamilyUserInfo = (response: IUserInfo): response is familyInfoResponse =>  'family_id' in response;
-
 const isCaregiverUserInfo = (response: IUserInfo): response is caregiverInfoResponse => 'caregiver_id' in response;
 
-// 加载用户信息
+// 获取用户信息
 const fetchUserInfo = async () => {
   try {
     const response = await getUserInfo(params)
@@ -250,6 +281,7 @@ const fetchUserInfo = async () => {
         isLoading.value = false; // 加载完成，隐藏加载状态
       }
 };
+// 更新用户信息
 const saveUserInfo = async () => {
     try {
     const response = await updateUserInfo(changedParams.value);
@@ -267,8 +299,7 @@ const saveUserInfo = async () => {
 };
 
 
-
-
+// 头像上传配置
 const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${store.state.user.token.access_token}`
 }));
@@ -280,17 +311,17 @@ const handleAvatarSuccess: UploadProps['onSuccess'] = async (
 }
 // 头像上传前验证
 const beforeAvatarUpload: UploadProps['beforeUpload'] = (file: File) => {
-  const isJPG = file.type === "image/jpeg";
-  const isPNG = file.type === "image/png";
-  const isLt2M = file.size / 1024 / 1024 < 2;
-      if (!isJPG && !isPNG) {
-        ElMessage.error("上传头像图片只能是 JPG 或 PNG 格式!");
-        return false
-      } else if (!isLt2M) {
-        ElMessage.error("上传头像图片大小不能超过 2MB!");
-        return false
-      }
-      return true
+  // const isJPG = file.type === "image/jpeg";
+  // const isPNG = file.type === "image/png";
+  // const isLt2M = file.size / 1024 / 1024 < 2;
+  //     if (!isJPG && !isPNG) {
+  //       ElMessage.error("上传头像图片只能是 JPG 或 PNG 格式!");
+  //       return false
+  //     } else if (!isLt2M) {
+  //       ElMessage.error("上传头像图片大小不能超过 2MB!");
+  //       return false
+  //     }
+  //     return true
 }
 // 头像选择后生成本地预览
 const handleAvatarChange = (uploadFile: UploadFile) => {
@@ -300,16 +331,16 @@ const handleAvatarChange = (uploadFile: UploadFile) => {
     return;
   }
 
-  const isValid = beforeAvatarUpload(rawFile);
-  if (!isValid) {
-    ElMessage.error("文件不符合要求，请选择 JPG 或 PNG 格式且大小不超过 2MB 的文件。");
-    return;
-  }
+  // const isValid = beforeAvatarUpload(rawFile);
+  // if (!isValid) {
+  //   ElMessage.error("文件不符合要求，请选择 JPG 或 PNG 格式且大小不超过 2MB 的文件。");
+  //   return;
+  // }
 
   avatarUrl.value = URL.createObjectURL(rawFile); // 更新头像预览
   avatarFile.value = rawFile;// 保存文件
   currentUploadType.value = 'avatar'; // 设置当前上传类型为头像
-  isPreviewDialogVisible.value = true; // 显示弹窗
+  dialogVisible.value = true; // 显示弹窗
 };
 // 保存头像
 const saveAvatar = async () => {
@@ -327,7 +358,7 @@ const saveAvatar = async () => {
   userInfoForm.value.avatar = uploadedUrl; // 更新本地头像地址
   // 更新 Vuex 中的头像地址
   store.commit("user/setAvatar", uploadedUrl);
-  isPreviewDialogVisible.value = false;// 关闭弹窗
+  dialogVisible.value = false;// 关闭弹窗
   // 退出编辑模式
   // isEditMode.value = false;
   // ElMessage.success("头像更新成功");
@@ -348,7 +379,7 @@ const cancelEdit = () => {
   avatarFile.value = null;// 清空文件
   backgroundUrl.value = null; // 清空背景图预览
   backgroundFile.value = null;// 清空文件
-  isPreviewDialogVisible.value = false;// 关闭弹窗
+  dialogVisible.value = false;// 关闭弹窗
   isEditMode.value = false; // 退出编辑模式
 };
 // 弹窗关闭时的回调
@@ -364,17 +395,17 @@ const handleBackgroundSuccess: UploadProps['onSuccess'] = async (
 
 // 背景图上传前验证
 const beforeBackgroundUpload: UploadProps['beforeUpload'] = (file: File) => {
-  const isJPG = file.type === "image/jpeg";
-  const isPNG = file.type === "image/png";
-  const isLt2M = file.size / 1024 / 1024 < 2;
-      if (!isJPG && !isPNG) {
-        ElMessage.error("上传背景图片只能是 JPG 或 PNG 格式!");
-        return false
-      } else if (!isLt2M) {
-        ElMessage.error("上传背景图片大小不能超过 2MB!");
-        return false
-      }
-      return true
+  // const isJPG = file.type === "image/jpeg";
+  // const isPNG = file.type === "image/png";
+  // const isLt2M = file.size / 1024 / 1024 < 2;
+  //     if (!isJPG && !isPNG) {
+  //       ElMessage.error("上传背景图片只能是 JPG 或 PNG 格式!");
+  //       return false
+  //     } else if (!isLt2M) {
+  //       ElMessage.error("上传背景图片大小不能超过 2MB!");
+  //       return false
+  //     }
+  //     return true
 }
 
 // 背景图选择后生成本地预览
@@ -385,16 +416,16 @@ const handleBackgroundChange = (uploadFile: UploadFile) => {
     return;
   }
 
-  const isValid = beforeBackgroundUpload(rawFile);
-  if (!isValid) {
-    ElMessage.error("文件不符合要求，请选择 JPG 或 PNG 格式且大小不超过 2MB 的文件。");
-    return;
-  }
+  // const isValid = beforeBackgroundUpload(rawFile);
+  // if (!isValid) {
+  //   ElMessage.error("文件不符合要求，请选择 JPG 或 PNG 格式且大小不超过 2MB 的文件。");
+  //   return;
+  // }
 
   backgroundUrl.value = URL.createObjectURL(rawFile); // 更新头像预览
   backgroundFile.value = rawFile;// 保存文件
   currentUploadType.value = 'background'; // 设置当前上传类型为背景图
-  isPreviewDialogVisible.value = true; // 显示弹窗
+  dialogVisible.value = true; // 显示弹窗
 };
 // 保存背景图
 const saveBackground = async () => {
@@ -412,7 +443,7 @@ const saveBackground = async () => {
   userInfoForm.value.background_image = uploadedUrl; // 更新本地背景图地址
   // 更新 Vuex 中的头像地址
   store.commit("user/setBackground", uploadedUrl);
-  isPreviewDialogVisible.value = false;// 关闭弹窗
+  dialogVisible.value = false;// 关闭弹窗
   // 退出编辑模式
   // isEditMode.value = false;
   // ElMessage.success("头像更新成功");
@@ -453,13 +484,10 @@ onBeforeRouteLeave(() => {
 <template>
   <!-- 用户信息已加载 -->
   <div ref="userPostsContainerRef" class="userInfo-page" v-if="isAuthenticated">
-    <div class="userInfo-left">
-     <!-- 弹窗组件 -->
-    <el-dialog
-      v-model="isPreviewDialogVisible"
+    <!-- 弹窗组件 -->
+      <el-dialog
+      v-model="dialogVisible"
       :title="currentUploadType === 'avatar' ? '确认头像' : '确认背景图'"
-      :before-close="handleDialogClose"
-      :modal="true"
     >
       <div v-if="currentUploadType === 'avatar'" class="preview-avatar-container">
         <img v-if="avatarUrl" :src="avatarUrl" class="preview-avatar" />
@@ -471,11 +499,12 @@ onBeforeRouteLeave(() => {
       </div>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="cancelEdit">取消</el-button>
-          <el-button type="primary" @click="saveCurrentUpload">保存</el-button>
+          <el-button class="primary-button" @click="cancelEdit">取消</el-button>
+          <el-button class="primary-button" @click="saveCurrentUpload">保存</el-button>
         </span>
       </template>
     </el-dialog>
+    <div class="userInfo-left">
     <!-- <div class="title">个人资料</div> -->
 
     <el-form
@@ -637,7 +666,8 @@ onBeforeRouteLeave(() => {
       <!-- 所在地 -->
       <el-form-item prop="address">
         <template v-if="isEditMode">
-          <AddressSelectorCom v-model="changedParams.user.address" />
+          <AddressSelectorCom v-model:address="parentAddress" />
+          <!-- <AddressSelectorCom v-model="changedParams.user.address" /> -->
         </template>
         <template v-else>
           <div>{{ userInfoForm.address }}</div>
@@ -647,24 +677,24 @@ onBeforeRouteLeave(() => {
       <!-- 根据用户类型显示不同的信息 -->
       <div class="elderly-item" v-if="isElderlyUserInfo(userInfoForm)">
         <!-- 紧急联系人 -->
-        <el-form-item prop="emergency_contact">
+        <!-- <el-form-item prop="emergency_contact">
           <template v-if="isEditMode">
             <el-input placeholder="请填写紧急联系人" v-model="changedParams.emergency_contact" />
           </template>
           <template v-else>
             <div>{{ userInfoForm.emergency_contact }}</div>
           </template>
-        </el-form-item>
+        </el-form-item> -->
 
         <!-- 紧急联系人电话 -->
-        <el-form-item prop="emergency_phone">
+        <!-- <el-form-item prop="emergency_phone">
           <template v-if="isEditMode">
             <el-input placeholder="请填写紧急联系人电话" v-model="changedParams.emergency_phone" />
           </template>
           <template v-else>
             <div>{{ userInfoForm.emergency_phone }}</div>
           </template>
-        </el-form-item>
+        </el-form-item> -->
 
         <!-- 健康状况 -->
         <!-- <el-form-item label="健康状况" prop="health_status">
@@ -769,15 +799,15 @@ onBeforeRouteLeave(() => {
           </ul>
           <!-- 加载状态 -->
           <LoadingCom v-if="loadingUserPosts" class="loading"/>
-          <div v-if="finishedUserPosts" class="no-more-data">
+          <!-- <div v-if="finishedUserPosts" class="no-more-data">
             没有更多数据
-          </div>
+          </div> -->
         </el-tab-pane>
         <el-tab-pane label="喜欢" name="second">
           <ul class="userpost-list" v-if="likedPosts.length > 0">
             <li class="userpost-item" v-for="post in likedPosts" :key="post.id" @click="router.push(`/interact/${post.id}`),recordViewHistory(post)">
-              <h3>{{ post.title }}</h3>
-              <p>{{ post.content }}</p>
+              <h3 class="title">{{ post.title }}</h3>
+              <p class="body-s text">{{ post.content }}</p>
               <div class="userpost-item-bottom">
                 <span class="userpost-item-bottom-like">
                 <svg t="1741824137804" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2618" width="200" height="200"><path d="M667.787 117.333c165.077 0 270.88 132.374 270.88 310.528 0 138.251-125.099 290.507-371.574 461.59a96.768 96.768 0 0 1-110.186 0C210.432 718.368 85.333 566.112 85.333 427.86c0-178.154 105.803-310.528 270.88-310.528 59.616 0 100.054 20.832 155.787 68.096 55.744-47.253 96.17-68.096 155.787-68.096z m0 63.147c-41.44 0-70.262 15.19-116.96 55.04-2.166 1.845-14.4 12.373-17.942 15.381a32.32 32.32 0 0 1-41.77 0c-3.542-3.018-15.776-13.536-17.942-15.381-46.698-39.85-75.52-55.04-116.96-55.04-126.026 0-206.88 100.779-206.88 246.219 0 110.901 113.526 248.544 344.299 408.128a32.352 32.352 0 0 0 36.736 0C761.141 675.253 874.667 537.6 874.667 426.699c0-145.44-80.854-246.219-206.88-246.219z" p-id="2619" fill="#2c2c2c"></path></svg>
@@ -789,15 +819,15 @@ onBeforeRouteLeave(() => {
           </ul>
           <!-- 加载状态 -->
           <LoadingCom v-if="loadingLikedPosts" class="loading"/>
-          <div v-if="finishedLikedPosts" class="no-more-data">
+          <!-- <div v-if="finishedLikedPosts" class="no-more-data">
             没有更多数据
-          </div>
+          </div> -->
         </el-tab-pane>
         <el-tab-pane label="足迹" name="third">
-          <ul class="userpost-list" v-if="paginatedViewHistory.length > 0">
-            <li class="userpost-item" v-for="post in viewHistory" :key="post.id">
-              <h3>{{ post.title }}</h3>
-              <p>{{ post.content }}</p>
+          <ul class="userpost-list" v-if="viewHistory.length > 0">
+            <li class="userpost-item" v-for="post in viewHistory" :key="post.id" @click="router.push(`/interact/${post.id}`),recordViewHistory(post)">
+              <h3 class="title">{{ post.title }}</h3>
+              <p class="body-s text">{{ post.content }}</p>
               <div class="userpost-item-bottom">
                 <span class="userpost-item-bottom-like">
                 <svg t="1741824137804" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2618" width="200" height="200"><path d="M667.787 117.333c165.077 0 270.88 132.374 270.88 310.528 0 138.251-125.099 290.507-371.574 461.59a96.768 96.768 0 0 1-110.186 0C210.432 718.368 85.333 566.112 85.333 427.86c0-178.154 105.803-310.528 270.88-310.528 59.616 0 100.054 20.832 155.787 68.096 55.744-47.253 96.17-68.096 155.787-68.096z m0 63.147c-41.44 0-70.262 15.19-116.96 55.04-2.166 1.845-14.4 12.373-17.942 15.381a32.32 32.32 0 0 1-41.77 0c-3.542-3.018-15.776-13.536-17.942-15.381-46.698-39.85-75.52-55.04-116.96-55.04-126.026 0-206.88 100.779-206.88 246.219 0 110.901 113.526 248.544 344.299 408.128a32.352 32.352 0 0 0 36.736 0C761.141 675.253 874.667 537.6 874.667 426.699c0-145.44-80.854-246.219-206.88-246.219z" p-id="2619" fill="#2c2c2c"></path></svg>
@@ -808,18 +838,18 @@ onBeforeRouteLeave(() => {
             </li>
           </ul>
            <!-- 没有观看历史时显示暂无观看历史 -->
-          <p v-if="paginatedViewHistory.length === 0">暂无观看历史</p>
+          <p v-if="viewHistory.length === 0">暂无观看历史</p>
           <!-- 加载状态 -->
           <LoadingCom v-if="loadingViewHistory" class="loading"/>
-          <div v-if="paginatedViewHistory.length > 0 && finishedViewHistory" class="no-more-data">
+          <!-- <div v-if="viewHistory.length > 0 && finishedViewHistory" class="no-more-data">
             没有更多数据
-          </div>
+          </div> -->
         </el-tab-pane>
         <el-tab-pane label="活动" name="fourth">
           <ul class="userpost-list" v-if="userActivitiesData.length > 0">
             <li class="userpost-item" v-for="activity in userActivitiesData" :key="activity.id">
-              <h3>{{ activity.event.title }}</h3>
-              <p>{{ activity.event.description }}</p>
+              <h3 class="title">{{ activity.event.title }}</h3>
+              <p class="body-s text">{{ activity.event.description }}</p>
               <div class="userpost-item-bottom">
                 <span class="userpost-item-bottom-like"></span>
               </div>
@@ -838,29 +868,18 @@ onBeforeRouteLeave(() => {
   </div>
 </template>
 <style scoped lang="scss">
-// @use '@/styles/main.scss';
 .userInfo-page,.not-logged-in{
   padding-top:2.1vh;
 }
-.demo-tabs {
-  position: relative;
-  z-index: 10;
-  transition: all 0.3s ease; /* 平滑过渡效果 */
-}
-
-.demo-tabs > .el-tabs__content {
-  padding: 32px;
-  color: #6b778c;
-  font-size: 32px;
-  font-weight: 600;
-}
 .userInfo-page{
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  height: 100%;
+  height: 97%;
   position: absolute;
   overflow: auto;
   .userInfo-left,.userInfo-right{
-    width: 96%;
+    padding-right: 2.1vw;
   }
   .text{
     padding: rem(5) 0;
@@ -871,9 +890,6 @@ onBeforeRouteLeave(() => {
   height: rem(20);
 }
   .userInfo-left{
-    .el-form-item__content{
-
-    }
     .button-group{
       position: absolute;
       right: 0;
@@ -887,9 +903,7 @@ onBeforeRouteLeave(() => {
     }
   }
   .userInfo-right{
-    // position: fixed;
     height: 100%;
-    // overflow: auto;
     :deep(.el-tabs__header){
       background-color: var(--white);
       position: sticky;
@@ -920,14 +934,14 @@ onBeforeRouteLeave(() => {
     }
   }
   .el-form{
+    height: rem(320);
     overflow: hidden; // 隐藏溢出部分
     text-overflow: ellipsis; // 溢出时显示省略号
     display: flex;
     flex-direction: column;
     position: relative;
     box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.1);
-    padding: 0 rem(20);
-    padding-bottom: rem(20);
+    padding-left: rem(20);
   }
   .el-form-item{
     width: 50%;
@@ -938,7 +952,7 @@ onBeforeRouteLeave(() => {
   }
   .background-container{
     width: 80%;
-    height: rem(200);
+    height: 100%;
     position: absolute;
     right: 0;
     .el-upload{
@@ -998,6 +1012,10 @@ onBeforeRouteLeave(() => {
     @extend .flex-center;
     overflow: hidden;
     z-index: 3;
+    :deep(.el-upload){
+      width: 100%;
+      height: 100%;
+    }
   }
 }
 .uploader-icon {

@@ -48,25 +48,22 @@ const router = createRouter({
           path: '/activity',
           name: 'activity',
           component: () => import('../views/ActivityView.vue'),
-          // meta: {
-          //   requiresLoading: true,// 是否需要加载动画
-          // }
+          meta: {
+            requiresLoading: true,// 是否需要加载动画
+          }
         },
         {// 个人资料
           path: '/userInfo',
           name: 'userInfo',
           component: () => import('../views/UserInfoView.vue'),
-          meta: {
-            requiresLoading: true,// 是否需要加载动画
-          },
         },
         {// 健康档案
           path: '/document',
           name: 'document',
           component: () => import('../views/DocumentView.vue'),
-          // meta: {
-          //   requiresLoading: true,// 是否需要加载动画
-          // }
+          meta: {
+            requiresLoading: true,// 是否需要加载动画
+          }
         },
         {// 记录-测试
           path: '/record',

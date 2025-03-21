@@ -144,8 +144,11 @@ const handleClear = () => {
   searchQuery.value = '';
 };
 // 在组件挂载时获取数据
-onMounted(async() => {
-  await fetchActivityData()
+onMounted(async () => {
+  // 设置全局加载状态为 true
+  store.commit('loading/SET_LOADING', true);
+  try {
+    await fetchActivityData()
   if (isAuthenticated.value) {
     await fetchUserActivityData()
   }
@@ -158,8 +161,13 @@ onMounted(async() => {
       await cancelActivity(activity.id); // 自动取消报名
     }
   }
+  } catch (error) {
+    console.error('Failed to fetch activity data:', error);
+  }finally {
+    // 设置全局加载状态为 false
+    store.commit('loading/SET_LOADING', false);
+  }
 })
-
 </script>
 <template>
     <div class="activity-page">
@@ -245,7 +253,7 @@ onMounted(async() => {
               活动已结束
             </el-button>
           </div>
-          <el-button v-else type="info" disabled>请先登录</el-button>
+          <el-button class="primary-button info" v-else disabled>请先登录</el-button>
         </template>
     </el-table-column>
   </el-table>

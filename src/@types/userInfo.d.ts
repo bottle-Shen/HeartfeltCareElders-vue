@@ -23,7 +23,6 @@ export interface UserInfoFormType {
   user: user;
   //老人
   elderly_id: number;
-  health_status: string;// 健康状态
   emergency_contact: string;// 紧急联系人姓名
   emergency_phone: string;// 紧急联系人电话
   caregiver: string;// 护理人员
@@ -41,7 +40,6 @@ export interface UserInfoFormType {
 export type elderlyInfoResponse = user & {
   emergency_contact: string;
   emergency_phone: string;
-  health_status: string;
   caregiver: string;
   elderly_id: number;
 }

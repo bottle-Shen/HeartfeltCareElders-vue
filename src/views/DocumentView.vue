@@ -99,10 +99,18 @@ const toggleSortDirection = () => {
   sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
   sortData(); // 重新排序
 };
-onMounted(() => {
+onMounted(async () => {
+  store.commit('loading/SET_LOADING', true); // 设置全局加载状态为 true
+  try {
     if (isAuthenticated.value) {
-        getDocumentBtn(currentPage.value, pageSize.value)
+      await getDocumentBtn(currentPage.value, pageSize.value); // 等待异步操作完成
     }
+  } catch (error) {
+    console.error('获取文档失败:', error);
+    ElMessage.error('获取文档失败，请稍后重试');
+  } finally {
+    store.commit('loading/SET_LOADING', false); // 设置全局加载状态为 false
+  }
 });
 
 </script>

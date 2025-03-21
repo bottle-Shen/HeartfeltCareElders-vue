@@ -74,7 +74,7 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .isLoading {
-    position: absolute;
-    background-color: var(--white);
+  // 全局加载样式-typography.scss
+  // 这里去掉.isLoading则失效
 }
 </style>

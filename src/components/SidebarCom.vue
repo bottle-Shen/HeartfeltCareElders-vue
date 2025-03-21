@@ -24,7 +24,7 @@ const handleSelect = (index: string) => {
       router.push('/document');
       break;
     case '7':
-      router.push('/userInfo');
+      router.push({ path: '/userInfo', query: { tab: 'first' } });
       break;
     default:
       break;

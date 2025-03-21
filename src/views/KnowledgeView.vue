@@ -18,7 +18,18 @@ const {  cleanup: cleanupKnowledgeData,
   addScrollListeners: addKnowledgeDataListeners,
    removeScrollListeners: removeKnowledgeDataListeners
 } = useInfiniteScroll(knowledgeDataContainerRef,
-  getKnowledge, 300,'knowledgeDataContainerRef')
+  async () => {
+  // 获取当前状态
+  const { finished, loading } = store.state.knowledge;
+
+  // 如果已经加载完成或正在加载中，则不触发加载更多
+  if (finished || loading) {
+    return;
+  }
+
+  // 调用加载更多数据的逻辑
+  await store.dispatch('knowledge/loadMoreKnowledgeData');
+}, 300,'knowledgeDataContainerRef')
 
 // 挂载时添加滚动事件监听
 onMounted(() => {

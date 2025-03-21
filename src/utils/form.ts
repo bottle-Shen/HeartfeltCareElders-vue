@@ -50,7 +50,6 @@ export const userInfo = reactive<UserInfoFormType>({
   elderly_id: 0,
   emergency_contact: '',//紧急联系人姓名
   emergency_phone: '',//紧急联系人电话
-  health_status: '',//健康状况
   caregiver: '',//护工姓名
   //家属
   family_id: 0,
@@ -84,7 +83,6 @@ export const userInfoForm = ref<IUserInfo>({
   elderly_id: 0, // 对于老人类型
   emergency_contact: '',
   emergency_phone: '',
-  health_status: '',
   caregiver: '',
   relation: '', // 对于家属类型
   common_address: '',

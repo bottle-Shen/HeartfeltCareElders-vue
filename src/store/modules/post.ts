@@ -3,11 +3,14 @@ import { type RootState } from '@/store/index'
 // import { store, type RootState } from '@/store/index'
 import type { SocialData,CommentData } from '@/@types/social'
 import { getSocial,UserLikePost,getUserSocial } from '@/api/social'
-
+import SecureLS from 'secure-ls';
+const secret = import.meta.env.VUE_APP_ENCRYPTION_SECRET || 'default-secret';
+const ls = new SecureLS({ encodingType: 'aes', encryptionSecret: secret });
 
 export interface PostState {
     userPosts: SocialData[]; // 用户发布的帖子
-    likedPosts: number[]; // 存储点赞的帖子 ID
+    likedPosts: number[]; // 存储点赞的帖子
+    likedPostsId: number[]; // 存储点赞的帖子ID
     socialData: SocialData[];// 所有帖子
     currentPageUserPosts: number; // 用户发布帖子的当前页码
     currentPageLikedPosts: number; // 用户点赞帖子的当前页码
@@ -25,7 +28,9 @@ export interface PostState {
     currentPageViewHistory: number; // 当前页码
     loadingViewHistory: boolean; // 加载状态
     finishedViewHistory: boolean; // 是否加载完成
+    loadedPagesViewHistory: Set<number>,
     itemsPerPageViewHistory: number,
+    maxPages: number,// 最大页数
 }
 
 export const PostModule: Module<PostState, RootState> = {
@@ -33,6 +38,7 @@ export const PostModule: Module<PostState, RootState> = {
   state: {
       userPosts: [],// 用户发布的帖子
       likedPosts: [],// 用户点赞的帖子
+      likedPostsId: [],// 用户点赞的帖子ID
       socialData: [],// 所有帖子
       currentPageUserPosts: 1,
       currentPageLikedPosts: 1,
@@ -47,54 +53,79 @@ export const PostModule: Module<PostState, RootState> = {
       finished: false, // 是否加载完成
       loadedPages: new Set(), // 缓存已加载的页码
       viewHistory: [], // 观看历史
-      currentPageViewHistory: 1, // 当前页码
+      currentPageViewHistory: 0, // 当前页码
       loadingViewHistory: false, // 加载状态
       finishedViewHistory: false, // 是否加载完成
-      itemsPerPageViewHistory: 5,// 每页显示的观看历史数量
+      loadedPagesViewHistory: new Set(),
+      itemsPerPageViewHistory: 50,// 每页显示的观看历史数量
+      maxPages:10,// 最大页数
     },
   mutations: {
       // 设置用户发布的帖子
         SET_USER_POSTS(state, posts: SocialData[]) {
           state.userPosts = posts;
         },
+        // 追加用户发布的帖子
         APPEND_USER_POSTS(state, posts: SocialData[]) {
           state.userPosts.push(...posts);
-    },
+        },
+        // 设置用户点赞的帖子ID
+        SET_LIKED_POSTS_ID(state, postIds: number[]) {
+          state.likedPostsId = postIds;
+        },
         // 设置用户点赞的帖子
         SET_LIKED_POSTS(state, postIds: number[]) {
           state.likedPosts = postIds;
         },
+        // 追加用户点赞的帖子
         APPEND_LIKED_POSTS(state, postIds: number[]) {
           state.likedPosts.push(...postIds);
         },
+        // 设置用户帖子当前页码
         SET_CURRENT_PAGE_USER_POSTS(state, page: number) {
           state.currentPageUserPosts = page;
         },
+        // 设置用户点赞帖子当前页码
         SET_CURRENT_PAGE_LIKED_POSTS(state, page: number) {
           state.currentPageLikedPosts = page;
         },
+        // 加载更多用户帖子
         SET_LOADING_USER_POSTS(state, loading: boolean) {
           state.loadingUserPosts = loading;
         },
+        // 加载更多用户点赞帖子
         SET_LOADING_LIKED_POSTS(state, loading: boolean) {
           state.loadingLikedPosts = loading;
         },
+        // 加载完成用户帖子
         SET_FINISHED_USER_POSTS(state, finished: boolean) {
           state.finishedUserPosts = finished;
         },
+        // 加载完成用户点赞帖子
         SET_FINISHED_LIKED_POSTS(state, finished: boolean) {
           state.finishedLikedPosts = finished;
         },
+        // 缓存已加载的页码用户帖子
         CACHE_LOADED_PAGE_USER_POSTS(state, page: number) {
           state.loadedPagesUserPosts.add(page);
         },
+        // 缓存已加载的页码用户点赞帖子
         CACHE_LOADED_PAGE_LIKED_POSTS(state, page: number) {
           state.loadedPagesLikedPosts.add(page);
+        },
+        // 清空已加载的页码用户帖子
+        CLEAR_LOADED_PAGES_USER_POSTS(state) {
+          state.loadedPagesUserPosts.clear();
+        },
+        // 清空已加载的页码用户点赞帖子
+        CLEAR_LOADED_PAGES_LIKED_POSTS(state) {
+          state.loadedPagesLikedPosts.clear();
         },
         // 设置观看历史
         SET_VIEW_HISTORY(state, viewHistory: SocialData[]) {
           state.viewHistory = viewHistory;
         },
+        // 追加数据观看历史
         ADD_TO_VIEW_HISTORY(state, post: SocialData) {
           // 添加帖子到观看历史
           const existingIndex = state.viewHistory.findIndex((item) => item.id === post.id);
@@ -103,22 +134,35 @@ export const PostModule: Module<PostState, RootState> = {
           } else {
             state.viewHistory[existingIndex] = post; // 更新已有记录
           }
-          localStorage.setItem('viewHistory', JSON.stringify(state.viewHistory));// 保存到本地存储
+          // localStorage.setItem('viewHistory', JSON.stringify(state.viewHistory));// 保存到本地存储
         },
+        // 设置当前页码观看历史
         SET_CURRENT_PAGE_VIEW_HISTORY(state, page: number) {
           state.currentPageViewHistory = page;
         },
+        // 设置加载状态观看历史
         SET_LOADING_VIEW_HISTORY(state, loading: boolean) {
           state.loadingViewHistory = loading;
         },
+        // 设置完成状态观看历史
         SET_FINISHED_VIEW_HISTORY(state, finished: boolean) {
           state.finishedViewHistory = finished;
         },
+        // 缓存已经加载的观看历史
+        CACHE_LOADED_PAGE_VIEW_HISTORY(state, page: number) {
+          state.loadedPagesViewHistory.add(page);
+        },
+        // 清空已加载的页码观看历史
+        CLEAR_LOADED_PAGES_VIEW_HISTORY(state) {
+          state.loadedPagesViewHistory.clear();
+        },
+        // 加载观看历史
         LOAD_VIEW_HISTORY(state, viewHistory) {
           state.viewHistory = viewHistory;
           state.loadingViewHistory = false; // 加载完成后关闭加载状态
           state.finishedViewHistory = viewHistory.length === 0; // 如果没有数据，标记为加载完成
         },
+        // 更新帖子数据
         updatePost(state, post: SocialData) {
           const index = state.socialData.findIndex(item => item.id === post.id);
           if (index !== -1) {
@@ -127,65 +171,102 @@ export const PostModule: Module<PostState, RootState> = {
             state.socialData.push(post);// 如果帖子不存在，则添加新帖子
           }
         },
+        // 更新评论数据
       updatePostComments(state, payload:{ postId:number, comments: CommentData[] }) {
           const post = state.socialData.find(item => item.id === payload.postId);
           if (post) {
             post.comments = payload.comments;
           }
         },
+        // 添加点赞的帖子ID
         addLikedPost(state, postId) {
-          if (!state.likedPosts.includes(postId)) {
-            state.likedPosts.push(postId);
+          if (!state.likedPostsId.includes(postId)) {
+            state.likedPostsId.push(postId);
           }
         },
+        // 移除点赞的帖子ID
         removeLikedPost(state, postId) {
-          state.likedPosts = state.likedPosts.filter(id => id !== postId);
+          state.likedPostsId = state.likedPostsId.filter(id => id !== postId);
     },
         // 设置所有帖子数据
         SET_SOCIAL_DATA(state, data: SocialData[]) {
             state.socialData = data;// 设置初始数据
         },
+        // 追加全部帖子数据
         APPEND_SOCIAL_DATA(state, data: SocialData[]) {
           state.socialData.push(...data); // 追加新数据
         },
+        // 设置当前页码全部帖子
         SET_CURRENT_PAGE(state, page: number) {
             state.currentPage = page;
         },
+        // 设置加载状态全部帖子
         SET_LOADING(state, loading: boolean) {
           state.loading = loading;
         },
+        // 设置完成状态全部帖子
         SET_FINISHED(state, finished: boolean) {
           state.finished = finished;
         },
+        // 缓存已加载的页码全部帖子
         CACHE_LOADED_PAGE(state, page) {
           state.loadedPages.add(page);
         },
     },
   actions: {
-    // userPosts({ commit }, response) {
-    // commit('setUserPosts', response);
-    // },
-    // async likedPosts({ commit }, response) {
-    //   commit('setLikedPosts', response);
-    // },
-    addToViewHistory({ commit }, post: SocialData) {
-      commit('SET_LOADING_VIEW_HISTORY', true);
+    // 添加帖子到观看历史
+    addToViewHistory({ state,commit }, post: SocialData) {
       commit('ADD_TO_VIEW_HISTORY', post);// 添加到观看历史
+      // 动态分页存储到 localStorage
+      const pageSize = state.itemsPerPageViewHistory;// 每页存储50条数据
+      const maxPages = state.maxPages;// 最多存储10页
+      const maxItems = pageSize * maxPages; // 最多存储数据数量
+      // 如果数据超过最大数量，从第一页开始覆盖旧数据
+      if (state.viewHistory.length > maxItems) {
+        state.viewHistory = state.viewHistory.slice(-maxItems); // 丢弃最旧的一条数据
+      }
+      const totalPages = Math.ceil(state.viewHistory.length / pageSize);// 计算总页数
+      const limitedPages = Math.min(totalPages, maxPages);// 限制页数
+
+      for (let i = 0; i < limitedPages; i++) {// 遍历页数
+        const start = i * pageSize;
+        const end = start + pageSize;
+        // localStorage.setItem(`viewHistoryPage${i}`, JSON.stringify(state.viewHistory.slice(start, end)));
+        ls.set(`viewHistoryPage${i}`, state.viewHistory.slice(start, end)); // 使用 SecureLS 加密本地存储
+      }
+
       commit('SET_LOADING_VIEW_HISTORY', false);
     },
-    loadMoreViewHistory({ state, commit }) {// 获取更多观看历史数据
-    if (state.finishedViewHistory || state.loadingViewHistory) return;
+    loadMoreViewHistory({ state, commit }) {// 仓库存储-获取更多观看历史数据
+      // 如果当前页码已经加载过，则不执行任何操作
+      if (state.loadedPagesViewHistory.has(state.currentPageViewHistory)) return;
+      // 如果已经加载完成或正在加载，则不执行任何操作
+      if (state.finishedViewHistory || state.loadingViewHistory) return;
 
-    commit('SET_LOADING_VIEW_HISTORY', true);
+      commit('SET_LOADING_VIEW_HISTORY', true);// 设置加载状态为true
+      commit('SET_CURRENT_PAGE_VIEW_HISTORY', state.currentPageViewHistory+1); // 更新当前页码
     try {
-      const viewHistory = JSON.parse(localStorage.getItem('viewHistory') || '[]');
-      const newItems = viewHistory.slice(state.currentPageViewHistory * 10, (state.currentPageViewHistory + 1) * 10);
+      const pageData = ls.get(`viewHistoryPage${state.currentPageViewHistory}`);
+      let newItems = [];
+
+      // 检查 pageData 是否已经是对象
+    if (typeof pageData === 'object' && !Array.isArray(pageData)) {
+      newItems = pageData;
+    } else if (typeof pageData === 'string') {
+      // 尝试解析 JSON 字符串
+      try {
+        newItems = JSON.parse(pageData);
+      } catch (error) {
+        console.error(`Failed to parse JSON for page ${state.currentPageViewHistory}:`, error);
+        newItems = []; // 如果解析失败，设置为空数组
+      }
+    }
 
       if (newItems.length === 0) {
-        commit('SET_FINISHED_VIEW_HISTORY', true);
+        commit('SET_FINISHED_VIEW_HISTORY', true);// 有更多数据，设置加载完成状态
       } else {
-        state.viewHistory.push(...newItems);
-        commit('SET_CURRENT_PAGE_VIEW_HISTORY', state.currentPageViewHistory + 1);
+        commit('SET_VIEW_HISTORY', [...state.viewHistory, ...newItems]); // 追加新数据
+        commit('CACHE_LOADED_PAGE_VIEW_HISTORY', state.currentPageViewHistory); // 缓存已加载的页码
       }
     } catch (error) {
       console.error('Failed to load more view history:', error);
@@ -193,20 +274,47 @@ export const PostModule: Module<PostState, RootState> = {
       commit('SET_LOADING_VIEW_HISTORY', false);
     }
     },
-    loadViewHistoryFromLocalStorage({ commit }) {
-  commit('SET_LOADING_VIEW_HISTORY', true); // 开始加载
-  const storedViewHistory = localStorage.getItem('viewHistory');
-  const viewHistory = storedViewHistory ? JSON.parse(storedViewHistory) : [];
+    loadViewHistoryFromLocalStorage({ state,commit }) {// 从本地存储加载观看历史数据
+     const viewHistory = [];
 
-  // 设置整个观看历史
-  commit('SET_VIEW_HISTORY', viewHistory);
+    // 加载所有页的数据
+    for (let i = 0; i < state.maxPages; i++) {
+      // const pageData = localStorage.getItem(`viewHistoryPage${i}`);
+      const pageData = ls.get(`viewHistoryPage${i}`);
+      if (pageData) {
+      try {
+        // 检查 pageData 是否已经是对象
+        if (typeof pageData === 'object') {
+          viewHistory.push(...pageData);
+        } else {
+          // 尝试解析 JSON 字符串
+          const parsedData = JSON.parse(pageData);
+          viewHistory.push(...parsedData);
+        }
+      } catch (error) {
+        console.error(`Failed to parse JSON for page ${i}:`, error);
+        // 如果解析失败，跳过当前页
+        continue;
+      }
+    }
+  }
 
-  // 设置加载状态和完成状态
-  commit('SET_LOADING_VIEW_HISTORY', false); // 结束加载
-  commit('SET_FINISHED_VIEW_HISTORY', viewHistory.length === 0); // 如果没有数据，标记为完成
+   
+    // 设置整个观看历史
+    commit('SET_VIEW_HISTORY', viewHistory);
+
+    // 初始化分页状态
+    // commit('SET_CURRENT_PAGE_VIEW_HISTORY', 0); // 当前页码设置为0
+    // commit('SET_LOADING_VIEW_HISTORY', false); // 加载状态设置为false
+    // commit('SET_FINISHED_VIEW_HISTORY', false); // 加载完成状态设置为false
+    // commit('CLEAR_LOADED_PAGES_VIEW_HISTORY'); // 清空已加载的页码缓存
+    // commit('CACHE_LOADED_PAGE_VIEW_HISTORY', 0); // 缓存第一页
     },
+    // 获取用户发布帖子数据
      async fetchUserPosts({ state, commit }) {
-    if (state.loadingUserPosts || state.finishedUserPosts) return;
+       //  如果当前页已经加载过，直接返回
+       if (state.loadedPagesUserPosts.has(state.currentPageUserPosts)) return;
+      if (state.loadingUserPosts || state.finishedUserPosts) return;
 
     commit('SET_LOADING_USER_POSTS', true);// 设置加载状态
     try {
@@ -233,11 +341,14 @@ export const PostModule: Module<PostState, RootState> = {
     } finally {
       commit('SET_LOADING_USER_POSTS', false);// 结束加载状态
     }
-  },
-  async fetchLikedPosts({ state, commit }) {
+    },
+     // 获取用户点赞帖子数据
+    async fetchLikedPosts({ state, commit }) {
+      // 如果当前页已经加载过，直接返回
+      if (state.loadedPagesLikedPosts.has(state.currentPageLikedPosts)) return;
     if (state.loadingLikedPosts || state.finishedLikedPosts) return;
 
-    commit('SET_LOADING_LIKED_POSTS', true);
+    commit('SET_LOADING_LIKED_POSTS', true);// 设置加载状态为true
     try {
       const params = {
         page: state.currentPageLikedPosts,
@@ -247,35 +358,37 @@ export const PostModule: Module<PostState, RootState> = {
       const newItems = response.results || [];
 
       if (newItems.length === 0) {
-        commit('SET_FINISHED_LIKED_POSTS', true);
+        commit('SET_FINISHED_LIKED_POSTS', true);// 如果没有更多数据，标记为加载完成
       } else {
         if (state.currentPageLikedPosts === 1) {
-          commit('SET_LIKED_POSTS', newItems);
+          commit('SET_LIKED_POSTS', newItems);// 如果是第一页，直接设置数据
         } else {
-          commit('APPEND_LIKED_POSTS', newItems);
+          commit('APPEND_LIKED_POSTS', newItems);// 否则追加数据
         }
-        commit('CACHE_LOADED_PAGE_LIKED_POSTS', state.currentPageLikedPosts);
+        commit('CACHE_LOADED_PAGE_LIKED_POSTS', state.currentPageLikedPosts);// 缓存已加载的页码
       }
     } catch (error) {
       console.error('Failed to fetch liked posts:', error);
-      commit('SET_FINISHED_LIKED_POSTS', true);
+      commit('SET_FINISHED_LIKED_POSTS', true);// 标记为加载完成
     } finally {
-      commit('SET_LOADING_LIKED_POSTS', false);
+      commit('SET_LOADING_LIKED_POSTS', false);// 结束加载状态
     }
     },
+  // 加载更多用户发布帖子数据
   async loadMoreUserPosts({ state, commit }) {
     if (!state.finishedUserPosts && !state.loadingUserPosts) {
-      // commit('SET_LOADING_USER_POSTS', true);// 设置加载状态为true
-      commit('SET_CURRENT_PAGE_USER_POSTS', state.currentPageUserPosts + 1);
-      await this.dispatch('post/fetchUserPosts');
+      commit('SET_CURRENT_PAGE_USER_POSTS', state.currentPageUserPosts + 1);// 更新当前页码
+      await this.dispatch('post/fetchUserPosts');// 加载数据
     }
-  },
+    },
+  // 加载更多用户点赞帖子数据
   async loadMoreLikedPosts({ state, commit }) {
     if (!state.finishedLikedPosts && !state.loadingLikedPosts) {
-      commit('SET_CURRENT_PAGE_LIKED_POSTS', state.currentPageLikedPosts + 1);
-      await this.dispatch('post/fetchLikedPosts');
+      commit('SET_CURRENT_PAGE_LIKED_POSTS', state.currentPageLikedPosts + 1);// 更新当前页码
+      await this.dispatch('post/fetchLikedPosts');// 加载数据
     }
-  },
+    },
+  // 获取全部帖子数据
     async fetchSocialData({ state, commit }) {
       console.log(`Current Page: ${state.currentPage}, Loaded Pages: ${Array.from(state.loadedPages)}`);
       console.log(`fetchSocialData called, current page: ${state.currentPage}`);
@@ -315,6 +428,7 @@ export const PostModule: Module<PostState, RootState> = {
       }
       console.log(`fetchSocialData finished, current page: ${state.currentPage}`);
     },
+    // 加载更多全部帖子数据
     async loadMoreData({ state, commit }) {
       // 只有在未完成加载且不是正在加载时才触发加载更多
       if (!state.finished && !state.loading) {
@@ -322,13 +436,14 @@ export const PostModule: Module<PostState, RootState> = {
         await this.dispatch('post/fetchSocialData'); // 调用 fetchSocialData 加载数据
       }
     },
+    // 初始化用户点赞帖子数据
     async initializeLikedPosts({ commit }) {
       try {
         const response = await UserLikePost({page: 1});// 加载第一页数据
         console.log('打印返回的数据结构',response); // 打印返回的数据结构
         if (response && response.results) {
           const likedPostIds = response.results.map((item: SocialData) => item.id);// 提取 id
-          commit('SET_LIKED_POSTS', likedPostIds);
+          commit('SET_LIKED_POSTS_ID', likedPostIds);
         }
       } catch (error) {
         console.error('Failed to fetch liked posts:', error);
@@ -337,21 +452,21 @@ export const PostModule: Module<PostState, RootState> = {
   },
   getters: {
     isPostLiked: (state) => (postId: number) => {
-      return state.likedPosts.includes(postId);
+      return state.likedPostsId.includes(postId);
     },
-    viewHistory: (state) => {
-      // return state.viewHistory;// 仓库中的观看历史
-      // 从 localStorage 中读取观看历史
-      const storedViewHistory = localStorage.getItem('viewHistory');
-      return storedViewHistory ? JSON.parse(storedViewHistory) : state.viewHistory;
-    },
-    paginatedViewHistory: (state) => {
-    // 计算分页的起始和结束索引
-    const start = (state.currentPageViewHistory - 1) * state.itemsPerPageViewHistory;
-    const end = start + state.itemsPerPageViewHistory;
-
-    // 返回分页后的观看历史
-    return state.viewHistory.slice(start, end);
-  },
+    // viewHistory: (state) => {
+    //   // return state.viewHistory;// 仓库中的观看历史
+    //   // 从 localStorage 中读取观看历史
+    //   const storedViewHistory = localStorage.getItem('viewHistory');
+    //   return storedViewHistory ? JSON.parse(storedViewHistory) : state.viewHistory;
+    // },
+  //   paginatedViewHistory: (state) => {
+  //   // 计算分页的起始和结束索引
+  //   const start = (state.currentPageViewHistory - 1) * state.itemsPerPageViewHistory;
+  //   const end = start + state.itemsPerPageViewHistory;
+    
+  //   // 返回分页后的观看历史
+  //   return state.viewHistory.slice(start, end);
+  // },
   }
 };

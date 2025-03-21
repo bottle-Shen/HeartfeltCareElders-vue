@@ -261,8 +261,8 @@ onUnmounted(() => {
     <div class="header">
       <h1>快来发布属于你的帖子吧~</h1>
       <div class="actions-bar">
-        <el-button v-if = "isAuthenticated" type="primary" @click="showPostForm = true">点我发布</el-button>
-        <el-button v-else type="info" disabled>请登录后操作</el-button>
+        <el-button class="primary-button" v-if = "isAuthenticated" @click="showPostForm = true">点我发布</el-button>
+        <el-button class="primary-button info"  v-else disabled>请登录后操作</el-button>
       </div>
     </div>
     <!-- 发布帖子的表单 -->
@@ -272,6 +272,7 @@ onUnmounted(() => {
       :before-close="handleClose"
     >
       <el-form
+      class="w-full"
         ref="postFormRef"
         :model="postForm"
         :rules="postFormRules"
@@ -337,18 +338,17 @@ onUnmounted(() => {
 
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="showPostForm = false">取消</el-button>
-          <el-button type="primary" @click="addPostBtn">发布</el-button>
+          <el-button class="primary-button" @click="showPostForm = false">取消</el-button>
+          <el-button class="primary-button" @click="addPostBtn">发布</el-button>
         </span>
       </template>
     </el-dialog>
     <div ref="socialDataContainerRef" class="post-list">
       <div v-for="(post,index) in socialData" :key="post.id" class="post-item">
-        <keep-alive>
         <router-link :to="`/interact/${post.id}`" @click="recordViewHistory(post)">
           <!-- 添加对post和post.user的校验，否则在重新回到列表页时user字段为undefined报错。 -->
           <CardsCom v-if="post && post.user" :post="post" :index="index"></CardsCom>
-        </router-link></keep-alive>
+        </router-link>
       </div>
       <!-- 加载状态 -->
         <LoadingCom v-if="loading" class="loading"/>
@@ -363,9 +363,6 @@ onUnmounted(() => {
   .header {
     @extend .flex-between;
     padding: 2.1vh 0;
-    .el-button{
-      // @extend .button;
-    }
   }
   .post-list{
     display: flex;
@@ -380,19 +377,19 @@ onUnmounted(() => {
     max-height: 80vh; //高度限制
     overflow: auto;
   }
-:deep(.el-dialog){
-  width:80%;
-  min-width: rem(300);
-  height: 70% !important;
-  min-height: rem(500);
- .el-form{
-    width: 100%;
-  }
-  .el-button{
-    @extend .button;
-  }
+// :deep(.el-dialog){
+//   width:80%;
+//   min-width: rem(300);
+//   height: 70% !important;
+//   min-height: rem(500);
+//  .el-form{
+//     width: 100%;
+//   }
+//   .el-button{
+//     @extend .button;
+//   }
   
-}
+// }
   .post-item {
     max-width: rem(315);
     padding-bottom: rem(30);
