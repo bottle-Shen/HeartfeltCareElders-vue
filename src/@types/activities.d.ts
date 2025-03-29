@@ -36,3 +36,12 @@ export interface userActivityData {
   user: number,
   event: EventData,
 }
+// 创建活动的请求参数类型
+export interface CreateActivityData {
+  title: string,
+  start_time: string,
+  end_time: string,
+  description: string,
+  location: string,
+  participants?:{ username: string }[],
+}

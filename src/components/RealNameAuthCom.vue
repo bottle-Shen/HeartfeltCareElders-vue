@@ -12,9 +12,15 @@ const form = reactive({
 });
 
 const ruleFormRef = ref();// 定义表单引用
-
+const resetForm = () => {
+  form.real_name = "";
+  form.id_card = "";
+  if (ruleFormRef.value) {
+    ruleFormRef.value.resetFields(); // 清空表单数据
+    ruleFormRef.value.clearValidate(); // 清空表单验证状态
+  }
+};
 const saveUserInfo = async () => {
-    // const formData = { real_name: real_name.value, id_card: id_card.value };
     const formData = { real_name: form.real_name, id_card: form.id_card };
     // 验证表单
     ruleFormRef.value.validate(async (valid: boolean) => {
@@ -25,8 +31,7 @@ const saveUserInfo = async () => {
                 ElMessage.success("实名认证成功");
                 // 触发自定义事件，将实名信息传递给父组件
                 emit("real-name-auth-success", form.real_name, form.id_card);
-                form.real_name = "";
-                form.id_card = "";
+                resetForm()// 重置表单
             }
         } catch (error) {
             if (error instanceof Error) {
@@ -41,7 +46,14 @@ const saveUserInfo = async () => {
     }
     })
 };
+// 监听父组件传来的 reset-form 事件
+const resetFormFromParent = () => {
+  resetForm();
+};
 
+defineExpose({
+  resetFormFromParent
+});
 </script>
 <template>
     <div class="realNameAuthCom display-flex flex-column">
@@ -54,21 +66,21 @@ const saveUserInfo = async () => {
             >
             <!-- 真实姓名 -->
             <el-form-item label="真实姓名" prop="real_name">
-                    <el-input v-model="form.real_name"/>
+                <el-input v-model="form.real_name"/>
             </el-form-item>
             <!-- 身份证号 -->
             <el-form-item label="身份证号" prop="id_card">
                     <el-input v-model="form.id_card"/>
             </el-form-item>
-            <!-- 退出和保存按钮 -->
             <el-form-item>
-              <!-- 修改按钮，点击后进入编辑模式 -->
-              <!-- <el-button type="primary" @click="isEditMode = true">修改</el-button> -->
-              <!-- 保存按钮，点击后保存信息并退出编辑模式 -->
-              <el-button type="primary" @click="saveUserInfo">保存</el-button>
+              <el-button class="primary-button w-full" @click="saveUserInfo">保存</el-button>
             </el-form-item>
-          </el-form>
+      </el-form>
     </div>
 </template>
 <style lang="scss" scoped>
+@use '@/styles/base.module';
+.el-form-item {
+  padding-bottom: rem(18);
+}
 </style>

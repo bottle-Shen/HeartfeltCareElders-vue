@@ -57,6 +57,11 @@ const router = createRouter({
           name: 'userInfo',
           component: () => import('../views/UserInfoView.vue'),
         },
+        {// 设置
+          path: '/setting',
+          name: 'setting',
+          component: () => import('../views/SetView.vue'),
+        },
         {// 健康档案
           path: '/document',
           name: 'document',
@@ -90,6 +95,16 @@ const router = createRouter({
           meta: {
             requiresLoading: true,// 是否需要加载动画
           }
+        },
+        {// 搜索社交互动帖子
+          path: '/searchpost',
+          name: 'searchPost',
+          component: () => import('../views/SearchPostView.vue'),
+        },
+        {// 搜索社交互动帖子
+          path: '/searchpost/:id',
+          name: 'searchPostDetail',
+          component: () => import('../views/InteractDetailView.vue'),
         },
         {// 健康知识库
           path: '/knowledge',

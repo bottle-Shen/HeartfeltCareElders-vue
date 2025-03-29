@@ -3,8 +3,11 @@ import type { Module } from 'vuex';
 import type { IUserInfo } from '@/@types/userInfo';
 import type { RootState } from '@/store/index'
 // import { getRefresh } from '@/api/refresh';
+import { updateTheme } from '@/utils/modules/themeUtils'
 import SecureLS from 'secure-ls'
-const secret = import.meta.env.VUE_APP_ENCRYPTION_SECRET || 'default-secret'
+// const encryptionSecret = import.meta.env.VITE_ENCRYPTION_SECRET;
+// console.log('Encryption Secret:', encryptionSecret);
+const secret = import.meta.env.VITE_ENCRYPTION_SECRET || 'default-secret'
 const ls = new SecureLS({ encodingType: 'aes', encryptionSecret: secret });
 
 export interface UserState {
@@ -59,6 +62,7 @@ export const userModule: Module<UserState, RootState> = {
     userInfo({ commit }, response: IUserInfo) {
       commit('setUser', response);
     },
+    // 退出登录
     logout({ commit }, router) {
       commit('clearToken');// 清除 Vuex 中的令牌
       commit('setUser', {} as IUserInfo);// 清除 Vuex 中的用户信息
@@ -66,7 +70,27 @@ export const userModule: Module<UserState, RootState> = {
       // sessionStorage.removeItem('user');
       ls.remove('access_token');
       ls.remove('refresh_token');
-      ls.remove('user'); // 清空加密存储中的用户信息
+      ls.remove('user'); // 清空本地存储中加密存储中的用户信息
+      // 恢复默认主题
+      updateTheme(0);
+      // console.log('currentThemeIndex', ls.get('currentThemeIndex'));
+      // ls.remove('currentThemeIndex');// 清空本地存储中存储的当前主题索引
+      sessionStorage.clear(); // 清空会话存储中的所有信息
+      
+      // 清空 post 模块的 Vuex 状态
+      commit('post/SET_USER_POSTS', [], { root: true });
+      commit('post/SET_CURRENT_PAGE_USER_POSTS', 1, { root: true }); // 重置当前页码
+      commit('post/SET_LOADING_USER_POSTS', false, { root: true });// 重置加载状态
+      commit('post/SET_FINISHED_USER_POSTS', false, { root: true });// 重置完成状态
+      commit('post/CLEAR_LOADED_PAGES_USER_POSTS',null, { root: true });// 重置缓存页码
+
+      // 清空 post 模块的 Vuex 状态
+      commit('post/SET_LIKED_POSTS', [], { root: true });
+      commit('post/SET_CURRENT_PAGE_LIKED_POSTS', 1, { root: true });
+      commit('post/SET_LOADING_LIKED_POSTS', false, { root: true });
+      commit('post/SET_FINISHED_LIKED_POSTS', false, { root: true });
+      commit('post/CLEAR_LOADED_PAGES_LIKED_POSTS',null, { root: true });
+      
       // 跳转到登录页面
       router.push('/login'); // 跳转到登录页面
     },

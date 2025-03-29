@@ -59,9 +59,10 @@ const handleClick = (tab: TabsPaneContext, event: Event) => {
      store.dispatch('post/fetchLikedPosts');
   } else if (tab.props.name === 'third') {
     getUserViewHistoryData();
-  } else if (tab.props.name === 'fourth') {
-    fetchUserActivityData();
   }
+  // else if (tab.props.name === 'fourth') {
+  //   fetchUserActivityData();
+  // }
   // 清除滚动位置
   const container = userPostsContainerRef.value;
   if (container) {
@@ -86,20 +87,20 @@ const getUserViewHistoryData = async () => {
   await store.dispatch('post/loadViewHistoryFromLocalStorage');
 }
 // 用户参加的活动
-const fetchUserActivityData = async () => {
-  const response = await getUserActivityData();
-  console.log('用户参加的活动数据', response);
-  // 处理用户活动数据
-  userActivitiesData.value = response.map((activity: userActivityData) => {
-    return {
-      ...activity,
-      event: {
-        ...activity.event,
-      },
-    }
-  })
-  store.commit('activities/setUserActivity', userActivitiesData.value)
-}
+// const fetchUserActivityData = async () => {
+//   const response = await getUserActivityData();
+//   console.log('用户参加的活动数据', response);
+//   // 处理用户活动数据
+//   userActivitiesData.value = response.map((activity: userActivityData) => {
+//     return {
+//       ...activity,
+//       event: {
+//         ...activity.event,
+//       },
+//     }
+//   })
+//   store.commit('activities/setUserActivity', userActivitiesData.value)
+// }
 // 使用无限滚动逻辑-用户发布的帖子-用户点赞的帖子
 const { cleanup: cleanupUserPosts,
   restoreScrollPosition: restoreUserPostsScroll,
@@ -179,9 +180,10 @@ onMounted(async() => {
         getUserLikeData(); // 加载用户点赞的帖子
       } else if (activeName.value === 'third') {
         getUserViewHistoryData(); // 加载用户观看历史
-      } else if (activeName.value === 'fourth') {
-        fetchUserActivityData(); // 加载用户参加的活动数据
       }
+      // else if (activeName.value === 'fourth') {
+      //   fetchUserActivityData(); // 加载用户参加的活动数据
+      // }
     }
   } catch (error) {
     console.error('加载用户资料失败:', error);
@@ -223,6 +225,8 @@ const changedParams = ref<UserInfoFormType>({
       emergency_contact:store.state.user.emergency_contact,
       emergency_phone: store.state.user.emergency_phone,
       caregiver:store.state.user.caregiver,
+      elderly_id_card: store.state.user.elderly_id_card,
+      elderly_real_name: store.state.user.elderly_real_name,
     //家属
       family_id: store.state.user.user.family_id, // 确保Vuex中存在family_id
         relation:store.state.user.relation,
@@ -505,8 +509,6 @@ onBeforeRouteLeave(() => {
       </template>
     </el-dialog>
     <div class="userInfo-left">
-    <!-- <div class="title">个人资料</div> -->
-
     <el-form
       ref="ruleFormRef"
       :model="changedParams"
@@ -845,7 +847,7 @@ onBeforeRouteLeave(() => {
             没有更多数据
           </div> -->
         </el-tab-pane>
-        <el-tab-pane label="活动" name="fourth">
+        <!-- <el-tab-pane label="活动" name="fourth">
           <ul class="userpost-list" v-if="userActivitiesData.length > 0">
             <li class="userpost-item" v-for="activity in userActivitiesData" :key="activity.id">
               <h3 class="title">{{ activity.event.title }}</h3>
@@ -855,7 +857,7 @@ onBeforeRouteLeave(() => {
               </div>
             </li>
           </ul>
-        </el-tab-pane>
+        </el-tab-pane> -->
       </el-tabs>
    </div>
   </div>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import zhCn from "element-plus/dist/locale/zh-cn.mjs"
 import type { CalendarDateType, CalendarInstance } from 'element-plus'
-import { getActivityData,getUserActivityData,registerActivity,cancelRegisterActivity,searchUserActivity } from "@/api/activities";
+import type {CreateActivityData} from "@/@types/activities"
+import { deleteActivityData,getActivityDataByOrg,createActivityData,getActivityData,getUserActivityData,registerActivity,cancelRegisterActivity,searchUserActivity } from "@/api/activities";
 import { useStore } from 'vuex'
 import { formatDate,formatDateToISO } from '@/utils'
 import type { ActivityData, ActivitiesByDate,userActivityData } from "@/@types/activities"
@@ -12,7 +13,8 @@ const store = useStore()
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);// 获取用户是否登录
 // const getUserType = computed(() => store.getters['user/getUserType']);// 获取用户类型
 // 定义活动数据的响应式变量
-const activityData = ref<ActivityData[]>([])
+const activityData = ref<ActivityData[]>([])// 全部活动数据
+const myActivityData = ref<ActivityData[]>([])// 机构人员创建的活动数据
 // 按日期分类的活动数据
 const activitiesByDate = ref<ActivitiesByDate>({});
 const calendar = ref<CalendarInstance>()
@@ -24,17 +26,41 @@ const userId = store.state.user.user.id
 const dialogVisible = ref(false); // 控制弹窗的显示
 const moreActivities = ref<ActivityData[]>([]); // 存储更多活动数据
 const searchQuery = ref(''); // 搜索关键词
+const getUserType = computed(() => store.getters['user/getUserType']);
+// 根据用户类型动态计算标题
+const activityTitle = computed(() => {
+  const userType = store.getters['user/getUserType'];
+  return userType === 3 ? '我创建的活动' : '报名活动';
+});
+const ActivityDialog = ref(false)// 创建活动弹窗
+const createActivityDialog = () => {
+  ActivityDialog.value = true
+}
+// 根据用户类型动态返回数据
+const currentActivityData = computed(() => {
+  if (getUserType.value === 3) {
+    return myActivityData.value;
+  } else {
+    return activityData.value;
+  }
+});
 // 获取活动数据
 const fetchActivityData = async () => {
   const response = await getActivityData()
+  if (getUserType.value === 3) {
+    const response = await getActivityDataByOrg()
+    myActivityData.value = response
+    myActivityData.value = response.map((activity: ActivityData) => {
+    return {
+      ...activity,
+      start_time: formatDate(activity.start_time),
+      end_time: formatDate(activity.end_time),
+    }
+  })
+  }
   // console.log(response)
   activityData.value = response
   // console.log('获取活动数据',activityData.value)
-  // activityData.value.sort((a, b) => {
-  //   const aDate = new Date(a.start_time).getTime()// 将日期字符串转换为时间戳
-  //   const bDate = new Date(b.start_time).getTime()
-  //   return bDate - aDate;//降序
-  // })
   // 处理活动数据
   activityData.value = response.map((activity: ActivityData) => {
     return {
@@ -81,6 +107,7 @@ const showMoreActivities = (date: string) => {
   moreActivities.value = activitiesByDate.value[date] || [];
   dialogVisible.value = true; // 显示弹窗
 };
+
 const hasRegistered = (row: number) => {
   const result = userActivitiesData.value.some(activity => {
     // console.log(`活动 ID: ${activity.event.id}, 用户 ID: ${activity.user}, 对比 ID: ${row}, 用户 ID: ${userId}`);
@@ -98,9 +125,6 @@ const isActivityEnded = async (row: number):Promise<boolean> => {
   return now > endTime;
 };
 const activityBtn = async (row: number) => {
-  // 获取当前行的 event_id
-  //     const eventId = row;
-  // console.log('Clicked event ID:', eventId);
     const params = { event_id: row,user_id:userId }
     // 处理报名逻辑
   await registerActivity(params)
@@ -110,6 +134,39 @@ const cancelActivity = async (row: number) => {
   const params = { event_id: row,user_id:userId }
   await cancelRegisterActivity(params)
 }
+// 删除活动
+const deleteBtn = async (rowId:number) => {
+  try {
+    // 调用后端接口删除活动
+    await deleteActivityData(rowId);
+
+    // 从 activityData 和 myActivityData 中移除对应的活动
+    const index = activityData.value.findIndex((activity) => activity.id === rowId);
+    if (index !== -1) {
+      activityData.value.splice(index, 1);
+    }
+
+    const myIndex = myActivityData.value.findIndex((activity) => activity.id === rowId);
+    if (myIndex !== -1) {
+      myActivityData.value.splice(myIndex, 1);
+    }
+
+    // 从 activitiesByDate 中移除对应的活动
+    for (const date in activitiesByDate.value) {
+      const activityIndex = activitiesByDate.value[date].findIndex((activity) => activity.id === rowId);
+      if (activityIndex !== -1) {
+        activitiesByDate.value[date].splice(activityIndex, 1);
+        // 如果某个日期的活动列表为空，移除该日期
+        if (activitiesByDate.value[date].length === 0) {
+          delete activitiesByDate.value[date];
+        }
+      }
+    }
+
+  } catch (error) {
+    console.error('删除活动失败:', error);
+  }
+};
 const filteredActivities = computed(() => {
   if (searchQuery.value === '') {
     // console.log('没有搜索关键词');
@@ -143,15 +200,18 @@ const handleClear = () => {
   // console.log('clear');
   searchQuery.value = '';
 };
+
 // 在组件挂载时获取数据
 onMounted(async () => {
   // 设置全局加载状态为 true
   store.commit('loading/SET_LOADING', true);
   try {
     await fetchActivityData()
-  if (isAuthenticated.value) {
-    await fetchUserActivityData()
-  }
+    if (isAuthenticated.value) {
+      if (getUserType.value === 1 || getUserType.value === 2) {
+        await fetchUserActivityData()
+      }
+    }
   for (const activity of activityData.value) {
     const ended = await isActivityEnded(activity.id); // 等待异步操作完成
     activityEndedStatus.value[activity.id] = ended; // 更新活动结束状态
@@ -168,6 +228,93 @@ onMounted(async () => {
     store.commit('loading/SET_LOADING', false);
   }
 })
+
+const activityForm = ref({
+  title: '',
+  start_time: '',
+  end_time: '',
+  description: '',
+  location: '',
+})
+import type { ElForm } from 'element-plus';
+const activityFormRef = ref<InstanceType<typeof ElForm> | null>(null);
+
+// 表单验证规则
+const rules = {
+  title: [
+    { required: true, message: '活动标题不能为空', trigger: 'blur' },
+  ],
+  description: [
+    { required: true, message: '活动描述不能为空', trigger: 'blur' },
+  ],
+  location: [
+    { required: true, message: '活动地点不能为空', trigger: 'blur' },
+  ],
+  start_time: [
+    { required: true, message: '活动开始时间不能为空', trigger: 'blur' },
+  ],
+  end_time: [
+    { required: true, message: '活动结束时间不能为空', trigger: 'blur' },
+  ],
+}
+// 创建活动数据
+const createActivity = async (activityForm: CreateActivityData) => {
+  try {
+        const response = await createActivityData(activityForm)
+        if (response) {
+          // 更新活动数据
+          const formattedActivity = {
+            ...response,
+            start_time: response.start_time,
+            end_time: response.end_time,
+          };
+
+          if (getUserType.value === 3) {
+            // 格式化日期并更新 formattedActivity 的 start_time 和 end_time
+            myActivityData.value.push({
+              ...response,
+              start_time: formatDate(response.start_time),
+              end_time: formatDate(response.end_time),
+            });;
+          } else {
+            activityData.value.push(formattedActivity);
+          }
+
+          // 更新按日期分类的活动数据
+          const date = new Date(response.start_time).toISOString().split('T')[0];
+          if (!activitiesByDate.value[date]) {
+            activitiesByDate.value[date] = [];
+          }
+          activitiesByDate.value[date].push(formattedActivity);
+        }
+      } catch (error) {
+        console.error('上传活动失败:', error);
+      }
+}
+// 提交表单
+const submitForm = () => {
+  if (activityFormRef.value) {
+    activityFormRef.value.validate((valid: boolean) => {
+      if (valid) {
+        // 表单验证通过，可以提交数据
+        console.log('表单数据:', activityForm.value);
+        // 这里可以调用 API 提交数据
+        createActivity(activityForm.value)
+        ActivityDialog.value = false; // 关闭弹窗
+      } else {
+        // 表单验证失败
+        console.log('表单验证失败');
+      }
+    });
+  }
+};
+
+// 重置表单
+const resetForm = () => {
+  if (activityFormRef.value) {
+    activityFormRef.value.resetFields();
+  }
+};
 </script>
 <template>
     <div class="activity-page">
@@ -210,7 +357,7 @@ onMounted(async () => {
       </el-config-provider>
       </div>
     </div>
-    <!-- 弹窗 -->
+    <!-- 更多活动弹窗 -->
   <el-dialog v-model="dialogVisible" title="更多活动">
     <div v-for="activity in moreActivities" :key="activity.id" class="activity-item">
       <div class="activity-content">
@@ -221,20 +368,79 @@ onMounted(async () => {
       </div>
       <div>
         <div v-if="isAuthenticated">
-          <el-button class="primary-button" v-if="!hasRegistered(activity.id) && !activityEndedStatus[activity.id]" v-debounce:click="()=>activityBtn(activity.id)">确认报名</el-button>
-          <el-button class="primary-button danger" v-else-if="hasRegistered(activity.id) && !activityEndedStatus[activity.id]" v-debounce:click="()=>cancelActivity(activity.id)" type="danger">取消报名</el-button>
-          <el-button class="primary-button danger" v-else disabled>
-              活动已结束
-          </el-button>
+          <div v-if="getUserType === 1 || getUserType === 2">
+            <el-button class="primary-button" v-if="!hasRegistered(activity.id) && !activityEndedStatus[activity.id]" v-debounce:click="()=>activityBtn(activity.id)">确认报名</el-button>
+            <el-button class="primary-button danger" v-else-if="hasRegistered(activity.id) && !activityEndedStatus[activity.id]" v-debounce:click="()=>cancelActivity(activity.id)" type="danger">取消报名</el-button>
+            <el-button class="primary-button danger" v-else disabled>
+                活动已结束
+            </el-button>
+          </div>
         </div>
         <el-button v-else type="info" disabled>请先登录</el-button>
       </div>
     </div>
   </el-dialog>
+  <!-- 创建活动弹窗 -->
+  <el-dialog v-model="ActivityDialog" title="创建活动">
+    <el-form class="w-full" :model="activityForm" :rules="rules" ref="activityFormRef">
+      <!-- 活动标题 -->
+      <el-form-item label="活动标题" prop="title">
+        <el-input v-model="activityForm.title" placeholder="请输入活动标题"></el-input>
+      </el-form-item>
+
+      <!-- 活动描述 -->
+      <el-form-item label="活动描述" prop="description">
+        <el-input
+          v-model="activityForm.description"
+          type="textarea"
+          :rows="3"
+          placeholder="请输入活动描述"
+        ></el-input>
+      </el-form-item>
+
+      <!-- 活动地点 -->
+      <el-form-item label="活动地点" prop="location">
+        <el-input v-model="activityForm.location" placeholder="请输入活动地点"></el-input>
+      </el-form-item>
+
+      <!-- 活动开始时间 -->
+      <el-form-item label="活动开始时间" prop="start_time">
+        <el-date-picker
+          v-model="activityForm.start_time"
+          type="datetime"
+          placeholder="请选择活动开始时间"
+          format="YYYY-MM-DD HH:mm:ss"
+          value-format="YYYY-MM-DD HH:mm:ss"
+        ></el-date-picker>
+      </el-form-item>
+
+      <!-- 活动结束时间 -->
+      <el-form-item label="活动结束时间" prop="end_time">
+        <el-date-picker
+          v-model="activityForm.end_time"
+          type="datetime"
+          placeholder="请选择活动结束时间"
+          format="YYYY-MM-DD HH:mm:ss"
+          value-format="YYYY-MM-DD HH:mm:ss"
+        ></el-date-picker>
+      </el-form-item>
+    </el-form>
+    <!-- 提交按钮 -->
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button class="primary-button" @click="submitForm">创建</el-button>
+          <el-button class="primary-button" @click="resetForm">重置</el-button>
+        </span>
+      </template>
+  </el-dialog>
     <div class="activity-item ep-bg-purple two">
-      <span class="activity-title title">报名活动</span>
+      <div class="flex-between">
+        <span class="activity-title title">{{ activityTitle }}</span>
+        <el-button v-if="getUserType === 3" class="primary-button" @click="createActivityDialog">上传</el-button>
+      </div>
       <el-table
-    :data="activityData"
+      row-key="id"
+    :data="currentActivityData"
     style="width: 100%" height="620"
   >
     <el-table-column prop="title" label="活动名称" show-overflow-tooltip/>
@@ -242,23 +448,40 @@ onMounted(async () => {
     <el-table-column prop="location" label="地点" show-overflow-tooltip/>
     <el-table-column prop="start_time" label="开始时间" show-overflow-tooltip/>
     <el-table-column prop="end_time" label="结束时间" show-overflow-tooltip/>
-    <el-table-column label="立即参与" fixed="right">
+    <el-table-column
+      v-if="getUserType === 3"
+      label="参与者"
+      show-overflow-tooltip
+    >
+      <template #default="scope">
+        <span v-if="scope.row.participants && scope.row.participants.length > 0">
+          {{ scope.row.participants.join(', ') }}
+        </span>
+        <span v-else>暂无参与者</span>
+      </template>
+    </el-table-column>
+    <el-table-column label="操作" fixed="right">
        <!-- 为按钮绑定点击事件，并传递当前行的数据 -->
         <!-- 根据用户是否登录显示不同的按钮 -->
       <template #default="scope">
           <div v-if = "isAuthenticated">
-            <el-button class="primary-button" v-if="!hasRegistered(scope.row.id) && !activityEndedStatus[scope.row.id]" v-debounce:click="()=>activityBtn(scope.row.id)">确认报名</el-button>
-            <el-button class="primary-button danger" v-else-if="hasRegistered(scope.row.id) && !activityEndedStatus[scope.row.id]" v-debounce:click="()=>cancelActivity(scope.row.id)">取消报名</el-button>
-            <el-button class="primary-button danger" v-else disabled>
-              活动已结束
-            </el-button>
+            <div v-if="getUserType === 3">
+              <el-button class="primary-button" v-debounce:click="()=>deleteBtn(scope.row.id)">删除活动</el-button>
+            </div>
+            <div v-else>
+              <el-button class="primary-button" v-if="!hasRegistered(scope.row.id) && !activityEndedStatus[scope.row.id]" v-debounce:click="()=>activityBtn(scope.row.id)">确认报名</el-button>
+              <el-button class="primary-button danger" v-else-if="hasRegistered(scope.row.id) && !activityEndedStatus[scope.row.id]" v-debounce:click="()=>cancelActivity(scope.row.id)">取消报名</el-button>
+              <el-button class="primary-button danger" v-else disabled>
+                活动已结束
+              </el-button>
+            </div>
           </div>
           <el-button class="primary-button info" v-else disabled>请先登录</el-button>
         </template>
     </el-table-column>
   </el-table>
     </div>
-   <div class="activity-item three">
+   <div v-if="getUserType === 1 || getUserType === 2" class="activity-item three">
       <el-card class="activity-card">
     <template #header>
       <div class="card-header">
@@ -278,7 +501,6 @@ onMounted(async () => {
       <p>{{'结束时间：' + formatDate(useractivity.event.end_time)}}</p>
     </el-card>
     </div>
-    <!-- <template #footer>Footer content</template> -->
   </el-card>
     </div>
 
@@ -292,6 +514,17 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 10px;
   // padding-bottom: rem(20);
+  .el-form{
+  .el-form-item{
+    padding-bottom: rem(20);
+  }
+  :deep(.el-date-editor.el-input){
+    width: 100%;
+  }
+}
+:deep(.el-dialog__footer .dialog-footer){
+  padding-top: 0 !important;
+}
   .activity-item{
     padding-top: rem(10);
     display: flex;

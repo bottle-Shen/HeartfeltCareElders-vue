@@ -3,43 +3,43 @@
 import { useStore } from 'vuex';
 import UserInfoCom from './UserInfoCom.vue'
 import { Search } from '@element-plus/icons-vue'
-const searchQuery = ref(""); // 搜索关键词
-// const emit = defineEmits(["search"]);
-// const handleSearch = () => {
-//   if (searchQuery.value.trim()) {
-//     emit("search", searchQuery.value); // 触发搜索事件
-//     console.log('触发搜索事件');
-//   }
-// };
+import { searchPost } from '@/api/social'
 const store = useStore();
 
 // 直接从 store 中获取 getters
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);
 const user = computed(() => store.getters['user/getUser']);
 // console.log('token', token)
-// const searchQuery = ref(""); // 搜索关键词
+const searchQuery = ref(""); // 搜索关键词
 const headerMenuVisible = ref(false);// 顶部菜单是否显示
 // 搜索逻辑
-const handleSearch = (query: string) => {
-  // 模拟搜索逻辑：根据关键词跳转到知识详情页
-  // 假设知识详情页的路由路径为 `/knowledge/:id`
-  const knowledgeId = searchKnowledge(query); // 搜索知识并获取 ID
-  if (knowledgeId) {
-    // router.push(`/knowledge/${knowledgeId}`); // 跳转到知识详情页
+const handleSearch = async (query:string) => {
+  if (query.trim()) {
+    try {
+      // 跳转到搜索结果页面，并传递搜索结果
+      router.push({ name: 'searchPost', query: { q: query } });
+    } catch (error) {
+      console.error('搜索失败：', error);
+    }
   } else {
-    alert("未找到相关知识");
+    console.log('搜索关键词为空');
+    // 清空搜索结果等操作
   }
 };
-
-// 模拟搜索函数
-const searchKnowledge = (query: string): string | null => {
-  // 这里可以根据实际逻辑调用 API 或查询 Vuex 状态
-  // 示例：假设返回知识的 ID
-  return query.toLowerCase() === "example" ? "123" : null;
+// 监听子组件的 clear 事件
+const handleClear = () => {
+  // console.log('clear');
+  searchQuery.value = '';
 };
 // 切换头部菜单
 const toggleHeaderMenu=() => {
   headerMenuVisible.value = !headerMenuVisible.value;
+};
+const showUserInfo = ref(false);// 用户信息是否显示
+const router = useRouter();
+const goToUserInfo = () => {
+  // 跳转到用户信息页面
+  router.push({ path: '/userInfo', query: { tab: 'first' } });
 };
 </script>
 <template>
@@ -48,18 +48,26 @@ const toggleHeaderMenu=() => {
       <!-- <img src="../assets/images/LOGO.png" /> -->
        智护长者
     </div>
-    <el-input class="search h-full" @keyup.enter="handleSearch" v-model="searchQuery" placeholder="请输入搜索内容" :prefix-icon="Search" />
-    <!-- <SearchCom class="search" @search="handleSearch"/> -->
+    <!-- <el-input class="search h-full" @keyup.enter="handleSearch" v-model="searchQuery" placeholder="请输入搜索内容" :prefix-icon="Search" /> -->
+    <SearchCom class="search" @search="handleSearch" :placeholder="'请输入想搜索的帖子内容'" @clear="handleClear"/>
     <div v-if="isAuthenticated" class="info flex-end">
-      <el-icon class="info-items">
+      <div class="info-items">
+      <div class="icon-container">
+      <el-icon class="icon" @click="$router.push('/setting')">
         <i-ep-Tools/>
       </el-icon>
-      <el-icon class="info-items">
+      <span>设置</span></div>
+    </div>
+      <!-- <el-icon class="info-items icon">
         <i-ep-BellFilled />
-      </el-icon>
-      <div class="info-items avatar">
-          <el-avatar class="w-full h-full" :src="user.avatar" />
-          <UserInfoCom class="userInfo-com"/>
+      </el-icon> -->
+      <div class="info-items avatar" @mouseenter="showUserInfo = true" @mouseleave="showUserInfo = false">
+          <el-avatar class="w-full h-full" :src="user.avatar" @click="goToUserInfo"/>
+           <transition name="slide-y">
+            <div class="userInfo-com" v-show="showUserInfo">
+              <UserInfoCom />
+            </div>
+            </transition>
       </div>
     </div>
     <div v-else class="info flex-end">
@@ -113,9 +121,35 @@ const toggleHeaderMenu=() => {
     .info{
     flex: 1.12;
     font-size: rem(30);
+    gap: 0 rem(8);
     .info-items{
+      cursor: pointer;
       width: rem(52);
       height: rem(52);
+      .icon-container{
+        height: 100%;
+        @extend .flex-center;
+        flex-direction: column;
+      }
+      span{
+        font-size: rem(12);
+      }
+      @include hover{
+        &:hover .icon{
+          color: var(--orange);
+          transition: all 0.2s ease;
+          background-color: var(--orange-light);
+        }
+        &:hover span{
+          color: var(--orange);
+          transition: all 0.2s ease;
+        }
+      }
+    }
+    .icon{
+      width: rem(34.4);
+      height: rem(34.4);
+      font-size: rem(26);
     }
     .avatar{
       position: relative;
@@ -123,13 +157,6 @@ const toggleHeaderMenu=() => {
       position: absolute;
       top: var(--header-height);
       right: 0;
-      display: none; // 默认隐藏
-      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-      }
-      @include hover {
-        &:hover .userInfo-com {
-          display: block;
-        }
       }
     }
     .el-icon{
@@ -141,26 +168,6 @@ const toggleHeaderMenu=() => {
   .header-menu{
     display: none;
   }
-    // @media (max-width: 768px) {
-    //   flex-direction: column;
-    //   justify-content: center;
-    //   .logo,
-    //   .search,
-    //   .info {
-    //     width: 100%;
-    //     text-align: center;
-    //     margin: 10px 0;
-    //   }
-    //   .logo{
-    //     flex-grow: 0.5;
-    //   }
-    //   .search {
-    //     flex-grow: 0.1;
-    //   }
-    //   .info{
-    //     flex-grow: 0.1;
-    //   }
-    // }
     @include mobile{
       margin: 0 2.1vw;
       .logo,.info{

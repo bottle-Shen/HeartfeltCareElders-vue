@@ -55,6 +55,8 @@ export const userInfo = reactive<UserInfoFormType>({
   family_id: 0,
   relation: '',//与老人关系
   common_address: '',//现在家庭地址
+  elderly_real_name: '',//绑定老人验证
+  elderly_id_card: '',//绑定老人验证
   //机构人员
   caregiver_id: 0,
   department: '',//部门
@@ -90,4 +92,24 @@ export const userInfoForm = ref<IUserInfo>({
   caregiver_id: 0, // 对于机构人员类型
   department: '',
   position:'',
+})
+
+import type { HealthDataFormType } from '@/@types/healthdata'
+export const HealthDataForm = reactive<HealthDataFormType>({
+  blood_cholesterol: 0,
+  blood_glucose: 0,
+  blood_triglyceride: 0,
+  systolic_pressure: 0,
+  diastolic_pressure: 0,
+  body_temperature: 0,
+  high_density_cholesterol: 0,
+  low_density_cholesterol: 0,
+  muscle_mass: 0,
+  body_fat: 0,
+  visceral_fat: 0,
+  blood_oxygen_saturation: 0,
+  height: 0,
+  heart_rate: 0,
+  weight: 0,
+  measured_at: '',
 })

@@ -4,10 +4,10 @@ import { getRefresh } from '@/api/refresh'
 
 // 在全局范围内定义一个标志
 let hasRetriedRefresh = false;
-
+// console.log(import.meta.env);
 // 创建axios实例
 const request = axios.create({
-  baseURL: 'http://localhost:3000/api/v1/',// API 请求的公共路径
+  baseURL: import.meta.env.VITE_BASE_URL, // 使用环境变量设置基础路径
   timeout: 5000,
   withCredentials: true,// 携带 cookie
 })

@@ -68,3 +68,33 @@ export const formRules: FormRules = reactive({
     ],
 
 })
+export const formRules2: FormRules = reactive({
+    height: [{ required: true, message: '请输入身高', trigger: 'blur' }],
+  weight: [{ required: true, message: '请输入体重', trigger: 'blur' }],
+  systolic_pressure: [{ required: true, message: '请输入收缩压', trigger: 'blur' }],
+  diastolic_pressure: [{ required: true, message: '请输入舒张压', trigger: 'blur' }],
+  body_fat: [{ required: true, message: '请输入体脂率', trigger: 'blur' }],
+  muscle_mass: [{ required: true, message: '请输入肌肉量', trigger: 'blur' }],
+  visceral_fat: [{ required: true, message: '请输入内脏脂肪面积', trigger: 'blur' }],
+  body_temperature: [{ required: true, message: '请输入体温', trigger: 'blur' }],
+  blood_oxygen_saturation: [{ required: true, message: '请输入血氧饱和度', trigger: 'blur' }],
+  heart_rate: [{ required: true, message: '请输入心率', trigger: 'blur' }],
+  blood_cholesterol: [{ required: true, message: '请输入总胆固醇', trigger: 'blur' }],
+  blood_triglyceride: [{ required: true, message: '请输入甘油三酯', trigger: 'blur' }],
+  high_density_cholesterol: [{ required: true, message: '请输入高密度脂蛋白胆固醇', trigger: 'blur' }],
+  low_density_cholesterol: [{ required: true, message: '请输入低密度脂蛋白胆固醇', trigger: 'blur' }],
+  blood_glucose: [{ required: true, message: '请输入空腹血糖', trigger: 'blur' }],
+  measured_at: [{ required: true, message: '请选择测量时间', trigger: 'blur' }]
+})
+export const formRules3: FormRules = reactive({
+  //常用手机号码
+    common_phone: [
+        { required: false, message: '请输入常用手机号', trigger: 'blur' },
+        { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
+    ],
+    //紧急联系人手机号码
+    emergency_phone: [
+        { required: false, message: '请输入紧急联系人手机号', trigger: 'blur' },
+        { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
+    ],
+})

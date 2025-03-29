@@ -43,6 +43,16 @@ export const useInfiniteScroll = (
       console.error("未找到容器，无法恢复滚动位置");
     }
   };
+  // 重置滚动位置
+  const resetScrollPosition = () => {
+    const container = containerRef.value;
+    if (container) {
+      container.scrollTop = 0;// 重置滚动容器的滚动位置
+      sessionStorage.setItem(scrollKey,  '0');// 更新存储中的滚动位置值
+    } else {
+      console.error("未找到容器，无法重置滚动位置");
+    }
+  };
 
   const addScrollListeners = () => {
     const container = containerRef.value;
@@ -65,6 +75,7 @@ export const useInfiniteScroll = (
     handleScroll,
     cleanup,
     restoreScrollPosition,
+    resetScrollPosition,
     addScrollListeners,
     removeScrollListeners,
   };

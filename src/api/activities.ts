@@ -1,6 +1,6 @@
 import store from '@/store';
 import request from '@/utils/request'
-import type { getRegisterActivityDataParams } from '@/@types/activities'
+import type { getRegisterActivityDataParams,CreateActivityData } from '@/@types/activities'
 
 
 // 获取全部活动数据
@@ -88,5 +88,55 @@ export const searchUserActivity =(params:string)=> {
       }
     }).catch((error) => {
         console.log(error)
+    })
+}
+
+// 机构人员创建活动数据
+export const createActivityData =(params:CreateActivityData)=> {
+    return request({
+        url: 'activities/events/',
+        method: 'POST',
+        data:{
+            title: params.title,
+            description: params.description,
+            location: params.location,
+            start_time: params.start_time,
+            end_time: params.end_time,
+        }
+    }).then(response => {
+      if (response.status === 201) {
+        // console.log(response.data)
+        return response.data;
+      }
+   }).catch((error) => {
+      console.log(error)
+  });
+}
+// 获取机构人员创建的活动数据
+export const getActivityDataByOrg =()=> {
+    return request({
+        url: 'activities/events/my-events/',
+        method: 'GET',
+    }).then(response => {
+      if (response.status === 200) {
+        // console.log(response.data)
+        return response.data;
+      }
+    }).catch((error) => {
+      console.log('获取机构人员创建的活动数据失败',error)
+    })
+}
+// 机构人员删除活动数据
+export const deleteActivityData =(params:number)=> {
+    return request({
+        url: `activities/events/${params}/delete-my-event/`,
+        method: 'DELETE',
+    }).then(response => {
+      if (response.status === 200) {
+        // console.log(response.data)
+        return response.data;
+      }
+    }).catch((error) => {
+      console.log('删除活动数据失败',error)
     })
 }

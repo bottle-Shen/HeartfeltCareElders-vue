@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { getHealthData, getSSEUrl } from '@/api/healthData'
+import { getHealthData, getElderlyHealthData, getElderlyHealthDataList, getElderlyList, uploadHealthData, updateHealthData, deleteHealthData, getSSEUrl } from '@/api/healthData'
+import { formRules2 } from '@/utils/formRules';
 import { useStore } from 'vuex'
 import * as echarts from 'echarts';
-import type{ HealthData } from '@/@types/healthdata'
+import { formatDate,formatDateToISO } from '@/utils'
+import type{ HealthData,HealthDataFormType } from '@/@types/healthdata'
+import type { elderlyInfoResponse } from '@/@types/userInfo'
+import type { ElForm } from 'element-plus';
 import { exampleHealthData } from '@/utils/exampleData'// 导入响应式布局逻辑
 // const store = useStore()
 // interface CountHealthData{
@@ -14,9 +18,15 @@ const store = useStore();
 // 直接从 store 中获取 getters
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);
 const getUserType = computed(() => store.getters['user/getUserType']);
+const elderlyList = ref<elderlyInfoResponse[]>([])// 机构人员绑定的老人用户列表
+const selectedElderly = ref<number>(1)// 选择的老人用户ID
 const isAsideVisible = computed(() => store.getters['asideVisible/isAsideVisible']);
+const dialogVisible = ref(false); // 控制弹窗的显示
+const selectedHealthData = ref<Partial<HealthData>>({});// 当前行的健康数据,Partial 类型将一个类型的所有属性都变为可选的,HealthData可以是不完整的
+const healthDataForm = ref<InstanceType<typeof ElForm> | null>(null);// 表单数据
 const healthData = ref<HealthData[]>([]); // 用于存储健康数据
 const hasHealthData = ref(true); // 用于标记是否有健康数据
+const hasElderlyHealthData = ref(true); // 用于标记机构人员绑定用户是否有健康数据
 // 存储所有提取的数据
 const healthMetrics = reactive({
   height: [] as number[],
@@ -424,29 +434,48 @@ const nextBtn = () => {
     number.value = 1;
   }
 };
+const HealthDataLength = ref<number>(0);// 获取到的健康数据长度
+
 // 加载数据
 const fetchHealthData = async () => {
   try {
+    // 设置全局加载状态
+    store.commit('loading/SET_LOADING', true);
+
     if (isAuthenticated.value) {
-      // 如果用户已登录，加载真实数据
-      const response = await getHealthData();
-      healthData.value = response.results;
-      hasHealthData.value = healthData.value.length > 0; // 标记是否有健康数据
+      let response;
+      if (getUserType.value === 1) {
+        response = await getHealthData();
+      } else if (getUserType.value === 2) {
+        response = await getElderlyHealthData();
+      } else if (getUserType.value === 3) {
+        response = await getElderlyHealthDataList(selectedElderly.value);
+      } else {
+        throw new Error("未知的用户类型");
+      }
+
+      healthData.value = response.results || [];
+      hasHealthData.value = healthData.value.length > 0;
+      HealthDataLength.value = healthData.value.length - 1;
     } else {
-      // 如果用户未登录，使用示例数据
       healthData.value = exampleHealthData;
-      hasHealthData.value = true; // 示例数据始终有数据
+      hasHealthData.value = true;
     }
+
     if (hasHealthData.value) {
-      extractHealthData(); // 提取数据
-      initCharts(); // 初始化图表
-      await nextTick(); // 确保图表初始化完成
-      updateCharts(); // 更新图表
+      extractHealthData();
+      initCharts();
+      await nextTick();
+      updateCharts();
     }
-    // console.log('健康数据', healthData.value);
   } catch (error) {
     console.error('获取健康数据失败:', error);
-    ElMessage.error('获取健康数据失败');
+    hasHealthData.value = false;
+    hasElderlyHealthData.value = false;
+    // ElMessage.error('获取健康数据失败');
+  } finally {
+    // 清除全局加载状态
+    store.commit('loading/SET_LOADING', false);
   }
 };
 const charts = [bloodGlucoseChart, BMIChart, bloodPressureChart];
@@ -515,7 +544,13 @@ const eventSource = ref<EventSource | null>(null); // 显式指定类型
 let stopWatch: () => void; // 用于存储 watch 的停止函数
 onMounted(async() => {
   try {
-        store.commit('loading/SET_LOADING', true); // 设置全局加载状态为 true
+        store.commit('loading/SET_LOADING', true); // 设置
+        if(getUserType.value === 3){
+          const response = await getElderlyList();
+          elderlyList.value = response;
+          // console.log('elderlyList',elderlyList.value)
+        }
+        // 全局加载状态为 true
         initCharts();
         await fetchHealthData();// 在组件加载时获取健康数据
     } catch (error) {
@@ -558,6 +593,7 @@ onUnmounted(() => {
 });
 // 绑定用户
 const bindHealthData  = async () => {
+  submitRealNameAndIdCard()
   // try {
   //   const response = await bindHealthDataToUser();
   //   console.log('绑定成功', response);
@@ -566,10 +602,297 @@ const bindHealthData  = async () => {
   //   console.error('绑定失败', error);
   // }
 }
+import { userInfoForm } from '@/utils/form'
+import type { user,UserInfoFormType } from '@/@types/userInfo'
+import { updateUserInfo} from '@/api/userInfo';
+const showRealNameAuthCom = ref(false)
+// 更新用户信息
+const saveUserInfo = async () => {
+    try {
+    const response = await updateUserInfo(changedParams.value);
+    console.log('更新', response);
+      // 更新成功后，更新store中的信息
+    store.commit('user/setUser', response);
+      // 可以在这里更新本地的 userInfo 状态，使其与后端同步
+    userInfoForm.value = response;
+
+  } catch (error) {
+    console.error('更新用户信息异常：', error);
+  }
+};
+const submitRealNameAndIdCard = () => {
+  showRealNameAuthCom.value = true
+};
+// 响应式数据
+const changedParams = ref<UserInfoFormType>({
+  user: {
+    user_type: store.state.user.user.user_type,
+    id: store.state.user.user.id,
+    username: store.state.user.user.username,
+    sex: store.state.user.user.sex,
+    phone: store.state.user.user.phone,
+    real_name: store.state.user.user.real_name,
+    id_card: store.state.user.user.id_card,
+    birthday: store.state.user.user.birthday,
+    signature: store.state.user.user.signature,
+    age: store.state.user.user.age,
+    common_phone: store.state.user.user.common_phone, 
+    address: store.state.user.user.address,
+  } as Pick<user, keyof user>,
+  //老人
+      elderly_id: store.state.user.user.elderly_id, // 确保Vuex中存在elderly_id
+      emergency_contact:store.state.user.emergency_contact,
+      emergency_phone: store.state.user.emergency_phone,
+      caregiver:store.state.user.caregiver,
+    //家属
+      family_id: store.state.user.user.family_id, // 确保Vuex中存在family_id
+        relation:store.state.user.relation,
+        common_address: store.state.user.common_address,
+        elderly_real_name:store.state.user.elderly_real_name,
+        elderly_id_card:store.state.user.elderly_id_card,
+    //机构人员
+      caregiver_id: store.state.user.caregiver_id, // 确保Vuex中存在caregiver_id
+        department: store.state.user.department,
+        position: store.state.user.position,
+});
+// 接收子组件传递的实名认证信息
+const handleRealNameAuthSuccess = (real_name: string, id_card: string) => {
+  changedParams.value.elderly_real_name = real_name;
+  changedParams.value.elderly_id_card = id_card;
+  // 调用更新接口
+  saveUserInfo();
+  showRealNameAuthCom.value = false
+};
+
+
+
+const updateBtn = async(healthDataId: number,HealthData:HealthData) => {
+  try {
+    const response = await updateHealthData(healthDataId, HealthData);
+    console.log('更新成功', response);
+    HealthData.health_status = response.health_status; 
+    // 检查 healthData 的结构
+    console.log('当前 healthData:', healthData.value);
+    // 直接更新前端数据
+    const index = healthData.value.findIndex(item => item.id === healthDataId);
+    if (index !== -1) {
+      healthData.value[index] = HealthData;
+
+      HealthDataLength.value = healthData.value.length - 1; // 更新长度
+      extractHealthData(); // 重新提取数据
+      updateCharts(); // 更新图表
+      // 如果当前行是选中的行，更新 selectedHealthData.value
+      if (selectedHealthData.value.id === healthDataId) {
+        selectedHealthData.value = { ...healthData.value[index] };
+      }
+    }
+  } catch (error) {
+    console.error('更新失败', error);
+  }
+};
+const deleteBtn = async (healthDataId: number) => {
+  try {
+    await deleteHealthData(healthDataId);
+    console.log('删除成功', healthDataId);
+    // 如果删除成功，从 healthData 中移除对应的项
+    healthData.value = healthData.value.filter(item =>item.id !== healthDataId);
+    console.log('删除成功', healthData.value);
+    // fetchHealthData(); // 重新加载数据
+    // 更新长度
+    HealthDataLength.value = healthData.value.length - 1;
+    extractHealthData(); // 重新提取数据
+    updateCharts(); // 更新图表 
+  } catch (error) {
+    console.error('删除失败', error);
+  }
+};
+const showdialogVisible = ()=>{
+  selectedHealthData.value = {}; // 初始化为空对象
+  dialogVisible.value = true
+}
+const openUpdateDialog = (row: HealthData) => {
+      // 从最新的 healthData.value 中获取当前行的数据
+    const currentRow = healthData.value.find(item => item.id === row.id);
+    if (currentRow) {
+      selectedHealthData.value = { ...currentRow }; // 深拷贝当前行的数据
+      delete selectedHealthData.value.elderly_name; // 删除不需要的字段
+  }
+      dialogVisible.value = true;
+};
+// 上传健康数据
+const createdHealthData = async (elderlyId:number,HealthData:HealthData) => {
+  try {
+    console.log('上传',elderlyId,HealthData)
+    await uploadHealthData(elderlyId, HealthData);
+    // 直接将新数据添加到前端数据
+    healthData.value.push(HealthData);
+    // fetchHealthData(); // 重新加载数据
+    HealthDataLength.value = healthData.value.length - 1; // 更新长度
+    extractHealthData(); // 重新提取数据
+    updateCharts(); // 更新图表 
+  } catch (error) {
+    console.error('上传失败', error);
+  }
+}; 
+
+const saveHealthData = async () => {
+  try {
+    // console.log('保存',selectedHealthData.value)
+    if (selectedHealthData.value.id) {
+      // 更新操作
+      updateBtn(selectedHealthData.value.id,selectedHealthData.value as HealthData)
+    } else {
+      // 上传操作
+      createdHealthData(selectedElderly.value,selectedHealthData.value as HealthData);
+    }
+    dialogVisible.value = false;
+  } catch (error) {
+    console.error('保存失败', error);
+  }
+};
+const submitForm = () => {
+  if (healthDataForm.value) {
+    // 在验证之前去除字段中的空格
+    const validKeys = ['height', 'weight', 'systolic_pressure', 'diastolic_pressure', 'body_fat', 'muscle_mass', 'visceral_fat', 'body_temperature', 'blood_oxygen_saturation', 'heart_rate', 'blood_cholesterol', 'blood_triglyceride', 'high_density_cholesterol', 'low_density_cholesterol', 'blood_glucose'] as const;
+    validKeys.forEach(key => {
+      if (selectedHealthData.value[key] !== undefined) {
+        if (typeof selectedHealthData.value[key] === 'string') {
+          // 如果是字符串，去除空格并尝试转换为数字
+          const trimmedValue = (selectedHealthData.value[key] as string).trim();
+          // 检查字符串是否包含非法字符（如空格）
+        if (trimmedValue.includes(' ')) {
+          ElMessage.error(`${key} 字段必须为数字，不能包含空格`);
+        } else {
+          // 如果是字符串，尝试转换为数字
+          const numericValue = parseFloat(trimmedValue);
+          if (!isNaN(numericValue)) {
+            (selectedHealthData.value[key] as string | number) = numericValue;
+          } else {
+            ElMessage.error(`${key} 字段必须为数字`);
+          }
+        }
+      }
+        if (typeof selectedHealthData.value[key] === 'number') {
+          // 如果已经是数字，保留小数点后一位
+          const roundedValue = Math.round(selectedHealthData.value[key] * 10) / 10;
+          (selectedHealthData.value[key] as number) = roundedValue;
+        }
+      }
+    });
+
+    healthDataForm.value.validate(async(valid: boolean) => {
+      if (valid) {
+        // 表单验证通过，调用保存函数
+        await saveHealthData();
+      } else {
+        // 表单验证失败，提示用户
+        ElMessage.error('表单信息不完整，请填写所有必填项');
+      }
+    });
+  }
+};
+const resetFormValidation = () => {
+  if (healthDataForm.value) {
+    healthDataForm.value.clearValidate(); // 清除验证状态
+  }
+};
+
+// 监听 dialogVisible 的变化
+watch(dialogVisible, (newVal, oldVal) => {
+  if (!newVal && oldVal) {//如果对话框从 true（打开状态）变为 false（关闭状态）则重置表单验证
+    // 当对话框关闭时重置表单验证
+    resetFormValidation();
+  }
+});
+const isTableVisible = ref(false)// 表格的显示状态
+const toggleTableVisibility = () => {
+  isTableVisible.value = !isTableVisible.value;
+};
 </script>
 
 <template>
-    <h1>{{ isAuthenticated ? '健康数据' : '示例数据-非真实用户' }}</h1>
+    <div class="header">
+      <h1>{{ isAuthenticated ? '健康数据' : '示例数据-非真实用户' }}</h1>
+      <div v-if="isAuthenticated && getUserType === 3" class="header-button">
+        <!-- 弹窗 -->
+  <el-dialog v-model="dialogVisible" title="健康数据">
+      <el-form class="w-full"
+      :model="selectedHealthData" 
+      :rules="formRules2"
+      ref="healthDataForm"
+      >
+        <el-form-item label="身高" prop="height">
+          <el-input v-model="selectedHealthData.height" />
+        </el-form-item>
+        <el-form-item label="体重" prop="weight">
+          <el-input v-model="selectedHealthData.weight" />
+        </el-form-item>
+        <el-form-item label="收缩压" prop="systolic_pressure">
+          <el-input v-model="selectedHealthData.systolic_pressure" />
+        </el-form-item>
+        <el-form-item label="舒张压" prop="diastolic_pressure">
+          <el-input v-model="selectedHealthData.diastolic_pressure" />
+        </el-form-item>
+        <el-form-item label="体脂率" prop="body_fat">
+          <el-input v-model="selectedHealthData.body_fat" />
+        </el-form-item>
+        <el-form-item label="肌肉量" prop="muscle_mass">
+          <el-input v-model="selectedHealthData.muscle_mass" />
+        </el-form-item>
+        <el-form-item label="内脏脂肪面积" prop="visceral_fat">
+          <el-input v-model="selectedHealthData.visceral_fat" />
+        </el-form-item>
+        <el-form-item label="体温" prop="body_temperature">
+          <el-input v-model="selectedHealthData.body_temperature" />
+        </el-form-item>
+        <el-form-item label="血氧饱和度" prop="blood_oxygen_saturation">
+          <el-input v-model="selectedHealthData.blood_oxygen_saturation" />
+        </el-form-item>
+        <el-form-item label="心率" prop="heart_rate">
+          <el-input v-model="selectedHealthData.heart_rate" />
+        </el-form-item>
+        <el-form-item label="总胆固醇" prop="blood_cholesterol">
+          <el-input v-model="selectedHealthData.blood_cholesterol" />
+        </el-form-item>
+        <el-form-item label="甘油三酯" prop="blood_triglyceride">
+          <el-input v-model="selectedHealthData.blood_triglyceride" />
+        </el-form-item>
+        <el-form-item label="高密度脂蛋白胆固醇" prop="high_density_cholesterol">
+          <el-input v-model="selectedHealthData.high_density_cholesterol" />
+        </el-form-item>
+        <el-form-item label="低密度脂蛋白胆固醇" prop="low_density_cholesterol">
+          <el-input v-model="selectedHealthData.low_density_cholesterol" />
+        </el-form-item>
+        <el-form-item label="空腹血糖" prop="blood_glucose">
+          <el-input v-model="selectedHealthData.blood_glucose" />
+        </el-form-item>
+        <el-form-item label="测量时间" prop="measured_at">
+          <el-date-picker v-model="selectedHealthData.measured_at" type="datetime" placeholder="请选择测量日期和时间" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+        <el-button class="primary-button"  @click="dialogVisible = false">取消</el-button>
+        <el-button class="primary-button" @click="submitForm">保存</el-button>
+        </span>
+      </template>
+    </el-dialog>
+        <el-button class="primary-button" @click="toggleTableVisibility">
+      {{ isTableVisible ? '隐藏' : '更新/删除' }}
+    </el-button>
+        <el-button class="primary-button createBtn" @click="showdialogVisible">上传</el-button>
+        <el-select v-model="selectedElderly" placeholder="请选择老人" @change="fetchHealthData">
+          <el-option
+            v-for="elderly in elderlyList"
+            :key="elderly.elderly_id"
+            :label="elderly.username"
+            :value="elderly.elderly_id"
+          >
+            用户名:{{ elderly.username }}
+          </el-option>
+        </el-select>
+      </div>
+    </div>
     <div v-if="!hasHealthData" class="no-data-message">
         <p v-if="isAuthenticated">
         <!-- 根据用户类型显示不同的提示信息 -->
@@ -577,12 +900,57 @@ const bindHealthData  = async () => {
           暂无健康数据，请联系机构人员或管理员。
         </template>
         <template v-else-if="getUserType === 2 || getUserType === 3">
-          您的账号未绑定任何健康数据，请先绑定健康数据。
+          <div v-if="hasElderlyHealthData">
+            您的账号未绑定任何健康数据，请先绑定健康数据。
           <button @click="bindHealthData" class="bind-button">绑定健康数据</button>
+           <RealNameAuthCom v-show="showRealNameAuthCom" @real-name-auth-success="handleRealNameAuthSuccess"></RealNameAuthCom>
+          </div>
+          <p v-else>暂无健康数据，请联系机构人员或管理员。</p>
         </template>
         </p>
     </div>
     <div v-else> 
+      <div class="healthdata-table">
+        <transition name="fade">
+      <el-table
+      v-show="isTableVisible"
+      row-key="id"
+    :data="healthData"
+    style="width: 100%"
+  >
+    <el-table-column prop="height" label="身高" show-overflow-tooltip/>
+    <el-table-column prop="weight" label="体重" show-overflow-tooltip/>
+    <el-table-column prop="systolic_pressure" label="收缩压" show-overflow-tooltip />
+      <el-table-column prop="diastolic_pressure" label="舒张压" show-overflow-tooltip />
+      <el-table-column prop="body_fat" label="体脂率" show-overflow-tooltip />
+      <el-table-column prop="muscle_mass" label="肌肉量" show-overflow-tooltip />
+      <el-table-column prop="visceral_fat" label="内脏脂肪面积" show-overflow-tooltip />
+      <el-table-column prop="body_temperature" label="体温" show-overflow-tooltip />
+      <el-table-column prop="blood_oxygen_saturation" label="血氧饱和度" show-overflow-tooltip />
+      <el-table-column prop="heart_rate" label="心率" show-overflow-tooltip />
+      <el-table-column prop="blood_cholesterol" label="总胆固醇" show-overflow-tooltip />
+      <el-table-column prop="blood_triglyceride" label="甘油三酯" show-overflow-tooltip />
+      <el-table-column prop="high_density_cholesterol" label="高密度脂蛋白胆固醇" show-overflow-tooltip />
+      <el-table-column prop="low_density_cholesterol" label="低密度脂蛋白胆固醇" show-overflow-tooltip />
+      <el-table-column prop="blood_glucose" label="空腹血糖" show-overflow-tooltip />
+      <el-table-column label="测量时间" show-overflow-tooltip>
+      <template #default="scope">
+        <!-- 使用 formatDate 函数格式化时间 -->
+        <span>{{ formatDate(scope.row.measured_at) }}</span>
+      </template>
+    </el-table-column>
+      <el-table-column prop="health_status" label="健康状态" show-overflow-tooltip />
+      <el-table-column label="操作" fixed="right" width="110">
+       <!-- 为按钮绑定点击事件，并传递当前行的数据 -->
+        <!-- 根据用户是否登录显示不同的按钮 -->
+      <template #default="scope">
+            <el-button class="primary-button" v-debounce:click="()=>openUpdateDialog(scope.row)">更新</el-button>
+            <el-button class="primary-button" v-debounce:click="()=>deleteBtn(scope.row.id)">删除</el-button>
+      </template>
+    </el-table-column>
+  </el-table>
+</transition>
+    </div>
         <div class="header-container">
         <span class="icon-btn" @click="backBtn"><el-icon><i-ep-Back /></el-icon></span>
       <transition name="slide-x" mode="out-in">
@@ -595,7 +963,7 @@ const bindHealthData  = async () => {
             <i>身高</i>
           </span>
           <span class="header-item-title">
-            <b>{{ healthMetrics.height[0] }}</b>
+            <b>{{ healthMetrics.height[HealthDataLength] }}</b>
             <i>cm</i>
           </span>
         </li>
@@ -605,7 +973,7 @@ const bindHealthData  = async () => {
             <i>体重</i>
           </span>
           <span class="header-item-title">
-            <b>{{ healthMetrics.weight[0] }}</b><i>kg</i></span>
+            <b>{{ healthMetrics.weight[HealthDataLength] }}</b><i>kg</i></span>
         </li>
         <li class="header-item">
           <span class="header-item-icon">
@@ -613,14 +981,14 @@ const bindHealthData  = async () => {
             <i>体脂率</i>
           </span>
           <span class="header-item-title">
-          <b>{{ healthMetrics.bodyFat[0]}}</b><i>%</i></span></li>
+          <b>{{ healthMetrics.bodyFat[HealthDataLength]}}</b><i>%</i></span></li>
         <li class="header-item">
           <span class="header-item-icon">
             <svg t="1741466542951" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3115" width="200" height="200"><path d="M0 0h1024v1024H0z" fill="#FFB9B6" p-id="3116"></path><path d="M187.3 149.3l-24.6 13.4-13.4 24.6-13.4-24.6-24.6-13.4 24.6-13.4 13.4-24.6 13.4 24.6 24.6 13.4z" fill="#FFFE07" fill-opacity=".734" p-id="3117"></path><path d="M149.3 204L130 168.7l-35.3-19.3L130 130l19.3-35.3 19.3 35.3 35.3 19.3-35.3 19.3-19.3 35.4zM128 149.3l13.8 7.5 7.5 13.8 7.5-13.8 13.8-7.5-13.8-7.5-7.5-13.8-7.5 13.8-13.8 7.5z" fill="#333333" p-id="3118"></path><path d="M839 149.1l-25.5-0.6-21.8 13.3 0.6-25.5-13.3-21.8 25.5 0.6 21.8-13.3-0.6 25.5 13.3 21.8z" fill="#FF7500" fill-opacity=".734" p-id="3119"></path><path d="M785 173.3l0.8-35.4-18.4-30.2 35.4 0.8L833 90.2l-0.8 35.4 18.4 30.2-35.4-0.8-30.2 18.3z m5.5-52.2l8.2 13.4-0.4 15.7 13.4-8.2 15.7 0.4-8.2-13.4 0.4-15.7-13.4 8.2-15.7-0.4z" fill="#333333" p-id="3120"></path><path d="M166.939 879.81c0.974-6.014 6.362-12.51 9.953-14.643 5.483-3.222 12.396-3.606 17.802-0.522 4.922 2.792 8.363 7.5 9.5 12.885 2.055 9.072 0.594 18.506-4.069 28.325-4.128 8.656-9.395 15.226-15.656 19.878-5.484 4.047-12.857 4.649-18.918 1.42" fill="#FF0000" p-id="3121"></path><path d="M173.863 937.756c-4.22 0.022-8.488-0.975-12.295-3.015-4.17-2.258-5.768-7.425-3.51-11.595 2.259-4.17 7.426-5.768 11.596-3.51 3.104 1.7 6.936 1.363 9.8-0.794 5.143-3.756 9.512-9.38 13.034-16.75 3.958-8.099 5.079-15.593 3.507-22.724-0.653-3.032-2.665-5.726-5.428-7.304-2.74-1.481-6.306-1.314-9.266 0.455-1.698 1.042-5.412 5.575-5.971 8.703-0.804 4.632-5.171 7.782-9.803 6.98-4.632-0.804-7.782-5.172-6.98-9.804 1.389-8.488 8.21-17.093 13.935-20.582 8.25-4.943 18.388-5.203 26.437-0.614 6.958 3.933 11.95 10.728 13.668 18.441 2.418 10.94 0.834 22.363-4.751 33.855-4.76 9.844-10.877 17.553-18.278 23.005-4.586 3.514-10.141 5.208-15.695 5.253z" fill="#333333" p-id="3122"></path><path d="M166.939 879.81c-3.708-4.95-12.17-7.89-16.44-8.062-6.256-0.295-12.54 2.611-15.866 7.872-3.035 4.776-3.887 10.45-2.435 15.86 2.444 8.976 8.163 16.62 16.89 23.1 7.709 5.705 15.444 9.033 23.155 10.202 6.742 0.998 13.535-1.932 17.37-7.63" fill="#FF0000" p-id="3123"></path><path d="M174.833 937.514c-1.237 0-2.595-0.074-3.88-0.269-8.998-1.364-18.114-5.274-26.939-11.731C133.76 917.867 127 908.525 124 897.73c-2.106-7.617-0.864-15.863 3.312-22.675 4.977-7.734 14.027-12.36 23.63-11.87 6.161 0.32 17.412 4.11 22.889 11.608 2.81 3.834 1.959 9.096-1.875 11.907s-9.097 1.96-11.908-1.875c-1.696-2.256-7.297-4.467-9.892-4.541-3.444-0.172-6.768 1.378-8.297 3.924-1.797 2.715-2.235 5.916-1.461 9.02 1.984 7.133 6.467 13.126 13.764 18.418 6.57 4.855 13.068 7.77 19.373 8.67 3.54 0.561 7.059-1.038 9.025-3.898 2.622-3.952 7.934-4.967 11.886-2.345 3.951 2.622 4.967 7.934 2.345 11.885-5 7.225-13.298 11.561-21.957 11.555zM924 520.5h-0.4c-11.8-0.2-21.2-9.9-20.9-21.7 0.6-34.3-13.8-70.5-40.6-102.1-7.6-9-6.5-22.4 2.4-30.1 9-7.6 22.4-6.5 30.1 2.4 33.6 39.5 51.6 85.8 50.8 130.5-0.3 11.7-9.8 21-21.4 21z" fill="#333333" p-id="3124"></path><path d="M923.7 559.2m-21.3 0a21.3 21.3 0 1 0 42.6 0 21.3 21.3 0 1 0-42.6 0Z" fill="#333333" p-id="3125"></path><path d="M308.5 825.3c58.8 28 128.1 42.5 201.7 38.7 200-10.5 355.2-152.5 346.5-317.2S679 257 479 267.5 123.8 420 132.4 584.7c3 56.9 25.1 109.1 61.1 152.6" fill="#FF5247" p-id="3126"></path><path d="M486.9 887.2c-66.4 0-130.9-14.2-188.1-41.5-11.3-5.4-16-18.9-10.7-30.1 5.4-11.3 18.9-16 30.1-10.7 57.4 27.4 123.4 40 190.8 36.5 187.2-9.8 333.1-141.5 325.1-293.5S667.3 280.2 480.1 290c-187.2 9.8-333 141.5-325.1 293.5 2.6 50.1 22 98.3 56 139.4 8 9.6 6.6 23.9-3 31.8-9.6 8-23.9 6.6-31.8-3-40.2-48.6-63.1-106-66.3-165.8-2.3-43.9 5.9-87 24.3-128 17.6-39.3 43.9-75.1 78-106.3 69.3-63.5 163.6-101.3 265.6-106.7 102-5.3 199.7 22.5 275.3 78.3 37.2 27.5 67 60.3 88.7 97.6 22.6 38.9 35.3 80.9 37.6 124.8s-5.9 87-24.3 128c-17.6 39.3-43.9 75.1-78 106.3-69.3 63.5-163.6 101.3-265.6 106.7-8.3 0.4-16.4 0.6-24.6 0.6z" fill="#333333" p-id="3127"></path><path d="M228.976667 801.970842a21.3 21.3 0 1 0 30.122224-30.123275 21.3 21.3 0 1 0-30.122224 30.123275Z" fill="#333333" p-id="3128"></path><path d="M473.7 356.8L411 465.7c-5.9 10.2-18.9 13.7-29.1 7.8-7.8-4.5-11.9-13.4-10.3-22.3l16.9-92.9-172.7-8.5c-11.8-0.6-20.8-10.6-20.3-22.4 0.5-9.8 7.6-18 17.2-19.9L386.9 273 352 198.5c-5-10.7-0.4-23.4 10.3-28.4 5.3-2.5 11.5-2.7 17-0.5l163.2 65.3 181.6 22.7c11.7 1.5 20 12.1 18.5 23.8-1.2 9.6-8.7 17.1-18.2 18.5l-80.8 11.3 18.8 95.9c2.3 11.6-5.3 22.8-16.8 25-4.4 0.9-9 0.3-13.1-1.6l-158.8-73.7z" fill="#5DEE57" p-id="3129"></path><path d="M392.4 497.7c-7.2 0-14.5-1.8-21.2-5.7-15.6-9-23.9-26.9-20.7-44.6l12.5-68.9-148.4-7.3c-23.5-1.2-41.7-21.2-40.5-44.7 1-19.6 15.1-35.9 34.3-39.8L356 257.4l-23.3-49.9c-4.8-10.3-5.4-21.9-1.5-32.6s11.7-19.3 22-24.1c10.6-5 23-5.3 33.9-1l160.6 64.3 178.9 22.4c23.3 2.9 40 24.3 37 47.6-2.4 19.1-17.4 34.3-36.4 37l-58.4 8.2 14.5 73.8c2.2 11.2-0.1 22.6-6.5 32-6.4 9.5-16 15.9-27.2 18.1-8.9 1.7-18 0.6-26.2-3.2l-141.1-65.5-53 91.9c-7.7 13.6-22.1 21.3-36.9 21.3z m-21-308.3l46.4 99.2-201 39.9 197 9.7L392.5 455 465 329.3l176.5 82-23.1-118 103.1-14.4-184.3-23-165.8-66.5z" fill="#333333" p-id="3130"></path><path d="M494.7 269.7l8.9-127.7c3-42.6 48.5-82.1 88.1-36.6 26.4 30.4 7.2 100.3-57.4 209.8" fill="#5DEE57" p-id="3131"></path><path d="M534.3 336.6c-3.7 0-7.4-1-10.8-3-10.1-6-13.5-19.1-7.5-29.2 31.2-52.9 51.6-96.4 60.7-129.4 7.3-26.7 7-46.5-1-55.6-9.4-10.8-18.5-14.9-27.1-12-12.1 4-22.5 19.9-23.6 36.1l-9 127.7c-0.8 11.8-11 20.6-22.8 19.8-11.8-0.8-20.6-11-19.8-22.8l8.9-127.7c2.4-33.8 24-64 52.6-73.6 25.4-8.5 52 0.4 72.9 24.5 33.9 39 16.4 113.6-55.2 234.7-3.9 6.8-11 10.5-18.3 10.5z" fill="#333333" p-id="3132"></path><path d="M625.631 656.78m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#FFD7D1" opacity=".5" p-id="3133"></path><path d="M369.631 656.78m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#FFD7D1" opacity=".5" p-id="3134"></path><path d="M412.031 591.58m-27.7 0a27.7 27.7 0 1 0 55.4 0 27.7 27.7 0 1 0-55.4 0Z" fill="#333333" p-id="3135"></path><path d="M495.231 680.28c-16 0-31-6.2-42.2-17.5-6.7-6.7-6.7-17.5 0-24.1 6.7-6.7 17.5-6.7 24.1 0 10 10 26.2 10 36.2 0 6.7-6.7 17.5-6.7 24.1 0 6.7 6.7 6.7 17.5 0 24.1-11.2 11.3-26.2 17.5-42.2 17.5z" fill="#333333" p-id="3136"></path><path d="M582.731 591.58m-27.7 0a27.7 27.7 0 1 0 55.4 0 27.7 27.7 0 1 0-55.4 0Z" fill="#333333" p-id="3137"></path><path d="M920.8 817m-21.3 0a21.3 21.3 0 1 0 42.6 0 21.3 21.3 0 1 0-42.6 0Z" fill="#6BD6F8" p-id="3138"></path><path d="M920.8 844.7c-15.3 0-27.7-12.4-27.7-27.7 0-15.3 12.4-27.7 27.7-27.7 15.3 0 27.7 12.4 27.7 27.7 0 15.3-12.4 27.7-27.7 27.7z m0-42.7c-8.2 0-14.9 6.7-14.9 14.9s6.7 14.9 14.9 14.9 14.9-6.7 14.9-14.9S929 802 920.8 802z" fill="#333333" p-id="3139"></path><path d="M853.3 896m-42.7 0a42.7 42.7 0 1 0 85.4 0 42.7 42.7 0 1 0-85.4 0Z" fill="#FF9C00" p-id="3140"></path><path d="M853.3 949.3c-29.4 0-53.3-23.9-53.3-53.3s23.9-53.3 53.3-53.3 53.3 23.9 53.3 53.3-23.9 53.3-53.3 53.3z m0-85.3c-17.6 0-32 14.4-32 32s14.4 32 32 32 32-14.4 32-32-14.3-32-32-32z" fill="#333333" p-id="3141"></path></svg>
             <i>肌肉量</i>
           </span>
           <span class="header-item-title">
-          <b>{{ healthMetrics.muscleMass[0] }}</b><i>kg</i></span>
+          <b>{{ healthMetrics.muscleMass[HealthDataLength] }}</b><i>kg</i></span>
         </li>
       </ul>
       <ul v-else-if="number === 2" key="2" class="header">
@@ -630,7 +998,7 @@ const bindHealthData  = async () => {
             <i>体温</i>
           </span>
           <span class="header-item-title">
-          <b>{{ healthMetrics.bodyTemperature[0] }}</b><i>°C</i>
+          <b>{{ healthMetrics.bodyTemperature[HealthDataLength] }}</b><i>°C</i>
         </span></li>
         <li class="header-item">
           <span class="header-item-icon">
@@ -638,21 +1006,21 @@ const bindHealthData  = async () => {
             <i>心率</i>
           </span>
           <span class="header-item-title">
-          <b>{{ healthMetrics.heartRate[0] }}</b><i>BPM</i></span></li>
+          <b>{{ healthMetrics.heartRate[HealthDataLength] }}</b><i>BPM</i></span></li>
         <li class="header-item">
           <span class="header-item-icon">
             <svg t="1741466721897" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3999" width="200" height="200"><path d="M0 0h1024v1024H0z" fill="#97C7F2" p-id="4000"></path><path d="M92.2 392c-3.5 0-7-0.9-10.3-2.7-10.3-5.7-14-18.7-8.3-29 28.6-51.6 83.5-83.9 150.6-88.6 11.8-0.8 21.9 8 22.8 19.8 0.8 11.8-8 21.9-19.8 22.8-52.4 3.7-94.7 28-116.2 66.7-4 7.1-11.3 11-18.8 11z" fill="#333333" p-id="4001"></path><path d="M943.4 858.9c13.3 5.9 20.6 19.8 19.1 33.9 12.6 5.6 20.7 19.1 19 33.9-1.7 14.8-12.6 26.4-26.2 29.5-1.6 14-11.8 26.2-26.2 29.5-14.3 3.2-28.4-3.5-35.2-15.7-13.6 3.1-28-2.9-35.2-15.7-7.2-12.8-5-28.6 4.4-39.2-6.8-12.2-5.5-28 4.4-39.2 9.9-11.1 25.3-14.2 37.9-8.5 9.4-10.6 24.7-14.5 38-8.5z" fill="#FCBC2E" p-id="4002"></path><path d="M921.9 999.2c-13.1 0-25.5-5.7-34-15.7-16.5 0.5-32-8.2-40.3-23-8.3-14.8-7.8-32.8 0.9-47-5.3-15.6-1.8-33.3 9.5-46.1 11.4-12.8 28.4-18.1 44.3-14.5 13.2-10.2 30.9-12.6 46.3-5.7 15.5 6.9 25.5 21.6 26.7 38.3 13.4 9.4 20.8 25.6 18.9 42.7-1.9 17-12.7 31.3-27.9 37.9-4.8 16-17.8 28.4-34.4 32.1-3.3 0.7-6.7 1-10 1z m-21.5-43.8l4.7 8.3c4.2 7.6 12.8 11.4 21.3 9.5 8.7-2 15.2-9.4 16.3-18.4l1-9.1 8.9-2c8.7-2 15.2-9.4 16.2-18.4 1-8.9-3.6-17.3-11.5-20.8l-8.6-3.8 1-9.3c1-8.9-3.6-17.3-11.5-20.8s-17.2-1.4-23.2 5.3l-6.2 7-8.6-3.8c-7.9-3.5-17.2-1.4-23.2 5.3-6.1 6.8-7.2 16.6-2.8 24.4l4.5 7.9-6.1 6.8c-6 6.8-7.2 16.6-2.8 24.4 4.3 7.6 12.8 11.4 21.3 9.5l9.3-2z" fill="#333333" p-id="4003"></path><path d="M192.9 149.3l-28.2 15.4-15.4 28.2-15.4-28.2-28.2-15.4 28.2-15.4 15.4-28.2 15.4 28.2 28.2 15.4z" fill="#FFFE07" fill-opacity=".734" p-id="4004"></path><path d="M149.3 215.1L126 172.6l-42.5-23.3L126 126l23.3-42.5 23.3 42.5 42.5 23.3-42.5 23.3-23.3 42.5zM128 149.3l13.8 7.5 7.5 13.8 7.5-13.8 13.8-7.5-13.8-7.5-7.5-13.8-7.5 13.8-13.8 7.5z" fill="#333333" p-id="4005"></path><path d="M157.2 956.9l-25.5-0.6-21.8 13.3 0.6-25.5-13.3-21.8 25.5 0.6 21.8-13.3-0.6 25.5 13.3 21.8z" fill="#FF7500" fill-opacity=".734" p-id="4006"></path><path d="M103.1 981.1l0.8-35.4-18.4-30.2 35.4 0.8 30.2-18.4-0.8 35.4 18.4 30.2-35.4-0.8-30.2 18.4z m5.6-52.2l8.2 13.4-0.4 15.7 13.4-8.2 15.7 0.4-8.2-13.4 0.4-15.7-13.4 8.2-15.7-0.4z" fill="#333333" p-id="4007"></path><path d="M875.678 144.302c5.438-2.748 13.86-2.207 17.696-0.555 5.83 2.542 10.204 7.909 10.887 14.096 0.634 5.623-1.152 11.173-4.84 15.258-6.132 6.996-14.623 11.358-25.308 13.358-9.43 1.748-17.84 1.348-25.284-0.982-6.497-2.058-11.318-7.67-12.268-14.471" fill="#FF0000" p-id="4008"></path><path d="M862.814 196.036c-5.89 0.019-11.355-0.78-16.47-2.463-9.632-2.99-16.76-11.452-18.199-21.405-0.624-4.701 2.617-9.03 7.318-9.655 4.701-0.624 9.03 2.617 9.655 7.318 0.449 3.51 2.974 6.412 6.402 7.46 6.063 1.955 13.18 2.184 21.214 0.7 8.878-1.557 15.599-5.056 20.445-10.52 2.069-2.31 3.066-5.52 2.718-8.684-0.477-3.01-2.708-5.796-5.878-7.151-1.842-0.762-7.692-1.102-10.552 0.284-4.22 2.073-9.335 0.39-11.408-3.829-2.072-4.22-0.39-9.335 3.829-11.408 7.683-3.866 18.654-3.406 24.842-0.825 8.847 3.77 15.017 11.818 16.036 21.027 0.908 7.942-1.655 15.974-6.886 21.897-7.43 8.387-17.6 13.82-30.182 16.056-4.471 0.817-8.762 1.264-12.884 1.198z" fill="#333333" p-id="4009"></path><path d="M875.678 144.302c1.825-5.91-0.77-14.484-3.14-18.039-3.44-5.235-9.484-8.61-15.695-8.21-5.648 0.353-10.74 2.999-14.263 7.353-5.825 7.253-8.647 16.372-8.76 27.242-0.084 9.59 1.77 17.804 5.357 24.73 3.155 6.041 9.518 9.814 16.382 9.569" fill="#FF0000" p-id="4010"></path><path d="M854.954 195.446c-9.654-0.007-18.79-5.454-23.319-14.214-4.185-8.08-6.38-17.755-6.343-28.69 0.095-12.713 3.679-23.674 10.648-32.446 4.925-6.18 12.326-10.022 20.292-10.648 9.182-0.52 18.244 4.082 23.492 12.14 3.362 5.172 6.91 16.502 4.062 25.34-1.45 4.528-6.207 6.932-10.735 5.482-4.528-1.45-6.931-6.208-5.482-10.735 0.829-2.699-0.675-8.53-2.14-10.673-1.886-2.887-5.093-4.665-8.052-4.406-3.253 0.142-6.1 1.67-8.157 4.12-4.603 5.798-6.817 12.948-6.81 21.962-0.066 8.168 1.396 15.138 4.373 20.77 1.628 3.193 4.989 5.1 8.46 5.009 4.737-0.202 8.681 3.499 8.883 8.237 0.201 4.738-3.5 8.682-8.238 8.883-0.294-0.116-0.64-0.014-0.934-0.13z" fill="#333333" p-id="4011"></path><path d="M290.1 284m-21.3 0a21.3 21.3 0 1 0 42.6 0 21.3 21.3 0 1 0-42.6 0Z" fill="#333333" p-id="4012"></path><path d="M917.3 277.3m-21.3 0a21.3 21.3 0 1 0 42.6 0 21.3 21.3 0 1 0-42.6 0Z" fill="#00FFD7" p-id="4013"></path><path d="M917.3 309.3c-17.6 0-32-14.4-32-32s14.4-32 32-32 32 14.4 32 32c0 17.7-14.3 32-32 32z m0-42.6c-5.9 0-10.7 4.8-10.7 10.7 0 5.9 4.8 10.7 10.7 10.7s10.7-4.8 10.7-10.7c0-5.9-4.8-10.7-10.7-10.7z" fill="#333333" p-id="4014"></path><path d="M136.6 426.4c18.2-38.5 61.4-64.6 129.7-78.3s125.2-8.9 170.8 14.4l92.6 435.7c-23.7 36.4-70.5 62.1-140.7 77-70.1 14.9-123.4 10.5-159.8-13.1l-92.6-435.7z" fill="#D6AD91" p-id="4015"></path><path d="M315.1 904.4c-7 0-13.8-0.3-20.3-0.8-29.9-2.5-55.8-10.6-76.8-24.3l-7.1-4.6-95.8-450.8 2.9-6.2c21-44.5 69.5-74.7 144.2-89.6 72.6-14.5 134.5-9.1 184.1 16.2l8.7 4.4 96.4 453.6-4.6 7.1c-13.6 21-33.9 39-60.3 53.4-25.1 13.7-56.5 24.7-93.3 32.5-28.3 6-54.5 9.1-78.1 9.1z m-67.7-55.3c31.5 16.8 77.7 18.8 137.4 6.2 59.7-12.7 101-33.4 123-61.5l-88.6-417c-39.9-17.4-89.9-20.3-148.9-8.5-57.5 11.5-95.2 32.1-112.1 61.1l89.2 419.7z" fill="#333333" p-id="4016"></path><path d="M798.7 798.7v81.9c-41 41-109.2 61.4-204.8 61.4s-163.8-20.5-204.8-61.4V286.7h409.6v409.6" fill="#D6AD91" p-id="4017"></path><path d="M593.9 962.6c-49.6 0-92.9-5.5-128.8-16.2-37.3-11.2-67.7-28.4-90.5-51.2l-6-6v-623h450.6v430.1c0 11.3-9.2 20.5-20.5 20.5s-20.5-9.2-20.5-20.5V307.2H409.6v564.6c37.6 33.1 99.5 49.8 184.3 49.8 84.8 0 146.8-16.8 184.3-49.8v-73.1c0-11.3 9.2-20.5 20.5-20.5s20.5 9.2 20.5 20.5v90.4l-6 6c-22.8 22.8-53.3 40-90.5 51.2-35.9 10.8-79.2 16.3-128.8 16.3z" fill="#333333" p-id="4018"></path><path d="M389.1 276.5a204.8 71.7 0 1 0 409.6 0 204.8 71.7 0 1 0-409.6 0Z" fill="#FFF1CE" p-id="4019"></path><path d="M593.9 368.6c-56.9 0-110.8-7.9-151.6-22.1-60.9-21.3-73.7-49.8-73.7-70s12.8-48.7 73.7-70c40.8-14.3 94.6-22.1 151.6-22.1s110.8 7.9 151.6 22.1c60.9 21.3 73.7 49.8 73.7 70s-12.8 48.7-73.7 70c-40.8 14.3-94.6 22.1-151.6 22.1z m0-143.3c-52.5 0-101.5 7-138 19.8-33.9 11.9-46.3 25.3-46.3 31.4s12.3 19.5 46.3 31.4c36.6 12.8 85.6 19.8 138 19.8s101.5-7 138-19.8c33.9-11.9 46.3-25.3 46.3-31.4S765.9 257 732 245.1c-36.6-12.8-85.6-19.8-138.1-19.8z" fill="#333333" p-id="4020"></path><path d="M777.5 401.4l38-15.3c10.5-4.2 22.4 0.8 26.7 11.3 4.2 10.5-0.8 22.4-11.3 26.7l-38 15.3c-10.5 4.2-22.4-0.8-26.7-11.3-4.3-10.5 0.8-22.4 11.3-26.7zM790.2 531.4l40.6 5.7c11.2 1.6 19 11.9 17.4 23.1-1.6 11.2-11.9 19-23.1 17.4l-40.6-5.7c-11.2-1.6-19-11.9-17.4-23.1 1.5-11.2 11.9-19 23.1-17.4zM373.8 438.6l39 12.7c10.8 3.5 16.6 15 13.1 25.8-3.5 10.8-15 16.6-25.8 13.1l-39-12.7c-10.8-3.5-16.6-15-13.1-25.8 3.5-10.7 15.1-16.6 25.8-13.1zM126.9 518.3l37.7-16c10.4-4.4 22.4 0.4 26.9 10.8 4.4 10.4-0.4 22.4-10.8 26.9L143 556c-10.4 4.4-22.4-0.4-26.9-10.8s0.3-22.4 10.8-26.9zM159.4 678.4l37.7-16c10.4-4.4 22.4 0.4 26.9 10.8 4.4 10.4-0.4 22.4-10.8 26.9l-37.7 16c-10.4 4.4-22.4-0.4-26.9-10.8-4.5-10.5 0.4-22.5 10.8-26.9zM179.7 736l37.7-16c10.4-4.4 22.4 0.4 26.9 10.8 4.4 10.4-0.4 22.4-10.8 26.9l-37.7 16c-10.4 4.4-22.4-0.4-26.9-10.8-4.5-10.5 0.4-22.5 10.8-26.9zM467.6 836l36.2-19.2c10-5.3 22.4-1.5 27.7 8.5 5.3 10 1.5 22.4-8.5 27.7l-36.2 19.2c-10 5.3-22.4 1.5-27.7-8.5-5.3-10-1.5-22.4 8.5-27.7zM374.5 659.7l35.8 19.9c9.9 5.5 13.5 17.9 8 27.8-5.5 9.9-17.9 13.5-27.8 8l-35.8-19.9c-9.9-5.5-13.5-17.9-8-27.8 5.4-9.9 17.9-13.5 27.8-8zM700.2 426.2l37.1 17.3c10.3 4.8 14.7 17 9.9 27.2-4.8 10.3-17 14.7-27.2 9.9l-37.1-17.3c-10.3-4.8-14.7-17-9.9-27.2 4.8-10.3 16.9-14.7 27.2-9.9zM364 754.7l39 12.7c10.8 3.5 16.6 15 13.1 25.8-3.5 10.8-15 16.6-25.8 13.1l-39-12.7c-10.8-3.5-16.6-15-13.1-25.8 3.4-10.7 15-16.6 25.8-13.1z" fill="#333333" p-id="4021"></path><path d="M799 747m-21.3 0a21.3 21.3 0 1 0 42.6 0 21.3 21.3 0 1 0-42.6 0Z" fill="#333333" p-id="4022"></path><path d="M703.676607 645.203212m-50.592293 0.883092a50.6 50.6 0 1 0 101.184587-1.766183 50.6 50.6 0 1 0-101.184587 1.766183Z" fill="#FFC3BB" opacity=".757" p-id="4023"></path><path d="M501.207449 648.737325m-50.592293 0.883092a50.6 50.6 0 1 0 101.184586-1.766184 50.6 50.6 0 1 0-101.184586 1.766184Z" fill="#FFC3BB" opacity=".757" p-id="4024"></path><path d="M533.901787 596.558783m-21.896664 0.382208a21.9 21.9 0 1 0 43.793329-0.764416 21.9 21.9 0 1 0-43.793329 0.764416Z" fill="#333333" p-id="4025"></path><path d="M600.015317 665.515445c-11.801693 0.005969-23.680177-4.387392-32.835879-13.22895-5.391691-5.206695-5.540036-13.7054-0.33334-19.097091 5.206695-5.391691 13.7054-5.540036 19.09709-0.333341 8.036671 7.760923 20.834721 7.537532 28.595645-0.499138 5.206695-5.391691 13.7054-5.540036 19.097091-0.333341 5.391691 5.206695 5.540036 13.7054 0.333341 19.097091-9.134531 9.560876-21.552346 14.37833-33.953948 14.39477z" fill="#333333" p-id="4026"></path><path d="M668.781242 594.204453m-21.896665 0.382208a21.9 21.9 0 1 0 43.793329-0.764415 21.9 21.9 0 1 0-43.793329 0.764415Z" fill="#333333" p-id="4027"></path></svg>
             <i>血压</i>
           </span>
           <span class="header-item-title">
-          <b>{{ healthMetrics.systolicPressure[0]}}/{{ healthMetrics.diastolicPressure[0] }}</b><i>mmHg</i></span></li>
+          <b>{{ healthMetrics.systolicPressure[HealthDataLength]}}/{{ healthMetrics.diastolicPressure[HealthDataLength] }}</b><i>mmHg</i></span></li>
         <li class="header-item">
           <span class="header-item-icon">
             <svg t="1741466633790" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3526" width="200" height="200"><path d="M0 0h1024v1024H0z" fill="#FF948F" p-id="3527"></path><path d="M778.4 794.2m-21.3 0a21.3 21.3 0 1 0 42.6 0 21.3 21.3 0 1 0-42.6 0Z" fill="#333333" p-id="3528"></path><path d="M596 929.1c-11.8 0-21.4-9.6-21.4-21.3 0-11.8 9.6-21.3 21.3-21.3 52.5 0 96.4-21.3 120.5-58.5 6.4-9.9 19.6-12.7 29.5-6.3 9.9 6.4 12.7 19.6 6.3 29.5-32 49.5-89 77.9-156.2 77.9z" fill="#333333" p-id="3529"></path><path d="M85.939 626.81c0.974-6.014 6.362-12.51 9.953-14.643 5.483-3.222 12.396-3.606 17.802-0.522 4.922 2.792 8.363 7.5 9.5 12.885 2.055 9.072 0.594 18.506-4.069 28.325-4.128 8.656-9.395 15.226-15.656 19.878-5.484 4.047-12.857 4.649-18.918 1.42" fill="#FF0000" p-id="3530"></path><path d="M92.863 684.756c-4.22 0.022-8.488-0.975-12.295-3.015-4.17-2.258-5.768-7.425-3.51-11.595 2.259-4.17 7.426-5.768 11.596-3.51 3.104 1.7 6.936 1.363 9.8-0.794 5.143-3.756 9.512-9.38 13.034-16.75 3.958-8.099 5.079-15.593 3.507-22.724-0.653-3.032-2.665-5.726-5.428-7.304-2.74-1.481-6.306-1.314-9.266 0.455-1.698 1.042-5.412 5.575-5.971 8.703-0.804 4.632-5.171 7.782-9.803 6.98-4.632-0.804-7.782-5.172-6.98-9.804 1.389-8.488 8.21-17.093 13.935-20.582 8.25-4.943 18.388-5.203 26.437-0.614 6.958 3.933 11.95 10.728 13.668 18.441 2.418 10.94 0.834 22.363-4.751 33.855-4.76 9.844-10.877 17.553-18.278 23.005-4.586 3.514-10.141 5.208-15.695 5.253z" fill="#333333" p-id="3531"></path><path d="M85.939 626.81c-3.708-4.95-12.17-7.89-16.44-8.062-6.256-0.295-12.54 2.611-15.866 7.872-3.035 4.776-3.887 10.45-2.435 15.86 2.444 8.976 8.163 16.62 16.89 23.1 7.709 5.705 15.444 9.033 23.155 10.202 6.742 0.998 13.535-1.932 17.37-7.63" fill="#FF0000" p-id="3532"></path><path d="M93.833 684.514c-1.237 0-2.595-0.074-3.88-0.269-8.998-1.364-18.114-5.274-26.939-11.731C52.76 664.867 46 655.525 43 644.73c-2.106-7.617-0.864-15.863 3.312-22.675 4.977-7.734 14.027-12.36 23.63-11.87 6.161 0.32 17.412 4.11 22.889 11.608 2.81 3.834 1.959 9.096-1.875 11.907s-9.097 1.96-11.908-1.875c-1.696-2.256-7.297-4.467-9.892-4.541-3.444-0.172-6.768 1.378-8.297 3.924-1.797 2.715-2.235 5.916-1.461 9.02 1.984 7.133 6.467 13.126 13.764 18.418 6.57 4.855 13.068 7.77 19.373 8.67 3.54 0.561 7.059-1.038 9.025-3.898 2.622-3.952 7.934-4.967 11.886-2.345 3.951 2.622 4.967 7.934 2.345 11.885-5 7.225-13.298 11.561-21.957 11.555z" fill="#333333" p-id="3533"></path><path d="M181.9 805.9c18.5 3.7 37.5 7.9 57 12.3 237.3 54 533.5 139.2 587.2-358.2C843.7 316.4 717 235.8 619.4 235.5c-292.8-0.9-292.2 189.7-291.9 285 13.9 204.8-114.1 204.8-156.7 204.8" fill="#F6372D" p-id="3534"></path><path d="M498.3 884.5c-79.8 0-163.5-19.2-241.5-37.2-7.8-1.8-15.6-3.6-23.4-5.3-16.8-3.8-36.7-8.3-56.3-12.2-13.2-2.6-21.8-15.5-19.2-28.7 2.6-13.2 15.5-21.8 28.7-19.2 20.2 4 40.5 8.5 57.7 12.4 7.8 1.8 15.6 3.6 23.5 5.4 69.9 16.1 142.1 32.7 210.8 35.4 75.1 3.1 134.1-11.5 180.5-44.5 36.6-26.1 65.7-63.3 89-113.9 26.1-56.8 44.2-130.6 53.8-219.5v-0.4c6.1-50-7.3-95.4-39-131.3-35.1-39.8-91.4-65.6-143.6-65.7h-1.9c-96.1 0-166.4 21.7-209.2 64.5-56.4 56.4-56.4 139.7-56.3 195.2 5.4 81.6-10.3 142.8-46.8 181.8-45.1 48.3-107.7 48.3-134.4 48.3-13.5 0-24.4-10.9-24.4-24.4s10.9-24.4 24.4-24.4c22.1 0 68.1 0 98.7-32.8 27-28.9 38.3-78 33.7-146l-0.1-0.8v-0.8c-0.2-59.7-0.5-159.6 70.6-230.6 25.2-25.2 57.4-44.5 95.8-57.6 41.9-14.2 92.3-21.4 150-21.2 31.3 0.1 64.3 7.4 95.4 21.1 32.8 14.5 62.1 35.6 84.7 61.2 41.1 46.6 58.7 105.2 50.9 169.4-10.2 94-29.7 172.9-58 234.5-26.5 57.7-61.9 102.5-105 133.3-56.5 40.2-121.4 54-189.1 54z" fill="#333333" p-id="3535"></path><path d="M275.9 331.5c76.7 40.8 169.6 15.6 278.7-75.5 6.7 127.8 26.2 187.7 68.8 185.5 28.4-1.5 54.6-45.6 78.5-132.3 119.6 107.7 177.9 133.1 174.9 76.3-4.5-85.2-139-206.3-266.8-199.6-144.9-49.4-256.3-0.9-334.1 145.6z" fill="#9AD520" p-id="3536"></path><path d="M621.3 462.9c-15 0-28.8-5.4-40-15.8-10.5-9.7-18.9-23.6-25.7-42.4-9.1-25.3-15.4-59.8-19.4-107-44.9 33.1-87.6 55.3-127.4 66.1-51.6 14-99.7 9.5-142.8-13.5l-18.8-10 10-18.8c41-77.3 92.2-129.7 152.2-155.8 59.5-25.9 128-26.4 203.9-1.3 62.4-2 131.4 23.4 189.9 70.2 26.7 21.3 49.5 45.9 66.1 71.2 17.7 27 27.8 54.2 29.1 78.7 1.6 30.2-11.3 42.8-22.3 48.1-18.5 8.8-42.5 2.8-77.8-19.5-22.9-14.4-51.4-36.4-85.1-65.6-9.6 29.7-19.5 53-30.1 70.9-16.9 28.5-36.5 43.5-58.2 44.6-1.4-0.1-2.5-0.1-3.6-0.1z m-47.6-250.6l2.2 42.6c3.3 63.5 9.8 107.8 19.7 135.4 11.1 30.7 22.4 30.1 26.7 29.9 2.8-0.1 28.1-4.7 59.1-116.7l9.2-33.3 25.7 23.1c40.1 36.1 73.4 62.9 99 79.9 23.4 15.5 35.2 19.3 40.3 20.1 0.2-1.5 0.3-3.7 0.1-6.7-1.8-35.2-32.9-81.8-79.2-118.7-51.8-41.4-112-63.5-165.2-60.7l-4.1 0.2-3.9-1.3c-33.9-11.5-66.1-17.4-95.6-17.5-29-0.1-56.3 5.4-81.3 16.3-45.8 20-86.2 59.2-120.3 116.7 28.1 9.8 58.2 10.2 91.5 1.2C440.8 311 489 283 541 239.6l32.7-27.3z" fill="#333333" p-id="3537"></path><path d="M604.5 229.5c9.2-53 20.9-94 35.2-123.2 24-49.3 140.8-94.1 76.7 37.4-28.7 58.8-50.1 102.8-64.4 132" fill="#9AD520" p-id="3538"></path><path d="M651.9 297.1c-3.1 0-6.3-0.7-9.3-2.2-10.6-5.2-15-17.9-9.8-28.5l64.4-132c16.7-34.3 17.8-50.9 16.5-55.8-3.5-0.4-12.7 1.1-25.3 8.4-13.2 7.7-24.8 19-29.6 28.7-13.3 27.2-24.5 66.7-33.3 117.5-2 11.6-13.1 19.4-24.7 17.4s-19.4-13.1-17.4-24.7c9.7-55.5 21.8-97.6 37-128.9 7.2-14.8 20.5-29.4 37.5-41.2 16.9-11.7 34.8-18.7 50.3-19.8 17.6-1.2 32 5.1 40.5 17.8 13.9 20.6 9.7 52.1-13.3 99.2L671 285c-3.6 7.7-11.2 12.1-19.1 12.1z" fill="#333333" p-id="3539"></path><path d="M139.741804 789.928667a21.3 21.3 0 1 0 5.802108-42.203027 21.3 21.3 0 1 0-5.802108 42.203027Z" fill="#333333" p-id="3540"></path><path d="M692.4 581.3m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#FFCAC3" opacity=".786" p-id="3541"></path><path d="M436.4 581.3m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#FFCAC3" opacity=".786" p-id="3542"></path><path d="M478.8 516.1m-27.7 0a27.7 27.7 0 1 0 55.4 0 27.7 27.7 0 1 0-55.4 0Z" fill="#333333" p-id="3543"></path><path d="M562 604.8c-16 0-31-6.2-42.2-17.5-6.7-6.7-6.7-17.5 0-24.1 6.7-6.7 17.5-6.7 24.1 0 10 10 26.2 10 36.2 0 6.7-6.7 17.5-6.7 24.1 0 6.7 6.7 6.7 17.5 0 24.1-11.3 11.3-26.3 17.5-42.2 17.5z" fill="#333333" p-id="3544"></path><path d="M649.4 516.1m-27.7 0a27.7 27.7 0 1 0 55.4 0 27.7 27.7 0 1 0-55.4 0Z" fill="#333333" p-id="3545"></path></svg>
             <i>血氧饱和度</i>
           </span>
           <span class="header-item-title">
-          <b>{{ healthMetrics.bloodOxygen[0] }}</b><i>%</i></span></li>
+          <b>{{ healthMetrics.bloodOxygen[HealthDataLength] }}</b><i>%</i></span></li>
       </ul>
       <ul v-else-if="number === 3" key="3" class="header">
         <li class="header-item">
@@ -660,28 +1028,28 @@ const bindHealthData  = async () => {
             <svg t="1741466752728" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4202" width="200" height="200"><path d="M0 0h1024v1024H0z" fill="#FF9641" p-id="4203"></path><path d="M890 795.5c13.3 5.9 20.6 19.8 19.1 33.9 12.6 5.6 20.7 19.1 19 33.9-1.7 14.8-12.6 26.4-26.2 29.5-1.6 14-11.8 26.2-26.2 29.5-14.3 3.2-28.4-3.5-35.2-15.7-13.6 3.1-28-2.9-35.2-15.7-7.2-12.8-5-28.6 4.4-39.2-6.8-12.2-5.5-28 4.4-39.2 9.9-11.1 25.3-14.2 37.9-8.5 9.5-10.5 24.7-14.4 38-8.5z" fill="#6BE166" p-id="4204"></path><path d="M868.6 933.1c-12.7 0-24.7-5.7-32.8-15.7-15.9 0.9-31.1-7.2-39.2-21.5-8-14.3-7.3-31.7 1.5-45.3-5.6-15-2.5-32.2 8.5-44.5 11-12.4 27.6-17.3 42.9-13.3 12.5-10.3 29.6-12.9 44.5-6.2 14.9 6.6 24.5 21.1 25.2 37.2 13.2 8.7 20.7 24.4 18.8 40.8-1.8 16.4-12.5 30.2-27.4 36.1-4.2 15.6-16.7 27.9-32.7 31.5-3.1 0.6-6.2 0.9-9.3 0.9z m-23-37.9l3.6 6.5c4.9 8.6 14.6 13 24.3 10.8 9.9-2.2 17.3-10.6 18.4-20.8l0.8-7.1 7-1.6c9.9-2.2 17.3-10.6 18.4-20.8 1.1-10.1-4.2-19.6-13.2-23.7l-6.7-3 0.8-7.3c1.1-10.1-4.2-19.6-13.2-23.6s-19.6-1.6-26.4 6l-4.9 5.5-6.7-3c-9-4-19.6-1.6-26.4 6-6.8 7.7-8.1 18.8-3.2 27.6l3.5 6.2-4.7 5.3c-6.8 7.7-8.1 18.8-3.1 27.6 4.9 8.7 14.6 13 24.3 10.8l7.4-1.4z" fill="#333333" p-id="4205"></path><path d="M194.7 153.5l-26.6 14.6-14.6 26.6-14.6-26.6-26.6-14.6 26.6-14.6 14.6-26.6 14.6 26.6 26.6 14.6z" fill="#FFFE07" fill-opacity=".734" p-id="4206"></path><path d="M153.5 211.3L133 174l-37.4-20.5L133 133l20.5-37.4L174 133l37.4 20.5L174 174l-20.5 37.3zM129 153.5l15.8 8.7 8.7 15.8 8.7-15.8 15.8-8.7-15.8-8.7-8.7-15.8-8.7 15.8-15.8 8.7z" fill="#333333" p-id="4207"></path><path d="M752.9 148.7l-24.9-0.6-21.3 13 0.6-24.9-13-21.3 24.9 0.6 21.3-13-0.6 24.9 13 21.3z" fill="#FF7500" fill-opacity=".734" p-id="4208"></path><path d="M700.5 171.9l0.8-34.1-17.8-29.2 34.1 0.8 29.2-17.8-0.8 34.1 17.8 29.2-34.1-0.8-29.2 17.8z m4.7-50.8l8.2 13.4-0.4 15.7 13.4-8.2 15.7 0.4-8.2-13.4 0.4-15.7-13.4 8.2-15.7-0.4z" fill="#333333" p-id="4209"></path><path d="M166.939 879.81c0.974-6.014 6.362-12.51 9.953-14.643 5.483-3.222 12.396-3.606 17.802-0.522 4.922 2.792 8.363 7.5 9.5 12.885 2.055 9.072 0.594 18.506-4.069 28.325-4.128 8.656-9.395 15.226-15.656 19.878-5.484 4.047-12.857 4.649-18.918 1.42" fill="#FF0000" p-id="4210"></path><path d="M173.863 937.756c-4.22 0.022-8.488-0.975-12.295-3.015-4.17-2.258-5.768-7.425-3.51-11.595 2.259-4.17 7.426-5.768 11.596-3.51 3.104 1.7 6.936 1.363 9.8-0.794 5.143-3.756 9.512-9.38 13.034-16.75 3.958-8.099 5.079-15.593 3.507-22.724-0.653-3.032-2.665-5.726-5.428-7.304-2.74-1.481-6.306-1.314-9.266 0.455-1.698 1.042-5.412 5.575-5.971 8.703-0.804 4.632-5.171 7.782-9.803 6.98-4.632-0.804-7.782-5.172-6.98-9.804 1.389-8.488 8.21-17.093 13.935-20.582 8.25-4.943 18.388-5.203 26.437-0.614 6.958 3.933 11.95 10.728 13.668 18.441 2.418 10.94 0.834 22.363-4.751 33.855-4.76 9.844-10.877 17.553-18.278 23.005-4.586 3.514-10.141 5.208-15.695 5.253z" fill="#333333" p-id="4211"></path><path d="M166.939 879.81c-3.708-4.95-12.17-7.89-16.44-8.062-6.256-0.295-12.54 2.611-15.866 7.872-3.035 4.776-3.887 10.45-2.435 15.86 2.444 8.976 8.163 16.62 16.89 23.1 7.709 5.705 15.444 9.033 23.155 10.202 6.742 0.998 13.535-1.932 17.37-7.63" fill="#FF0000" p-id="4212"></path><path d="M174.833 937.514c-1.237 0-2.595-0.074-3.88-0.269-8.998-1.364-18.114-5.274-26.939-11.731C133.76 917.867 127 908.525 124 897.73c-2.106-7.617-0.864-15.863 3.312-22.675 4.977-7.734 14.027-12.36 23.63-11.87 6.161 0.32 17.412 4.11 22.889 11.608 2.81 3.834 1.959 9.096-1.875 11.907s-9.097 1.96-11.908-1.875c-1.696-2.256-7.297-4.467-9.892-4.541-3.444-0.172-6.768 1.378-8.297 3.924-1.797 2.715-2.235 5.916-1.461 9.02 1.984 7.133 6.467 13.126 13.764 18.418 6.57 4.855 13.068 7.77 19.373 8.67 3.54 0.561 7.059-1.038 9.025-3.898 2.622-3.952 7.934-4.967 11.886-2.345 3.951 2.622 4.967 7.934 2.345 11.885-5 7.225-13.298 11.561-21.957 11.555z" fill="#333333" p-id="4213"></path><path d="M704 917.3m-21.3 0a21.3 21.3 0 1 0 42.6 0 21.3 21.3 0 1 0-42.6 0Z" fill="#00FFD7" p-id="4214"></path><path d="M704 946.7c-16.2 0-29.3-13.2-29.3-29.3 0-16.2 13.2-29.3 29.3-29.3s29.3 13.2 29.3 29.3-13.1 29.3-29.3 29.3z m0-42.7c-7.4 0-13.3 6-13.3 13.3 0 7.4 6 13.3 13.3 13.3s13.3-6 13.3-13.3c0-7.3-5.9-13.3-13.3-13.3z" fill="#333333" p-id="4215"></path><path d="M765.6 741.5c-95.4 105.7-214.3 43.1-238.3-10.7s43.9-136.3 151.5-184.2c54.2-24.1 123.1-18.7 206.8 16.4 21.7 9.1 32 34.1 22.9 55.8-3.7 8.8-10.2 16.1-18.6 20.8-43.3 24.1-84.8 58.1-124.3 101.9z" fill="#6BE166" p-id="4216"></path><path d="M648.4 820.2c-8.5 0-17.1-0.7-25.7-2.1-59-9.4-100.9-47.4-114.9-78.7-15-33.8-4.6-75.2 29.4-116.5 30.7-37.3 77.9-71.3 132.9-95.8 30.3-13.5 64.8-18.8 102.7-15.8 36.6 2.9 77.3 13.7 121 32 32.5 13.6 47.9 51.2 34.3 83.8-5.5 13.2-15.4 24.2-27.9 31.2-41.1 22.9-81.1 55.7-118.8 97.5-23.7 26.3-50.4 44.8-79.2 55.1-17.5 6.2-35.5 9.3-53.8 9.3z m104.1-267c-24 0-45.7 4.3-64.9 12.8-103.4 46-157.1 119.2-140.7 156 9.5 21.3 41.6 47.4 82.6 53.9 30.4 4.8 76 0.3 120.4-48.9 40.9-45.3 84.5-81 129.8-106.2 4.2-2.3 7.5-6 9.3-10.4 4.5-10.8-0.6-23.4-11.4-27.9-46.9-19.5-88.7-29.3-125.1-29.3z" fill="#333333" p-id="4217"></path><path d="M233.1 744.3c13.3 8.4 26.5 17.6 39.8 27.6 113.8 85.6 218.6 1.5 231.9-55.9 13.3-57.4-69.1-125.4-183.9-151.9-58.6-13.5-126.1 5.6-202.8 57.5-19.5 13.2-24.6 39.7-11.4 59.2 6 8.8 15 15.1 25.4 17.6" fill="#6BE166" p-id="4218"></path><path d="M372.7 829.7c-8.1 0-16.2-0.6-24.4-1.9-30.3-4.6-60-17.7-88.3-39-12.7-9.6-25.7-18.5-38.4-26.6-10-6.3-12.9-19.5-6.6-29.4 6.3-10 19.5-12.9 29.4-6.6 13.7 8.7 27.6 18.3 41.2 28.5 52.9 39.8 98.5 35.6 127.5 25 39-14.2 65.5-46 70.8-68.7 9.1-39.3-57.6-100.9-167.9-126.3-52.3-12.1-114.9 6.2-186 54.4-4.7 3.2-7.9 8-9 13.6-1.1 5.6 0.1 11.3 3.3 16 3 4.4 7.5 7.5 12.7 8.8 11.5 2.7 18.5 14.3 15.8 25.7-2.7 11.5-14.3 18.5-25.7 15.8-15.6-3.7-29.1-13.1-38.1-26.4-9.6-14.2-13.1-31.2-9.8-48s12.8-31.3 27-40.9c40-27.1 78.5-46 114.3-56.1 37.1-10.5 72.5-12 105.2-4.5 58.7 13.5 111.5 38 148.7 68.7 41.3 34.1 59.4 72.7 51.1 108.8-7.7 33.4-41.6 78.7-97.7 99.2-18 6.6-36.4 9.9-55.1 9.9z" fill="#333333" p-id="4219"></path><path d="M533.7 811.7c80-20 124.1-119.5 98.4-222.4-17.1-68.6-80.9-118.6-191.3-150.2-82.7 79.7-115.6 153.8-98.4 222.4C368 764.4 453.7 831.7 533.7 811.7z" fill="#6BE166" p-id="4220"></path><path d="M504.9 836.6c-34.5 0-69.2-12.7-100.4-37.1-39.9-31.3-69.3-78.4-82.8-132.8-9.7-38.8-5.3-79.5 13-120.8 17.5-39.4 48.2-80.5 91.4-122.1l8.8-8.5 11.8 3.4c57.6 16.4 104.1 38.3 138 64.9 35.6 27.9 58.5 61.8 68.2 100.6 13.5 54.3 9.7 109.8-10.8 156.1-21.3 48.2-58 80.9-103.2 92.2-11.2 2.7-22.6 4.1-34 4.1z m-58.1-373.5c-34.5 34.7-59.1 68.3-73.1 100-14.6 32.9-18 63.4-10.6 93.3 11.3 45.2 35.3 84.1 67.8 109.5 30.8 24.2 65.6 33.1 97.7 25.1 32.2-8 58.6-32.2 74.5-68 16.7-37.7 19.7-83.3 8.4-128.5-7.4-29.8-24.8-55.1-53.1-77.4-27.3-21.4-64.8-39.6-111.6-54z" fill="#333333" p-id="4221"></path><path d="M465.7 170.8c86.6-13.7 166.9 29.7 190.3 99.2 10-2.5 20.6-3.9 31.4-3.9 70.7 0 128 57.3 128 128 0 23.1-6.1 44.8-16.8 63.5 26.9 19.4 44.4 50.9 44.4 86.6 0 58.9-47.8 106.7-106.7 106.7-23.2 0-44.8-7.4-62.3-20.1-15 24.6-42 41.1-73 41.1-12.6 0-24.5-2.7-35.3-7.6-25.1 9.3-52.9 15.1-82.4 16.7-7.1 0.4-14.1 0.5-21 0.4C447 704.1 421 719 391.6 719c-33.3 0-62.1-19-76.2-46.8-11.4 4.2-23.7 6.4-36.5 6.4-58.9 0-106.7-47.8-106.7-106.7 0-17 4-33.1 11-47.3-21-22.8-33.8-53.2-33.8-86.6 0-18.2 3.8-35.6 10.7-51.2 9.2-21.1 24-39.2 42.4-52.5 21.1-15.2 46.9-24.2 74.9-24.2 13.3 0 26.2 2 38.3 5.8 5.3-70.2 66.7-131.9 150-145.1z" fill="#FFCC99" p-id="4222"></path><path d="M391.6 740.2c-34.4 0-65.9-16.2-85.8-43.2-8.8 1.9-17.8 2.8-26.9 2.8-70.6 0-128-57.4-128-128 0-15.1 2.6-29.7 7.6-43.7-19.7-25.9-30.4-57.4-30.4-90.3 0-20.8 4.2-40.9 12.5-59.8 10.7-24.4 27.8-45.6 49.5-61.3 25.6-18.5 55.8-28.3 87.4-28.3 7 0 13.9 0.5 20.8 1.4 7.3-30.6 24-59.5 48.3-83.2 30.4-29.7 71.6-50 115.8-57 46.1-7.3 93.1 0 132.1 20.6 33.6 17.7 59.5 44.1 74.7 75.5 6-0.7 12.1-1.1 18.2-1.1 82.3 0 149.3 67 149.3 149.3 0 19.9-4 39.7-11.7 57.9 24.8 24 39.2 57.3 39.2 92.2 0 70.6-57.4 128-128 128-20 0-39.3-4.5-56.8-13.3-20 21.8-48.1 34.3-78.4 34.3-12.4 0-24.4-2.1-35.8-6.2-25.6 8.6-52.7 13.7-80.8 15.2-3.9 0.2-7.8 0.3-11.6 0.4-20.2 23.9-49.8 37.8-81.2 37.8z m-65.7-94.7l8.6 16.9c11 21.7 32.9 35.1 57.1 35.1 21.3 0 41.1-10.5 53-28.2l6.5-9.6 11.6 0.2c6.5 0.1 13 0 19.5-0.3 26.7-1.4 52.3-6.6 76.1-15.4l8.2-3 8 3.6c8.3 3.8 17.2 5.7 26.5 5.7 22.5 0 43-11.5 54.7-30.8l12-19.7 18.7 13.5c14.6 10.5 31.8 16 49.8 16 47.1 0 85.3-38.3 85.3-85.3 0-27.4-13.3-53.3-35.5-69.3l-15.6-11.2L780 447c9.2-16 14-34.3 14-52.9 0-58.8-47.9-106.7-106.7-106.7-8.9 0-17.7 1.1-26.2 3.2l-19.1 4.8-6.3-18.7c-9.6-28.6-31.3-53-61.2-68.7-31-16.3-68.5-22.1-105.6-16.2l-3.3-21.1 3.3 21.1c-71.9 11.4-127.5 64.1-132 125.4l-2 26.8-25.7-8c-10.3-3.2-21-4.9-31.9-4.9-22.6 0-44.2 7-62.4 20.2-15.5 11.2-27.7 26.4-35.4 43.8-5.9 13.5-8.9 27.8-8.9 42.7 0 26.8 10 52.5 28.1 72.2l9.9 10.8-6.5 13.1c-5.9 11.8-8.8 24.5-8.8 37.8 0 47.1 38.3 85.3 85.3 85.3 10.1 0 19.9-1.7 29.2-5.1l18.1-6.4z" fill="#333333" p-id="4223"></path><path d="M892.9 384.3c-11 0-20.3-8.4-21.2-19.5-2.9-34.1-21.1-68.7-51.1-97.3-8.5-8.1-8.9-21.6-0.7-30.2 8.1-8.5 21.6-8.9 30.2-0.7 37.5 35.8 60.3 80 64.2 124.5 1 11.7-7.7 22.1-19.4 23.1-0.8 0.1-1.4 0.1-2 0.1z" fill="#333333" p-id="4224"></path><path d="M643.712 454.12m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#FFAFA3" opacity=".694" p-id="4225"></path><path d="M387.712 454.12m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#FFAFA3" opacity=".694" p-id="4226"></path><path d="M430.112 388.92m-27.7 0a27.7 27.7 0 1 0 55.4 0 27.7 27.7 0 1 0-55.4 0Z" fill="#333333" p-id="4227"></path><path d="M513.312 477.62c-16 0-31-6.2-42.2-17.5-6.7-6.7-6.7-17.5 0-24.1s17.5-6.7 24.1 0c10 10 26.2 10 36.2 0 6.7-6.7 17.5-6.7 24.1 0 6.7 6.7 6.7 17.5 0 24.1-11.2 11.3-26.2 17.5-42.2 17.5z" fill="#333333" p-id="4228"></path><path d="M600.812 388.92m-27.7 0a27.7 27.7 0 1 0 55.4 0 27.7 27.7 0 1 0-55.4 0Z" fill="#333333" p-id="4229"></path><path d="M886.350718 439.942622a21.3 21.3 0 1 0 25.040254-34.463687 21.3 21.3 0 1 0-25.040254 34.463687Z" fill="#333333" p-id="4230"></path><path d="M171.656717 739.130395a21.3 21.3 0 1 0 25.040253-34.463687 21.3 21.3 0 1 0-25.040253 34.463687Z" fill="#333333" p-id="4231"></path></svg>
           <i>总胆固醇</i></span>
           <span class="header-item-title">
-          <b>{{ healthMetrics.cholesterol[0] }}</b><i>mmol/L</i></span></li>
+          <b>{{ healthMetrics.cholesterol[HealthDataLength] }}</b><i>mmol/L</i></span></li>
         <li class="header-item">
           <span class="header-item-icon">
             <svg t="1741466770041" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4404" width="200" height="200"><path d="M0 0h1024v1024H0z" fill="#D8E957" p-id="4405"></path><path d="M213.4 738c-1.4 0-2.7-0.1-4.1-0.4-57.9-11.3-105.6-53.5-130.8-115.8-4.4-10.9 0.9-23.4 11.8-27.8 10.9-4.4 23.4 0.9 27.8 11.8 19.7 48.7 55.9 81.4 99.4 89.9 11.6 2.2 19.1 13.4 16.9 25-2 10.2-11 17.3-21 17.3z" fill="#333333" p-id="4406"></path><path d="M900.7 816.2c13.3 5.9 20.6 19.8 19.1 33.9 12.6 5.6 20.7 19.1 19 33.9-1.7 14.8-12.6 26.4-26.2 29.5-1.6 14-11.8 26.2-26.2 29.5-14.3 3.2-28.4-3.5-35.2-15.7-13.6 3.1-28-2.9-35.2-15.7-7.2-12.8-5-28.6 4.4-39.2-6.8-12.2-5.5-28 4.4-39.2 9.9-11.1 25.3-14.2 37.9-8.5 9.4-10.6 24.7-14.4 38-8.5z" fill="#FAB04B" p-id="4407"></path><path d="M879.2 956.6c-13.1 0-25.5-5.7-34-15.7-16.5 0.4-32-8.2-40.3-23-8.3-14.8-7.8-32.8 0.9-47-5.3-15.6-1.8-33.3 9.5-46.1 11.4-12.8 28.4-18.1 44.3-14.5 13.2-10.2 30.9-12.6 46.3-5.7 15.5 6.9 25.5 21.6 26.7 38.3 13.4 9.4 20.8 25.6 18.9 42.7-1.9 17-12.7 31.3-27.9 37.9-4.8 16-17.8 28.4-34.4 32.1-3.3 0.6-6.7 1-10 1z m-21.5-43.9l4.7 8.3c4.2 7.6 12.8 11.4 21.3 9.5 8.7-2 15.2-9.4 16.3-18.4l1-9.1 8.9-2c8.7-2 15.2-9.4 16.2-18.4 1-8.9-3.6-17.3-11.5-20.8L906 858l1-9.3c1-8.9-3.6-17.3-11.5-20.8s-17.2-1.4-23.2 5.3l-6.2 7-8.6-3.8c-7.9-3.5-17.2-1.4-23.2 5.3-6.1 6.8-7.2 16.6-2.8 24.4l4.5 8-6.1 6.8c-6 6.8-7.2 16.6-2.8 24.4 4.3 7.6 12.8 11.4 21.3 9.5l9.3-2.1z" fill="#333333" p-id="4408"></path><path d="M194.7 153.5l-26.6 14.6-14.6 26.6-14.6-26.6-26.6-14.6 26.6-14.6 14.6-26.6 14.6 26.6 26.6 14.6z" fill="#FF3407" fill-opacity=".734" p-id="4409"></path><path d="M153.5 211.3L133 174l-37.4-20.5L133 133l20.5-37.4L174 133l37.4 20.5L174 174l-20.5 37.3zM129 153.5l15.8 8.7 8.7 15.8 8.7-15.8 15.8-8.7-15.8-8.7-8.7-15.8-8.7 15.8-15.8 8.7z" fill="#333333" p-id="4410"></path><path d="M222 934.7l-25.5-0.6-21.8 13.3 0.6-25.5L162 900l25.5 0.6 21.8-13.3-0.6 25.5 13.3 21.9z" fill="#FF7500" fill-opacity=".734" p-id="4411"></path><path d="M168 958.9l0.8-35.4-18.4-30.2 35.4 0.8 30.2-18.4-0.8 35.4 18.4 30.2-35.4-0.8-30.2 18.4z m5.5-52.2l8.2 13.4-0.4 15.7 13.4-8.2 15.7 0.4-8.2-13.4 0.4-15.7-13.4 8.2-15.7-0.4z" fill="#333333" p-id="4412"></path><path d="M849.605 154.477c0.974-6.014 6.363-12.51 9.954-14.643 5.483-3.222 12.395-3.606 17.802-0.522 4.922 2.792 8.363 7.5 9.5 12.884 2.055 9.073 0.594 18.506-4.069 28.326-4.129 8.656-9.396 15.225-15.656 19.878-5.484 4.047-12.857 4.649-18.919 1.419" fill="#FF0000" p-id="4413"></path><path d="M856.53 212.423c-4.22 0.022-8.489-0.975-12.295-3.015-4.17-2.258-5.768-7.425-3.51-11.596 2.259-4.17 7.426-5.767 11.596-3.509 3.103 1.7 6.935 1.363 9.799-0.794 5.144-3.756 9.513-9.38 13.035-16.751 3.958-8.098 5.078-15.592 3.506-22.724-0.653-3.032-2.664-5.725-5.428-7.303-2.74-1.481-6.305-1.314-9.265 0.455-1.698 1.042-5.412 5.575-5.972 8.703-0.803 4.632-5.17 7.782-9.803 6.979-4.632-0.804-7.782-5.171-6.978-9.803 1.387-8.488 8.208-17.094 13.934-20.583 8.25-4.942 18.388-5.202 26.437-0.613 6.958 3.933 11.95 10.727 13.667 18.44 2.419 10.94 0.835 22.363-4.75 33.856-4.76 9.844-10.877 17.553-18.278 23.005-4.586 3.514-10.141 5.208-15.696 5.253z" fill="#333333" p-id="4414"></path><path d="M849.605 154.477c-3.707-4.95-12.17-7.89-16.438-8.063-6.258-0.295-12.541 2.612-15.867 7.873-3.035 4.776-3.887 10.45-2.436 15.86 2.444 8.975 8.163 16.619 16.89 23.1 7.71 5.705 15.444 9.032 23.156 10.201 6.742 0.999 13.535-1.931 17.37-7.629" fill="#FF0000" p-id="4415"></path><path d="M857.5 212.181c-1.237 0-2.595-0.074-3.88-0.27-8.998-1.363-18.115-5.274-26.939-11.73-10.254-7.647-17.015-16.989-20.016-27.784-2.105-7.617-0.863-15.862 3.313-22.675 4.977-7.733 13.954-12.239 23.63-11.869 6.16 0.32 17.412 4.11 22.889 11.608 2.81 3.834 1.958 9.096-1.876 11.907-3.833 2.811-9.096 1.959-11.907-1.875-1.696-2.257-7.297-4.467-9.892-4.542-3.444-0.172-6.768 1.379-8.298 3.924-1.796 2.715-2.235 5.917-1.46 9.022 1.984 7.131 6.467 13.125 13.764 18.417 6.57 4.855 13.068 7.77 19.373 8.67 3.54 0.56 7.058-1.038 9.025-3.899 2.622-3.951 7.934-4.967 11.885-2.345 3.952 2.622 4.967 7.934 2.346 11.886-5.001 7.224-13.299 11.56-21.957 11.555z" fill="#333333" p-id="4416"></path><path d="M245.42918 735.096614a21.300213 21.300213 0 1 0 42.544622-2.179785 21.300213 21.300213 0 1 0-42.544622 2.179785Z" fill="#333333" p-id="4417"></path><path d="M917.3 277.3m-21.3 0a21.3 21.3 0 1 0 42.6 0 21.3 21.3 0 1 0-42.6 0Z" fill="#00FFD7" p-id="4418"></path><path d="M917.3 306.7c-16.2 0-29.3-13.2-29.3-29.3s13.2-29.3 29.3-29.3c16.2 0 29.3 13.2 29.3 29.3s-13.1 29.3-29.3 29.3z m0-42.7c-7.4 0-13.3 6-13.3 13.3s6 13.3 13.3 13.3c7.4 0 13.3-6 13.3-13.3s-5.9-13.3-13.3-13.3z" fill="#333333" p-id="4419"></path><path d="M697.6 441.9c49.4 10.8 111.8 48 136.6 111.1 16.5 52.9 38.7 92 66.6 117.4-76.1 84.6-149.3 95.1-219.5 31.7-27.7-21.7-47.9-48.5-59-75.7-43.6 8.9-94.2-4.6-133.7-40.2-40.3-36.3-59-86.5-53.6-131.5-26.1-7.2-52.7-21.7-76.3-42.9-52.8-47.6-51.8-123.2 3.2-226.8 36.1 5 64.4 13.9 85 26.6 17.3 10.7 35.5 24.6 54.5 41.7 32.6 29.4 52.9 65.8 58.8 100.1 34.4 1.8 70.2 16 99.7 42.6 15.1 13.6 27.1 29.1 36 45.6l1.7 0.3z" fill="#44A214" p-id="4420"></path><path d="M773.2 764.1c-36.3 0-71.8-15.4-105.6-45.8-24.8-19.5-44.5-42.9-57.9-68.6-47.2 4.3-96.8-12.9-135.4-47.7-21.9-19.7-39-44.1-49.5-70.4-8-20.1-12.1-41.2-12.1-61.8-24.3-9.2-47.7-23.6-68.4-42.2-31.1-28-46.5-64.5-45.9-108.5 0.6-41 15.6-89.5 44.5-144.1l7-13.2 14.8 2.1c39.4 5.5 69.9 15.1 93.3 29.5 18.4 11.3 37.7 26.1 57.6 44 30.6 27.6 52.2 61.3 61.9 96.3 35 5.2 68.8 21.4 96.6 46.5 14.1 12.7 26 27 35.6 42.8 51.2 13.4 116.9 52.4 144.3 122.3l0.3 0.7 0.2 0.7c15.3 49 35.6 85.3 60.6 107.9l15.7 14.3-14.2 15.8c-45.3 50.3-91.3 77-136.8 79.4-2.2-0.1-4.4 0-6.6 0zM635.3 601.9l6.7 16.3c10.1 24.6 28.7 48.4 52.4 66.9l0.6 0.5 0.6 0.5c27.7 25.1 54.6 36.6 82 35.2 29.6-1.5 61-18.6 93.6-50.9-23.5-27.1-42.6-64.1-57.1-110.4-21.4-53.6-76.1-87.5-121-97.3l-11.3-2.4-4.7-8.7c-8-14.8-18.6-28.2-31.5-39.9-24.9-22.4-55.6-35.6-86.6-37.2l-17-0.9-2.9-16.8c-5.3-30.8-24.3-62.9-52-87.9-17.9-16.2-35.2-29.4-51.4-39.3-15.2-9.4-36-16.5-61.9-21.2-21.2 42.8-32.2 80.2-32.6 111.2-0.4 31.6 9.9 56.6 31.8 76.2 20.4 18.4 43.9 31.6 67.8 38.2l17.7 4.9-2.2 18.2c-4.7 39.6 13.2 83 46.7 113.2 33.3 29.9 76.3 43.1 115.2 35.1l17.1-3.5z" fill="#333333" p-id="4421"></path><path d="M550.1 511.4c47.9-16.2 120.6-16.4 174.3 24.9 41.4 36.8 80.5 58.9 117.5 66.3-21.7 111.7-79 158.4-171.8 140.2-34.9-4.3-66-16.9-89.6-34.4-32.8 30.1-83.2 44.6-135.3 34.5-53.2-10.3-95.1-43.7-113.7-85.1-26.1 7.3-56.3 8.6-87.6 2.5-69.8-13.6-107.8-78.9-114-196 33.3-22.5 84.9-27 154.7-13.4 43.1 8.4 79.2 29.2 101.9 55.5 30.4-16.2 68.4-22.4 107.5-14.8 19.9 3.9 38.3 11 54.4 20.5l1.7-0.7z" fill="#44A214" p-id="4422"></path><path d="M707 767.9c-12.8 0-26.2-1.4-40.3-4.1-31.2-3.9-60.3-13.9-85-29-28.9 21.1-65.2 32.5-103.3 32.5-12.3 0-24.8-1.2-37.3-3.6-28.9-5.6-56.1-17.7-78.7-34.9-17.2-13.1-31.6-29.1-42.2-46.7-25.6 4.6-53.1 4.3-80.4-1-41-8-73.1-31.3-95.2-69.4-20.6-35.5-32.8-84.7-36-146.4l-0.6-12.1 10-6.8c38.6-26 94.4-31.5 170.7-16.6 40.4 7.9 76.3 25.6 102.7 50.6 32.7-13.5 70-17.1 106.7-9.9 18.6 3.6 36.2 9.8 52.6 18.3 50.8-14.9 127.2-15.3 186.7 30.5l0.6 0.5 0.6 0.5c38.3 34.1 74.5 54.7 107.5 61.3l20.8 4.1-4.1 20.8C849.9 673 824.2 719.6 786.4 745c-22.5 15.3-49.1 22.9-79.4 22.9z m-127.9-87.3l14.2 10.6c21.4 15.9 49.6 26.7 79.4 30.4l0.8 0.1 0.8 0.1c36.7 7.2 65.6 3.2 88.4-12.1 24.6-16.6 42.7-47.4 54-91.8-34.1-11.1-69.6-33-105.8-65.2-46-34.9-110.3-35.8-153.8-21.1l-11 3.8-8.5-5c-14.5-8.6-30.5-14.6-47.6-17.9-32.9-6.4-66-1.9-93.4 12.7l-15.1 8-11.1-12.9c-20.4-23.7-53.2-41.4-89.9-48.5-56.6-11-99.7-9.5-128.5 4.3 3.8 48.7 13.6 87.1 29.5 114.3 15.9 27.3 37.7 43.4 66.5 49 27 5.2 53.9 4.5 77.8-2.1l17.7-4.9 7.5 16.7c16.3 36.4 54 64.3 98.3 72.9 43.9 8.5 87.6-2.4 116.8-29.2l13-12.2z" fill="#333333" p-id="4423"></path><path d="M453.3 700.9c57.8 11.2 113.8-26.5 125.1-84.4 11.2-57.8-26.5-113.8-84.4-125.1S380.2 518 369 575.8c-11.2 57.8 26.5 113.8 84.3 125.1z" fill="#A4D21E" p-id="4424"></path><path d="M473.9 707.1c-7.1 0-14.3-0.7-21.4-2.1-60-11.7-99.4-70-87.7-130.1s70-99.4 130.1-87.7c29.1 5.7 54.2 22.3 70.8 46.9 16.6 24.6 22.6 54.1 16.9 83.2s-22.3 54.2-46.9 70.8c-18.5 12.5-39.9 19-61.8 19z m-19.7-10.4c26.8 5.2 54.1-0.3 76.8-15.6s38-38.5 43.3-65.4c5.2-26.8-0.3-54.1-15.6-76.8-15.3-22.7-38.5-38-65.4-43.3-55.4-10.8-109.3 25.6-120.1 81-10.8 55.5 25.5 109.3 81 120.1z" fill="#84B200" p-id="4425"></path><path d="M670.9 699.7c57.8 11.2 113.8-26.5 125.1-84.4 11.2-57.8-26.5-113.8-84.4-125.1s-113.8 26.5-125.1 84.4c-11.2 57.9 26.6 113.9 84.4 125.1z" fill="#A4D21E" p-id="4426"></path><path d="M691.5 706c-7.1 0-14.3-0.7-21.4-2.1-29.1-5.7-54.2-22.3-70.8-46.9-16.6-24.6-22.6-54.1-16.9-83.2 5.7-29.1 22.3-54.2 46.9-70.8 24.6-16.6 54.1-22.6 83.2-16.9 29.1 5.7 54.2 22.3 70.8 46.9s22.6 54.1 16.9 83.2-22.3 54.2-46.9 70.8c-18.6 12.5-39.9 19-61.8 19z m-19.8-10.5c26.9 5.2 54.1-0.3 76.8-15.6 22.7-15.3 38-38.5 43.3-65.4 5.2-26.8-0.3-54.1-15.6-76.8-15.3-22.7-38.5-38-65.4-43.3-26.9-5.2-54.1 0.3-76.8 15.6-22.7 15.3-38 38.5-43.3 65.4-5.2 26.8 0.3 54.1 15.6 76.8 15.4 22.7 38.6 38.1 65.4 43.3z" fill="#84B200" p-id="4427"></path><path d="M760.627987 595.766039m-27.556505 4.364521a27.9 27.9 0 1 0 55.11301-8.729043 27.9 27.9 0 1 0-55.11301 8.729043Z" fill="#FFDAD5" opacity=".516" p-id="4428"></path><path d="M635.298315 610.553983m-27.556505 4.364521a27.9 27.9 0 1 0 55.113009-8.729043 27.9 27.9 0 1 0-55.113009 8.729043Z" fill="#FFDAD5" opacity=".516" p-id="4429"></path><path d="M695.877027 627.384597c-5.573077-0.02853-11.115786-1.78306-15.770494-5.60192-2.777182-2.192547-3.221025-6.273356-0.914066-8.967412 2.192547-2.777182 6.273356-3.221025 8.967412-0.914066 5.22677 4.234487 12.894544 3.425017 17.129031-1.801753 2.192547-2.777182 6.273356-3.221025 8.967412-0.914066 2.777182 2.192547 3.221025 6.273356 0.914066 8.967412-4.816364 6.027656-12.009927 9.191934-19.293361 9.231805zM747.715648 598.621124c-2.433026-0.019633-4.77311-1.37019-5.855578-3.729907-1.38951-3.019812-2.623504-6.975473-3.650144-12.178934-0.745058-3.425622 1.551166-6.826704 4.976788-7.571763 3.425622-0.745058 6.826704 1.551166 7.571762 4.976788 1.125409 5.187818 2.072913 7.973897 2.70264 9.392856 1.519566 3.201706 0.091709 6.971484-3.109996 8.491049-0.841989 0.437098-1.715265 0.676657-2.635472 0.619911zM721.0131 594.953164c-1.018975-0.041103-2.069237-0.279744-3.052017-0.731566-3.09404-1.636129-4.312391-5.493022-2.593136-8.701473 1.568647-2.880859 3.979283-6.198815 7.496928-10.198337 2.306959-2.694056 6.419055-2.940362 9.014343-0.617759 2.694056 2.306959 2.940362 6.419055 0.617759 9.014342-3.517645 3.999522-5.050097 6.469661-5.850064 7.811322-1.069895 2.194385-3.315199 3.359978-5.633813 3.423471zM770.552114 584.272053c-1.117744-0.02546-2.381187-0.331583-3.395255-0.980942-2.813377-1.781828-5.965082-4.421289-9.699584-8.183402-2.527805-2.535784-2.462161-6.596041 0.089266-9.025078 2.535784-2.527805 6.596041-2.462161 9.025078 0.089266 3.734502 3.762113 6.038391 5.52339 7.380052 6.323356 3.026558 1.84931 3.865477 5.867545 2.000523 8.795335-1.215594 1.913722-3.263361 3.048028-5.40008 2.981465z" fill="#333333" p-id="4430"></path><path d="M740.094199 587.577415c-13.365998-0.009211-25.239416-9.771995-27.398212-23.402094-0.547521-3.456909 1.863116-6.774865 5.320025-7.322386 3.456909-0.547521 6.774865 1.863116 7.322386 5.320025 1.282763 8.099044 8.948385 13.668445 17.04743 12.385683s13.668445-8.948385 12.385683-17.04743c-0.547521-3.456909 1.863116-6.774865 5.320025-7.322386 3.456909-0.547521 6.774865 1.863116 7.322385 5.320025 2.393447 15.111632-7.914101 29.298754-23.025732 31.692201-1.481533 0.234652-2.87994 0.354891-4.29399 0.376362zM643.943042 608.881053c-3.041282-0.024541-5.719695-2.232731-6.303411-5.278921-0.516234-3.259372-0.663771-7.387111-0.390773-12.695169 0.24263-3.582057 3.272258-6.188079 6.739903-6.028575 3.582057 0.24263 6.188079 3.272258 6.028574 6.739903-0.272998 5.308057-0.016876 8.20364 0.23342 9.783942 0.646289 3.441266-1.764347 6.759222-5.205613 7.405511-0.395075 0.062574-0.691382 0.109504-1.1021 0.073309zM619.103609 598.438228c-1.512819 0.037114-3.135143-0.617154-4.424965-1.729071-2.610931-2.421372-2.742825-6.450342-0.321453-9.061273 2.255121-2.382106 5.482286-5.019416 9.879035-7.943215 2.925951-1.982123 6.898175-1.19381 8.880298 1.73214s1.19381 6.898175-1.732141 8.880298C626.987635 593.240907 624.768709 595.212295 623.739917 596.387704c-1.210686 1.305465-2.925951 1.982123-4.636308 2.050524zM669.71987 600.951037c-1.726001-0.030368-3.447093-0.668992-4.685077-2.092859-2.200212-2.385176-4.572502-5.85681-7.215639-10.399257-1.800229-3.056007-0.699966-6.976392 2.356041-8.776621 3.056007-1.800229 6.976392-0.699966 8.776621 2.356041 2.643137 4.542447 4.43263 6.891429 5.524914 8.034632 2.429037 2.551427 2.264624 6.627328-0.286803 9.056365-1.325098 1.22234-2.957238 1.784585-4.470057 1.821699z" fill="#333333" p-id="4431"></path><path d="M644.977055 596.87144c-1.018975-0.041103-1.939182-0.09785-2.958157-0.138953-7.408582-0.75028-13.955541-4.370683-18.611169-10.113081-4.655627-5.742398-6.816574-12.993626-6.050651-20.303439 0.357042-3.498931 3.501083-6.021829 7.000014-5.664786 3.498931 0.357042 6.021829 3.501083 5.664786 7.000014-0.377594 4.008419 0.741988 7.880955 3.249242 10.926226 2.522897 3.14404 6.058943 5.013902 10.083005 5.490265 8.13125 0.838313 15.593822-5.102228 16.416492-13.332247 0.357042-3.498931 3.501083-6.021829 7.000014-5.664786 3.498931 0.357042 6.021829 3.501083 5.664786 7.000014C671.038535 586.26393 658.95131 596.885558 644.977055 596.87144z" fill="#333333" p-id="4432"></path><path d="M272.4 513.6m-106.7 0a106.7 106.7 0 1 0 213.4 0 106.7 106.7 0 1 0-213.4 0Z" fill="#A4D21E" p-id="4433"></path><path d="M272.5 624.5c-7 0-14.1-0.7-21.2-2-29.1-5.7-54.2-22.3-70.8-46.9-16.6-24.6-22.6-54.1-16.9-83.2 5.7-29.1 22.3-54.2 46.9-70.8 24.6-16.6 54.1-22.6 83.2-16.9 29.1 5.7 54.2 22.3 70.8 46.9 16.6 24.6 22.6 54.1 16.9 83.2-10.4 52.9-56.9 89.7-108.9 89.7z m-0.1-213.3c-48 0-91 34-100.5 82.9-10.8 55.4 25.6 109.3 81 120.1 55.4 10.8 109.3-25.6 120.1-81 5.2-26.8-0.3-54.1-15.6-76.8s-38.5-38-65.4-43.3c-6.6-1.3-13.2-1.9-19.6-1.9z" fill="#84B200" p-id="4434"></path><path d="M322.796917 532.626729m-27.387398-5.323571a27.9 27.9 0 1 0 54.774797 10.647142 27.9 27.9 0 1 0-54.774797-10.647142Z" fill="#FFEDEB" opacity=".516" p-id="4435"></path><path d="M213.247324 511.332445m-27.387399-5.323571a27.9 27.9 0 1 0 54.774797 10.647142 27.9 27.9 0 1 0-54.774797-10.647142Z" fill="#FFEDEB" opacity=".516" p-id="4436"></path><path d="M236.826402 486.984199m-11.877689-2.308789a12.1 12.1 0 1 0 23.755378 4.617578 12.1 12.1 0 1 0-23.755378-4.617578Z" fill="#333333" p-id="4437"></path><path d="M270.092266 531.244817c-8.041068-0.03495-15.96512-3.816407-20.789111-10.968267-1.977045-2.93109-1.194729-6.955762 1.736362-8.932807s6.955762-1.194729 8.932807 1.736362c3.795927 5.627694 11.354457 7.096923 16.982151 3.300995 2.93109-1.977045 6.955762-1.194729 8.932807 1.736362s1.194729 6.955762-1.736362 8.932807c-4.417096 2.808784-9.273279 4.207886-14.058654 4.194548zM316.369678 526.385688c-1.333358 0.046436-2.669474-0.417022-3.831105-1.25405-10.258344-7.49509-19.284251-15.565592-16.484421-23.680452 2.955234-8.390268 14.723728-8.140138 27.067633-6.657571 3.492938 0.373343 6.020798 3.615245 5.549291 7.089102-0.373343 3.492938-3.615245 6.020798-7.089101 5.549292-5.278948-0.618637-8.810047-0.795655-11.084113-0.626459 1.696122 1.755896 4.553873 4.34882 9.554883 7.969582 2.854993 2.08303 3.504197 6.080345 1.323005 8.916258-1.068757 1.829688-3.064657 2.664184-5.006072 2.694298z" fill="#333333" p-id="4438"></path><path d="M530.040028 608.348766m-27.883004-0.973696a27.9 27.9 0 1 0 55.766008 1.947392 27.9 27.9 0 1 0-55.766008-1.947392Z" fill="#FFEDEB" opacity=".516" p-id="4439"></path><path d="M418.508012 604.453982m-27.883004-0.973696a27.9 27.9 0 1 0 55.766008 1.947392 27.9 27.9 0 1 0-55.766008-1.947392Z" fill="#FFEDEB" opacity=".516" p-id="4440"></path><path d="M437.987888 576.716924m-12.092629-0.422284a12.1 12.1 0 1 0 24.185258 0.844567 12.1 12.1 0 1 0-24.185258-0.844567Z" fill="#333333" p-id="4441"></path><path d="M473.853006 615.59228l-0.899452-0.03141c-6.695919-0.233827-12.901342-3.05211-17.434451-7.913274-2.411228-2.585726-2.26814-6.683228 0.317585-9.094456s6.683228-2.26814 9.094457 0.317585c2.21833 2.378868 5.271072 3.786264 8.469122 3.897943 3.198051 0.111678 6.341532-1.079341 8.7204-3.297671 2.585726-2.411228 6.683228-2.26814 9.094456 0.317585s2.26814 6.683228-0.317585 9.094456c-4.654306 4.340211-10.74139 6.72923-17.044532 6.709242z" fill="#333333" p-id="4442"></path><path d="M512.342565 579.313446m-12.092629-0.422284a12.1 12.1 0 1 0 24.185258 0.844568 12.1 12.1 0 1 0-24.185258-0.844568Z" fill="#333333" p-id="4443"></path></svg>
             <i>甘油三酯</i>
           </span>
           <span class="header-item-title">
-          <b>{{ healthMetrics.bloodTriglyceride[0] }}</b><i>mmol/L</i></span></li>
+          <b>{{ healthMetrics.bloodTriglyceride[HealthDataLength] }}</b><i>mmol/L</i></span></li>
         <li class="header-item">
           <span class="header-item-icon">
             <svg t="1741466796058" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4618" width="200" height="200"><path d="M0 0h1024v1024H0z" fill="#FFFFFF" p-id="4619"></path><path d="M0 0h1024v1024H0z" fill="#97C7F2" p-id="4620"></path><path d="M470.9 164.5l-5 543c5.1-1.1 10.4-2.1 15.9-3.2L512 266.2l18.8 272 85.5-359.6L556 696.4c7.5 0.5 15.3 3.3 23.4 7.2l33.8-334.4L637 730.9c0.5 0.1 1 0.2 1.6 0.3l77.1-439.5-14.3 399.6 93.9-307.8-48.3 390c11.2 15.6 18.1 34.6 18.7 55.3v2.8c0 56.6-45.8 102.4-102.4 102.4H315.2c-56.6 0-102.4-45.8-102.4-102.4 0-22.4 7.2-43.1 19.4-60l-7.5-419.5L298 730.6c1.1-0.2 2.2-0.4 3.3-0.5l2-475.2 67 462.7c0.7 0 1.3-0.1 2-0.1L390 349.9l26.9 226.5 54-411.9z" fill="#FFFFFF" p-id="4621"></path><path d="M663.4 947.3H315.2c-63.8 0-115.7-51.9-115.7-115.7 0-23 6.7-45.1 19.3-64.1l-7.5-415.2 26.4-2.8 50.8 262 1.5-356.7 26.5-1.9 48.7 336.3 11.6-240 26.5-0.9L417.6 469l40.1-306.2 26.5 1.9-3.3 359.2 17.8-258.5h26.6L538 450.1l65.2-274.6 26.2 4.6L607.6 368l18.8 0.3 17 257.9 59.1-336.8 26.4 2.8-10.7 297.9 64.2-210.5 25.9 5.5L760.8 770c11.3 17.4 17.6 37.4 18.2 58.3v3.2c0.1 63.9-51.8 115.8-115.6 115.8zM240.7 504.9l4.9 270.9-2.6 3.6c-11 15.2-16.9 33.3-16.9 52.2 0 49.1 40 89.1 89.1 89.1h348.2c49.1 0 89.1-40 89.1-89.1v-2.5c-0.5-17.3-6.1-33.9-16.2-47.9l-3.1-4.2 30-243.2L714 695.2l-26-4.4 7.4-206.7L649.3 747l-13.4-2.8c-0.6-0.1-1.2-0.3-1.8-0.4l-9.7-2.2-14-212.2-19.6 194.4-17.1-8.3c-7.7-3.7-13.6-5.6-18.5-5.9l-14-0.9 35.7-306.9-33.1 139.5-26.2-2.2-5.5-79.4-17.6 255.8-10.1 1.9c-4.7 0.9-9.7 1.9-15.7 3.1l-16.2 3.4 3.2-339.9-25.4 194.1-26.4-0.2-8.1-67.9L385 730.3l-12.1 0.6c-0.7 0-1.3 0.1-1.9 0.1l-12.2 0.7-43-296.9-1.3 307-11.5 1.6c-1 0.1-1.9 0.3-2.9 0.4l-12.8 2.2-46.6-241.1z" fill="#333333" p-id="4622"></path><path d="M317 906.2h102.4v41H317z" fill="#FFFFFF" p-id="4623"></path><path d="M663.4 947.3H409.6c-7.4 0-13.3-6-13.3-13.3s6-13.3 13.3-13.3h253.8c7.4 0 13.3 6 13.3 13.3s-6 13.3-13.3 13.3z m-335.7 0h-12.5c-63.8 0-115.7-51.9-115.7-115.7 0-7.4 6-13.3 13.3-13.3s13.3 6 13.3 13.3c0 49.1 40 89.1 89.1 89.1h12.5c7.4 0 13.3 6 13.3 13.3s-6 13.3-13.3 13.3z" fill="#333333" p-id="4624"></path><path d="M626.4 168.8c-6.6-9.4-7.2-18.5-9.4-36.2-2.4-18.5-6.8-45.1-37.5-30.9-17.7 12.4-23.1 35.3-11.9 51.2 11 15.9 41.1 28.3 58.8 15.9z" fill="#E1E226" p-id="4625"></path><path d="M609 184.1c-5.6 0-11.5-1-17.6-2.9-13.3-4.2-25.4-12.6-32.3-22.4-14.3-20.5-7.9-49.9 14.5-65.5l0.7-0.5 0.8-0.4c13-6 24.1-6.6 33-1.7 14.9 8.3 17.5 28.4 19 40.5 0.2 1.6 0.4 3.1 0.6 4.5 1.8 14.2 2.6 20.7 7.1 27.1l5.9 8.4-8.4 5.9c-6.6 4.7-14.6 7-23.3 7z m-24.4-73.5c-12.5 9.2-16.4 25.4-8.7 36.4 4.2 6.1 12.8 11.8 21.7 14.7 5.3 1.7 10.3 2.2 14.6 1.7-2.6-7.2-3.6-15-4.8-25.1-0.2-1.4-0.4-2.9-0.6-4.5-0.8-6.6-2.8-22-8.6-25.2-2.7-1.4-7.5-0.7-13.6 2z" fill="#333333" p-id="4626"></path><path d="M622.8 177.8c11.1-2.8 17.6-9.3 30.9-21.2 13.9-12.4 34.7-29.5 48.6 1.3 5.2 21-5.8 41.8-24.6 46.5-18.8 4.7-49.7-5.6-54.9-26.6z" fill="#E1E226" p-id="4627"></path><path d="M667.9 215.8c-8.8 0-18.2-1.9-26.8-5.7-15-6.5-25-17.1-28.2-29.9l-2.5-9.9 9.9-2.5c7.7-1.9 12.5-6.3 23.2-15.8 1.1-1 2.2-2 3.4-3 9.1-8.1 24.3-21.7 40.9-18.1 9.9 2.1 17.9 9.8 23.8 22.9l0.4 0.8 0.2 0.9c6.6 26.4-7.8 52.9-32 58.9-3.9 0.9-8 1.4-12.3 1.4zM637 183.1c2.9 3.2 7.1 6.1 12.1 8.3 8.6 3.7 18.8 5 26 3.2 13.1-3.3 20.7-18 17.3-33.2-2.9-6.1-6-9.8-9-10.4-6.5-1.4-18.1 8.9-23 13.3-1.2 1-2.3 2-3.3 3-7.5 6.7-13.4 12-20.1 15.8z" fill="#333333" p-id="4628"></path><path d="M471.1 177.1c-10.2-5.2-15-13-25.4-27.6-10.8-15.2-27.2-36.6-47.6-9.6-9.8 19.3-3.8 42 13.5 50.8 17.2 8.8 49.6 5.6 59.5-13.6z" fill="#E1E226" p-id="4629"></path><path d="M433.4 205.6c-9.7 0-19-2-26.5-5.8-11-5.6-18.9-15.5-22.2-28-3.2-12-1.7-25 4.2-36.6l0.4-0.8 0.6-0.7c8.7-11.4 18.2-17.1 28.3-16.9 17 0.3 28.8 16.9 35.8 26.8 0.9 1.3 1.8 2.5 2.6 3.7 8.2 11.7 12 17 19 20.6l9.1 4.6-4.6 9.1c-6 11.7-18.1 19.8-34.2 22.8-4.1 0.9-8.3 1.2-12.5 1.2z m-26.6-60.3c-3.3 6.9-4.1 14.4-2.2 21.3 1.8 6.8 5.9 12.1 11.7 15 6.6 3.4 16.8 4.4 26 2.8 5.5-1 10.1-2.8 13.7-5.3-5.7-5.1-10.2-11.6-16-19.9-0.8-1.2-1.7-2.4-2.6-3.7-3.8-5.4-12.8-18.1-19.4-18.2h-0.1c-3.1-0.1-7 2.8-11.1 8z" fill="#333333" p-id="4630"></path><path d="M466.6 161.5c11.4-1.2 18.7-6.7 33.6-16.7 15.5-10.3 38.5-24.4 47.9 8.1 2.3 21.5-11.5 40.6-30.8 42.6-19.4 2.1-48.5-12.5-50.7-34z" fill="#E1E226" p-id="4631"></path><path d="M513.5 206c-10.8 0-22.9-3.6-33.3-9.9-14-8.5-22.4-20.4-23.8-33.5l-1.1-10.2 10.2-1.1c7.9-0.8 13.3-4.5 25.1-12.4 1.2-0.8 2.5-1.7 3.8-2.5 10.1-6.8 27-18.1 43.1-12.2 9.5 3.5 16.4 12.2 20.4 26l0.3 0.9 0.1 0.9c2.8 27.1-15.1 51.3-39.9 53.9-1.7 0-3.3 0.1-4.9 0.1zM480 168.7c7.1 10.4 24 18 36.2 16.7 13.4-1.4 23-15 21.8-30.5-2-6.4-4.6-10.5-7.5-11.5-6.3-2.3-19.2 6.3-24.7 10-1.3 0.9-2.5 1.7-3.7 2.5-8.5 5.6-15 10-22.1 12.8z" fill="#333333" p-id="4632"></path><path d="M509.9 277.2c-9.7-6.1-13.9-14.2-22.9-29.7-9.4-16.1-23.9-38.8-46.6-13.7-11.5 18.3-7.4 41.5 9 51.8 16.5 10.2 49 9.9 60.5-8.4z" fill="#E1E226" p-id="4633"></path><path d="M476 302.6c-11.8 0-23.4-3-32-8.3-21.2-13.3-26.7-42.8-12.3-65.9l0.5-0.8 0.6-0.7c9.6-10.6 19.6-15.5 29.7-14.4 17 1.8 27.2 19.4 33.3 29.9 0.8 1.4 1.6 2.7 2.3 3.9 7.2 12.4 10.4 18 17.1 22.2l8.7 5.4-5.4 8.7c-7 11.2-19.8 18.2-36.1 19.7-2.1 0.2-4.2 0.3-6.4 0.3z m-27.4-62.7c-7.9 13.4-5.2 29.8 6.2 36.9 10.4 6.5 28.9 7.1 39.8 0.9-5.2-5.6-9.1-12.4-14.2-21.2-0.7-1.2-1.5-2.5-2.3-3.9-3.3-5.7-11.2-19.1-17.8-19.8-2.9-0.3-7.1 2.2-11.7 7.1z" fill="#333333" p-id="4634"></path><path d="M510.1 280.9c8.6-7.5 11.5-16.2 17.9-32.9 6.8-17.4 17.5-42.1 43.9-20.9 14.2 16.3 13.8 39.9-0.8 52.6-14.6 12.7-46.8 17.5-61 1.2z" fill="#E1E226" p-id="4635"></path><path d="M536.9 301.6c-14.5 0-26.6-4.9-34.5-14l-6.7-7.7 7.7-6.7c6-5.2 8.3-11.3 13.5-24.6 0.5-1.4 1.1-2.8 1.6-4.2 4.4-11.3 11.8-30.3 28.3-34.7 9.8-2.6 20.4 0.6 31.6 9.6l0.7 0.6 0.6 0.7c8.5 9.8 13.1 22.1 12.9 34.5-0.2 12.9-5.4 24.4-14.7 32.5-9 7.9-22.8 13.1-36.7 14-1.5-0.1-3 0-4.3 0z m-11.7-22.5c11.8 4.4 30 0.9 39.2-7.1 4.9-4.2 7.6-10.4 7.7-17.4 0.1-7.1-2.5-14.2-7.3-20.1-5.3-4.1-9.8-6-12.7-5.2-6.4 1.7-12.1 16.2-14.5 22.3-0.6 1.5-1.1 2.9-1.6 4.2-3.7 9.6-6.5 16.9-10.8 23.3z" fill="#333333" p-id="4636"></path><path d="M619.6 389.5c-9.7-6.1-13.9-14.2-22.9-29.7-9.4-16.1-23.9-38.8-46.6-13.7-11.5 18.3-7.4 41.5 9 51.8s49 9.9 60.5-8.4z" fill="#E1E226" p-id="4637"></path><path d="M585.7 414.9c-11.8 0-23.4-3-32-8.3-10.5-6.5-17.4-17.1-19.6-29.8-2.1-12.3 0.5-25.1 7.4-36.1l0.5-0.8 0.6-0.7c9.6-10.6 19.6-15.5 29.7-14.4 17 1.8 27.2 19.4 33.3 29.9 0.8 1.4 1.6 2.7 2.3 3.9 7.2 12.4 10.4 18 17.1 22.2l8.7 5.4-5.4 8.7c-7 11.2-19.8 18.2-36.1 19.7-2.2 0.2-4.4 0.3-6.5 0.3z m-27.4-62.6c-3.9 6.5-5.3 14-4.1 21 1.2 6.9 4.9 12.5 10.3 16 10.4 6.5 28.9 7.1 39.8 0.9-5.2-5.6-9.1-12.4-14.2-21.2-0.7-1.2-1.5-2.5-2.3-3.9-3.3-5.7-11.2-19.1-17.8-19.8-2.9-0.4-7.1 2.1-11.7 7z" fill="#333333" p-id="4638"></path><path d="M616.3 388.1c10.7-4.1 16.3-11.3 28.1-24.8 12.3-14 30.9-33.6 48.4-4.6 7.8 20.2-0.6 42.2-18.7 49.1s-50.1 0.5-57.8-19.7z" fill="#E1E226" p-id="4639"></path><path d="M657.9 420.8c-6.5 0-13.2-0.9-19.6-2.8-15.7-4.6-26.9-13.9-31.7-26.2l-3.7-9.6 9.6-3.7c7.4-2.8 11.7-7.7 21.1-18.5 1-1.1 2-2.2 3-3.4 8-9.1 21.4-24.4 38.4-22.9 10.1 0.9 19 7.6 26.4 19.8l0.5 0.8 0.3 0.9c9.8 25.4-1.3 53.4-24.6 62.4-5.8 2.1-12.6 3.2-19.7 3.2z m-26.8-29.2c9.5 8.2 27.8 11.1 39.2 6.7 12.6-4.8 18.3-20.4 13.2-35.1-3.6-5.7-7.2-9-10.2-9.2-6.6-0.6-16.9 11.1-21.2 16.1-1 1.2-2 2.3-3 3.4-6.7 7.6-11.9 13.6-18 18.1z" fill="#333333" p-id="4640"></path><path d="M392.3 358.5c-9.7-6.1-13.9-14.2-22.9-29.7-9.4-16.1-23.9-38.8-46.6-13.7-11.5 18.3-7.4 41.5 9 51.8 16.5 10.2 49 9.9 60.5-8.4z" fill="#E1E226" p-id="4641"></path><path d="M358.4 383.9c-11.8 0-23.4-3-32-8.3-21.2-13.3-26.7-42.8-12.3-65.9l0.5-0.8 0.6-0.7c9.6-10.6 19.6-15.5 29.7-14.4 17 1.8 27.2 19.4 33.3 29.9 0.8 1.4 1.6 2.7 2.3 3.9 7.2 12.4 10.4 18 17.1 22.2l8.7 5.4-5.4 8.7c-7 11.2-19.8 18.2-36.1 19.7-2 0.2-4.2 0.3-6.4 0.3z m-27.3-62.7c-7.9 13.4-5.2 29.8 6.2 36.9 6.3 3.9 16.4 5.9 25.7 5 5.5-0.5 10.3-2 14.1-4.1-5.2-5.6-9.1-12.4-14.2-21.2-0.7-1.2-1.5-2.5-2.3-3.9-3.3-5.7-11.2-19.1-17.8-19.8-3-0.3-7.2 2.2-11.7 7.1z" fill="#333333" p-id="4642"></path><path d="M389 357.1c10.7-4.1 16.3-11.3 28.1-24.8 12.3-14 30.9-33.6 48.4-4.6 7.8 20.2-0.6 42.2-18.7 49.1-18.2 7-50 0.5-57.8-19.7z" fill="#E1E226" p-id="4643"></path><path d="M430.7 389.8c-6.5 0-13.2-0.9-19.6-2.8-15.7-4.6-26.9-13.9-31.7-26.2l-3.7-9.6 9.6-3.7c7.4-2.8 11.7-7.8 21.1-18.5 1-1.1 2-2.2 3-3.4 8-9.1 21.4-24.5 38.4-22.9 10.1 0.9 19 7.6 26.4 19.8l0.5 0.8 0.3 0.9c4.7 12.1 4.8 25.2 0.3 36.9-4.6 12-13.5 21.1-25 25.5-5.7 2.1-12.5 3.2-19.6 3.2z m-26.9-29.2c3.3 2.9 7.7 5.2 13.1 6.7 9 2.6 19.3 2.6 26.2 0 6-2.3 10.7-7.2 13.2-13.7 2.5-6.7 2.5-14.2 0-21.4-3.6-5.7-7.2-9-10.2-9.2-6.6-0.6-16.9 11.1-21.2 16.1-1 1.2-2 2.3-3 3.4-6.7 7.6-11.9 13.6-18.1 18.1z" fill="#333333" p-id="4644"></path><path d="M616 710.1c-8.6-7.5-11.5-16.2-17.9-32.9-6.8-17.4-17.5-42.1-43.9-20.9-14.2 16.3-13.8 39.9 0.8 52.6s46.8 17.6 61 1.2z" fill="#E1E226" p-id="4645"></path><path d="M589.3 730.8c-1.4 0-2.8 0-4.2-0.1-14-0.9-27.7-6.1-36.7-14-9.3-8.1-14.5-19.6-14.7-32.5-0.2-12.5 4.4-24.7 12.9-34.5l0.6-0.7 0.7-0.6c11.2-9 21.8-12.2 31.6-9.6 16.5 4.4 23.8 23.4 28.3 34.7 0.6 1.5 1.1 2.9 1.6 4.3 5.1 13.3 7.5 19.4 13.5 24.6l7.7 6.7-6.7 7.7c-8 9.1-20.2 14-34.6 14z m-27.9-67c-4.8 5.9-7.4 13-7.3 20.1 0.1 7 2.8 13.2 7.7 17.4 9.2 8 27.4 11.5 39.2 7.1-4.2-6.3-7.1-13.7-10.7-23.2-0.5-1.3-1.1-2.7-1.6-4.2-2.4-6.2-8-20.6-14.5-22.3-3-0.9-7.5 1-12.8 5.1z" fill="#333333" p-id="4646"></path><path d="M613 708.2c11.2-2.4 17.9-8.6 31.6-20.1 14.3-11.9 35.7-28.3 48.5 3 4.5 21.2-7.2 41.6-26.2 45.6-18.9 4.1-49.4-7.3-53.9-28.5z" fill="#E1E226" p-id="4647"></path><path d="M658.8 747.9c-9.3 0-19.5-2.3-28.6-6.6-14.8-7-24.4-18-27.2-30.9l-2.1-10 10-2.1c7.4-1.6 12.3-5.5 23.7-15 1.1-0.9 2.3-1.9 3.5-2.9 9.4-7.8 25-20.8 41.5-16.7 9.9 2.5 17.6 10.4 23 23.7l0.3 0.8 0.2 0.9c2.7 12.7 0.8 25.6-5.4 36.5-6.4 11.2-16.6 18.7-28.6 21.3-3.3 0.6-6.8 1-10.3 1zM627.1 714c2.8 3.3 6.8 6.3 11.8 8.7 8.5 4 18.6 5.6 25.9 4.1 6.3-1.3 11.7-5.4 15.1-11.5 3.6-6.2 4.7-13.6 3.3-21.1-2.6-6.2-5.7-10-8.6-10.7-6.5-1.6-18.4 8.3-23.5 12.5-1.2 1-2.4 2-3.5 2.9-7.7 6.5-13.7 11.6-20.5 15.1z" fill="#333333" p-id="4648"></path><path d="M716.5 291c-7.8-8.4-9.7-17.3-14.4-34.6-4.9-18-13-43.7-41.5-25.3-15.8 14.7-17.9 38.2-4.7 52.4 13.2 14.1 44.8 22.2 60.6 7.5z" fill="#E1E226" p-id="4649"></path><path d="M694 309.1c-3.4 0-6.9-0.3-10.5-0.9-13.8-2.3-26.9-9-35.1-17.7-17.1-18.3-14.7-48.3 5.2-66.9l0.7-0.6 0.8-0.5c12-7.8 22.9-9.9 32.4-6.2 15.9 6.1 21.3 25.7 24.5 37.5 0.4 1.5 0.8 3 1.2 4.4 3.7 13.8 5.4 20.1 10.8 25.9l7 7.5-7.5 7c-7.5 6.9-17.7 10.5-29.5 10.5z m-27-69.9c-11.1 10.9-12.7 27.5-3.5 37.3 5.1 5.4 14.3 9.9 23.5 11.5 5.5 0.9 10.5 0.8 14.7-0.3-3.6-6.8-5.6-14.4-8.3-24.2-0.4-1.4-0.8-2.8-1.2-4.3-1.7-6.4-5.8-21.4-12-23.7-2.9-1.2-7.5 0.1-13.2 3.7z" fill="#333333" p-id="4650"></path><path d="M715.2 294.4c10.5-4.7 15.7-12.2 26.8-26.2 11.5-14.6 29.1-35.1 48.1-7.1 8.8 19.8 1.6 42.2-16.1 50.1-17.9 7.8-50 3-58.8-16.8z" fill="#E1E226" p-id="4651"></path><path d="M754.9 325c-5.3 0-10.8-0.6-16.1-1.9-15.9-3.8-27.6-12.5-33-24.5l-4.2-9.4 9.4-4.2c7.2-3.2 11.2-8.4 20.1-19.6 0.9-1.1 1.8-2.3 2.8-3.6 7.4-9.4 19.7-24.9 36.2-24.9h0.9c10.1 0.4 19.4 6.6 27.4 18.4l0.5 0.8 0.4 0.8c5.3 11.9 6.1 24.9 2.3 36.8-4 12.3-12.3 21.8-23.6 26.8-6.7 3-14.7 4.5-23.1 4.5z m-24.7-27.9c9.9 7.7 28.4 9.7 39.5 4.7 5.9-2.6 10.3-7.7 12.4-14.4 2.2-6.8 1.8-14.3-1.1-21.4-3.9-5.5-7.6-8.6-10.7-8.7h-0.2c-6.6 0-16.1 12-20.2 17.1-1 1.2-1.9 2.4-2.8 3.5-6.2 8.2-11 14.4-16.9 19.2z" fill="#333333" p-id="4652"></path><path d="M792.9 400.4c-7.8-8.4-9.7-17.3-14.4-34.6-4.9-18-13-43.7-41.5-25.3-15.8 14.7-17.9 38.2-4.7 52.4 13.3 14.1 44.8 22.2 60.6 7.5z" fill="#E1E226" p-id="4653"></path><path d="M770.5 418.5c-3.4 0-6.9-0.3-10.5-0.9-13.8-2.3-26.9-9-35.1-17.7-17.1-18.3-14.7-48.3 5.2-66.9l0.7-0.6 0.8-0.5c12-7.8 22.9-9.9 32.4-6.2 15.9 6.1 21.3 25.7 24.5 37.5 0.4 1.5 0.8 3 1.2 4.4 3.7 13.8 5.4 20.1 10.8 25.9l7 7.5-7.5 7c-7.6 6.8-17.8 10.5-29.5 10.5z m-27.1-69.9c-11.1 10.9-12.7 27.5-3.5 37.3 8.3 8.9 26.1 14.3 38.2 11.1-3.5-6.7-5.6-14.4-8.2-24.2-0.4-1.4-0.8-2.8-1.2-4.3-1.7-6.4-5.8-21.4-12-23.7-2.9-1.1-7.6 0.2-13.3 3.8z" fill="#333333" p-id="4654"></path><path d="M783.4 405.5c10.8-3.7 16.7-10.8 28.9-23.8 12.8-13.6 32-32.5 48.5-2.9 7 20.4-2.1 42.1-20.4 48.5-18.3 6.3-50-1.4-57-21.8z" fill="#E1E226" p-id="4655"></path><path d="M826.2 439.7c-7.2 0-14.7-1.2-21.8-3.5-15.5-5.2-26.4-14.9-30.7-27.3l-3.3-9.7 9.7-3.3c7.5-2.6 11.9-7.3 21.7-17.8 1-1.1 2-2.2 3.1-3.3 8.3-8.9 22.3-23.7 39.2-21.6 10.1 1.2 18.7 8.2 25.7 20.7l0.4 0.8 0.3 0.9c4.2 12.3 3.9 25.4-1 36.8-5 11.9-14.2 20.6-25.8 24.6-5.2 1.8-11.2 2.7-17.5 2.7z m-28.1-30.2c3.2 3 7.6 5.5 12.8 7.2 8.9 3 19.2 3.3 26.2 0.9 6.1-2.1 10.9-6.8 13.6-13.2 2.8-6.6 3-14.1 0.7-21.4-3.4-5.8-6.9-9.2-9.9-9.6-6.6-0.8-17.2 10.5-21.8 15.3-1.1 1.1-2.1 2.2-3.1 3.3-6.8 7.4-12.2 13.2-18.5 17.5z" fill="#333333" p-id="4656"></path><path d="M304.7 261.3c-7.8-8.4-9.7-17.3-14.4-34.6-4.9-18-13-43.7-41.5-25.3-15.8 14.7-17.9 38.2-4.7 52.4 13.3 14.2 44.8 22.3 60.6 7.5z" fill="#E1E226" p-id="4657"></path><path d="M282.3 279.4c-3.4 0-6.9-0.3-10.5-0.9-13.8-2.3-26.9-9-35.1-17.7-17.1-18.3-14.7-48.3 5.2-66.9l0.7-0.6 0.8-0.5c12-7.8 22.9-9.9 32.4-6.2 15.9 6.1 21.3 25.7 24.5 37.5 0.4 1.5 0.8 3 1.2 4.4 3.7 13.8 5.4 20.1 10.8 25.9l7 7.5-7.5 7c-7.5 6.9-17.8 10.5-29.5 10.5z m-27.1-69.9c-11.1 10.9-12.7 27.5-3.5 37.3 5.1 5.4 14.3 9.9 23.5 11.5 5.5 0.9 10.5 0.8 14.7-0.3-3.6-6.8-5.6-14.4-8.3-24.2-0.4-1.4-0.8-2.8-1.2-4.3-1.7-6.4-5.8-21.4-12-23.7-2.8-1.2-7.5 0.2-13.2 3.7z" fill="#333333" p-id="4658"></path><path d="M299.8 258.6c10.7-4.1 16.3-11.3 28.1-24.8 12.3-14 30.9-33.6 48.4-4.6 7.8 20.2-0.6 42.2-18.7 49.1s-50.1 0.4-57.8-19.7z" fill="#E1E226" p-id="4659"></path><path d="M341.4 291.3c-6.5 0-13.2-0.9-19.6-2.8-15.7-4.6-26.9-13.9-31.7-26.2l-3.7-9.6 9.6-3.7c7.4-2.8 11.7-7.8 21.1-18.5 1-1.1 2-2.2 3-3.4 8-9.1 21.4-24.4 38.4-22.9 10.1 0.9 19 7.6 26.4 19.8l0.5 0.8 0.3 0.9c9.8 25.4-1.3 53.4-24.6 62.4-5.8 2-12.6 3.2-19.7 3.2zM314.6 262c3.3 2.9 7.7 5.2 13.1 6.7 9 2.6 19.3 2.6 26.2 0 12.6-4.8 18.4-20.4 13.2-35.1-3.6-5.7-7.2-9-10.2-9.2-6.6-0.6-16.9 11.1-21.2 16.1-1 1.2-2 2.3-3 3.4-6.8 7.7-12 13.6-18.1 18.1z" fill="#333333" p-id="4660"></path><path d="M222.3 369.3c-11.4 1-19.6-3-36.1-9.9-17.2-7.2-42.4-16.6-45.5 17.1 1.9 21.5 19.1 37.6 38.4 36s45-21.7 43.2-43.2z" fill="#E1E226" p-id="4661"></path><path d="M176.3 422.7c-23.4 0-43.6-19.6-45.8-45.4l-0.1-0.9 0.1-0.9c1.3-14.3 6.4-24.1 15.1-29.4 14.6-8.8 33.4-0.9 44.6 3.8 1.5 0.6 2.9 1.2 4.2 1.8 13.2 5.6 19.2 8.1 27.1 7.4l10.2-0.9 0.9 10.2c1.1 13.1-4.9 26.4-17 37.4-10.3 9.4-23.6 15.7-35.6 16.7-1.3 0.2-2.5 0.2-3.7 0.2z m-25.4-46.3c1.8 15.4 13.8 26.9 27.2 25.8 12.2-1.1 27.3-11.7 32.3-23.3-7.5-1.4-14.8-4.4-24.1-8.4-1.3-0.6-2.7-1.1-4.1-1.7-6.1-2.6-20.4-8.6-26.1-5.1-2.6 1.5-4.4 6-5.2 12.7z" fill="#333333" p-id="4662"></path><path d="M210.9 359.8c8.8-7.4 11.7-16 18.5-32.6 7.1-17.2 18.3-41.8 44.3-20.1 13.9 16.6 13.1 40.1-1.7 52.6-15 12.4-47.2 16.6-61.1 0.1z" fill="#E1E226" p-id="4663"></path><path d="M238.4 380.9c-15 0-27.4-5.1-35.4-14.6l-6.6-7.8 7.8-6.6c6.1-5.1 8.5-11.1 13.9-24.4 0.5-1.3 1.1-2.8 1.7-4.2 4.6-11.3 12.3-30.1 28.9-34.2 9.9-2.4 20.4 1 31.4 10.1l0.7 0.6 0.6 0.7c17.5 20.9 16.2 50.9-3 67-9.2 7.7-23 12.7-37 13.3-1 0.1-2 0.1-3 0.1zM226 358.2c11.7 4.6 29.9 1.5 39.3-6.4 10.3-8.6 10.7-25.3 1-37.4-5.2-4.2-9.7-6.1-12.6-5.4-6.5 1.6-12.3 16-14.8 22.1-0.6 1.4-1.2 2.8-1.7 4.2-3.9 9.3-6.9 16.6-11.2 22.9z" fill="#333333" p-id="4664"></path><path d="M760.3 946.9c-3.5 0-6.9-1.3-9.5-4-5.1-5.3-5.1-13.7 0.2-18.8 22.1-21.6 35.8-48.1 39.8-76.5 1-7.3 7.8-12.3 15-11.3 7.3 1 12.4 7.8 11.3 15-4.8 34.3-21.3 66-47.6 91.8-2.4 2.5-5.8 3.8-9.2 3.8z" fill="#333333" p-id="4665"></path><path d="M185.6 149.3l-23.4 12.8-12.8 23.4-12.8-23.4-23.4-12.8 23.4-12.8 12.8-23.4 12.8 23.4 23.4 12.8z" fill="#FFFE07" fill-opacity=".734" p-id="4666"></path><path d="M149.3 200.5l-18.1-33.1-33.1-18.1 33.1-18.1 18.1-33.1 18.1 33.1 33.1 18.1-33.1 18.1-18.1 33.1zM128 149.3l13.8 7.5 7.5 13.8 7.5-13.8 13.8-7.5-13.8-7.5-7.5-13.8-7.5 13.8-13.8 7.5z" fill="#333333" p-id="4667"></path><path d="M914.9 137.7l-25.5-0.6-21.8 13.3 0.6-25.5-13.3-21.9 25.5 0.6 21.8-13.3-0.6 25.5 13.3 21.9z" fill="#FF7500" fill-opacity=".734" p-id="4668"></path><path d="M860.9 161.9l0.8-35.4-18.4-30.2 35.4 0.8 30.2-18.4-0.8 35.4 18.4 30.2-35.4-0.8-30.2 18.4z m5.5-52.2l8.2 13.4-0.4 15.7 13.4-8.2 15.7 0.4-8.2-13.4 0.4-15.7-13.4 8.2-15.7-0.4z" fill="#333333" p-id="4669"></path><path d="M121.143 693.837c-1.453-5.916 0.968-14.002 3.44-17.368 3.79-5.108 10.002-8.162 16.184-7.436 5.622 0.647 10.628 3.636 13.779 8.148 5.437 7.548 7.778 16.803 7.322 27.664-0.418 9.58-2.7 17.686-6.644 24.415-3.467 5.868-10.02 9.303-16.86 8.698" fill="#FF0000" p-id="4670"></path><path d="M139.943 746.535c-0.78-0.038-1.5 0.003-2.2-0.095-4.721-0.45-8.21-4.582-7.761-9.303 0.449-4.72 4.581-8.21 9.302-7.76 3.46 0.271 6.917-1.457 8.71-4.56 3.267-5.468 5.092-12.352 5.453-20.513 0.48-9.001-1.417-16.337-5.65-22.287-1.786-2.536-4.69-4.23-7.851-4.602-3.18-0.233-6.397 1.314-8.43 4.099-1.157 1.622-2.804 7.246-2.097 10.344 1.07 4.578-1.72 9.184-6.297 10.255-4.577 1.07-9.184-1.72-10.254-6.297-2.04-8.355 0.877-18.942 4.784-24.39 5.663-7.774 14.893-11.975 24.096-10.896 7.942 0.902 15.192 5.206 19.786 11.636 6.5 9.125 9.506 20.258 8.855 33.02-0.535 10.92-3.153 20.407-7.836 28.317-4.701 8.051-13.47 13.031-22.61 13.032z" fill="#333333" p-id="4671"></path><path d="M121.143 693.837c-5.347-3.108-14.285-2.507-18.282-0.998-5.875 2.173-10.523 7.304-11.53 13.446-0.927 5.582 0.506 11.139 3.956 15.551 5.756 7.307 14.007 12.108 24.573 14.664 9.325 2.24 17.745 2.28 25.301 0.343 6.596-1.715 11.704-7.067 13.009-13.81" fill="#FF0000" p-id="4672"></path><path d="M133.923 746.688c-5.14-0.008-10.481-0.616-16.004-1.963-12.447-2.892-22.32-8.85-29.3-17.614-4.914-6.189-6.993-14.264-5.73-22.227 1.479-9.003 8.001-16.798 17.034-20.099 5.795-2.113 17.633-3.02 25.604 1.742 4.085 2.431 5.357 7.608 2.926 11.694-2.43 4.085-7.608 5.357-11.693 2.926-2.443-1.414-8.463-1.26-10.88-0.315-3.238 1.187-5.692 3.913-6.105 6.854-0.593 3.201 0.254 6.32 2.18 8.875 4.613 5.79 11.082 9.555 19.866 11.575 7.945 1.902 15.065 2.046 21.221 0.412 3.478-0.868 6.092-3.714 6.784-7.116 0.87-4.662 5.363-7.672 10.025-6.803 4.662 0.87 7.672 5.363 6.802 10.025-1.957 9.864-9.439 17.882-19.293 20.424-4.298 1.11-8.736 1.7-13.437 1.61z" fill="#333333" p-id="4673"></path><path d="M805.4 811.5m-13.3 0a13.3 13.3 0 1 0 26.6 0 13.3 13.3 0 1 0-26.6 0Z" fill="#333333" p-id="4674"></path><path d="M917.3 277.3m-21.3 0a21.3 21.3 0 1 0 42.6 0 21.3 21.3 0 1 0-42.6 0Z" fill="#00FFD7" p-id="4675"></path><path d="M917.3 309.3c-17.6 0-32-14.4-32-32s14.4-32 32-32 32 14.4 32 32c0 17.7-14.3 32-32 32z m0-42.6c-5.9 0-10.7 4.8-10.7 10.7 0 5.9 4.8 10.7 10.7 10.7s10.7-4.8 10.7-10.7c0-5.9-4.8-10.7-10.7-10.7z" fill="#333333" p-id="4676"></path><path d="M611.86 838.217m-60.7 0a60.7 60.7 0 1 0 121.4 0 60.7 60.7 0 1 0-121.4 0Z" fill="#FFDBD6" opacity=".836" p-id="4677"></path><path d="M369.26 838.217m-60.7 0a60.7 60.7 0 1 0 121.4 0 60.7 60.7 0 1 0-121.4 0Z" fill="#FFDBD6" opacity=".836" p-id="4678"></path><path d="M409.36 776.417m-26.3 0a26.3 26.3 0 1 0 52.6 0 26.3 26.3 0 1 0-52.6 0Z" fill="#333333" p-id="4679"></path><path d="M488.26 860.417c-14.5 0-29-5.5-40-16.6-6.3-6.3-6.3-16.6 0-22.9 6.3-6.3 16.6-6.3 22.9 0 9.5 9.5 24.9 9.5 34.3 0 6.3-6.3 16.6-6.3 22.9 0s6.3 16.6 0 22.9c-11.1 11.1-25.6 16.6-40.1 16.6z" fill="#333333" p-id="4680"></path><path d="M571.16 776.417m-26.3 0a26.3 26.3 0 1 0 52.6 0 26.3 26.3 0 1 0-52.6 0Z" fill="#333333" p-id="4681"></path><path d="M367.8 934.4m-13.3 0a13.3 13.3 0 1 0 26.6 0 13.3 13.3 0 1 0-26.6 0Z" fill="#333333" p-id="4682"></path></svg>
             <i>内脏脂肪</i>
           </span>
           <span class="header-item-title">
-          <b>{{ healthMetrics.systolicPressure[0]}}</b><i>cm<sup>2</sup></i></span></li>
+          <b>{{ healthMetrics.systolicPressure[HealthDataLength]}}</b><i>cm<sup>2</sup></i></span></li>
         <li class="header-item">
           <span class="header-item-icon">
             <svg t="1741466817162" class="icon" viewBox="0 0 1048 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4859" width="200" height="200"><path d="M0 0h1024v1024H0z" fill="#FFFFFF" p-id="4860"></path><path d="M0 0h1024v1024H0z" fill="#FFBCB9" p-id="4861"></path><path d="M839 149.1l-25.5-0.6-21.8 13.3 0.6-25.5-13.3-21.8 25.5 0.6 21.8-13.3-0.6 25.5 13.3 21.8z" fill="#FF7500" fill-opacity=".734" p-id="4862"></path><path d="M785 173.3l0.8-35.4-18.4-30.2 35.4 0.8L833 90.2l-0.8 35.4 18.4 30.2-35.4-0.8-30.2 18.3z m5.5-52.2l8.2 13.4-0.4 15.7 13.4-8.2 15.7 0.4-8.2-13.4 0.4-15.7-13.4 8.2-15.7-0.4z" fill="#333333" p-id="4863"></path><path d="M166.939 879.81c0.974-6.014 6.362-12.51 9.953-14.643 5.483-3.222 12.396-3.606 17.802-0.522 4.922 2.792 8.363 7.5 9.5 12.885 2.055 9.072 0.594 18.506-4.069 28.325-4.128 8.656-9.395 15.226-15.656 19.878-5.484 4.047-12.857 4.649-18.918 1.42" fill="#FF0000" p-id="4864"></path><path d="M173.863 937.756c-4.22 0.022-8.488-0.975-12.295-3.015-4.17-2.258-5.768-7.425-3.51-11.595 2.259-4.17 7.426-5.768 11.596-3.51 3.104 1.7 6.936 1.363 9.8-0.794 5.143-3.756 9.512-9.38 13.034-16.75 3.958-8.099 5.079-15.593 3.507-22.724-0.653-3.032-2.665-5.726-5.428-7.304-2.74-1.481-6.306-1.314-9.266 0.455-1.698 1.042-5.412 5.575-5.971 8.703-0.804 4.632-5.171 7.782-9.803 6.98-4.632-0.804-7.782-5.172-6.98-9.804 1.389-8.488 8.21-17.093 13.935-20.582 8.25-4.943 18.388-5.203 26.437-0.614 6.958 3.933 11.95 10.728 13.668 18.441 2.418 10.94 0.834 22.363-4.751 33.855-4.76 9.844-10.877 17.553-18.278 23.005-4.586 3.514-10.141 5.208-15.695 5.253z" fill="#333333" p-id="4865"></path><path d="M166.939 879.81c-3.708-4.95-12.17-7.89-16.44-8.062-6.256-0.295-12.54 2.611-15.866 7.872-3.035 4.776-3.887 10.45-2.435 15.86 2.444 8.976 8.163 16.62 16.89 23.1 7.709 5.705 15.444 9.033 23.155 10.202 6.742 0.998 13.535-1.932 17.37-7.63" fill="#FF0000" p-id="4866"></path><path d="M174.833 937.514c-1.237 0-2.595-0.074-3.88-0.269-8.998-1.364-18.114-5.274-26.939-11.731C133.76 917.867 127 908.525 124 897.73c-2.106-7.617-0.864-15.863 3.312-22.675 4.977-7.734 14.027-12.36 23.63-11.87 6.161 0.32 17.412 4.11 22.889 11.608 2.81 3.834 1.959 9.096-1.875 11.907s-9.097 1.96-11.908-1.875c-1.696-2.256-7.297-4.467-9.892-4.541-3.444-0.172-6.768 1.378-8.297 3.924-1.797 2.715-2.235 5.916-1.461 9.02 1.984 7.133 6.467 13.126 13.764 18.418 6.57 4.855 13.068 7.77 19.373 8.67 3.54 0.561 7.059-1.038 9.025-3.898 2.622-3.952 7.934-4.967 11.886-2.345 3.951 2.622 4.967 7.934 2.345 11.885-5 7.225-13.298 11.561-21.957 11.555zM139.5 387.6c-1.6 0-3.2-0.2-4.8-0.5-11.5-2.6-18.7-14.1-16-25.6 10-43.5 38.7-84.1 80.9-114.3 9.6-6.9 22.9-4.7 29.8 4.9 6.9 9.6 4.7 22.9-4.9 29.8-33.8 24.1-56.5 55.7-64.2 89.1-2.3 9.9-11 16.6-20.8 16.6z" fill="#333333" p-id="4867"></path><path d="M125 425.3m-21.3 0a21.3 21.3 0 1 0 42.6 0 21.3 21.3 0 1 0-42.6 0Z" fill="#333333" p-id="4868"></path><path d="M920.8 817m-21.3 0a21.3 21.3 0 1 0 42.6 0 21.3 21.3 0 1 0-42.6 0Z" fill="#6BD6F8" p-id="4869"></path><path d="M920.8 844.7c-15.3 0-27.7-12.4-27.7-27.7 0-15.3 12.4-27.7 27.7-27.7 15.3 0 27.7 12.4 27.7 27.7 0 15.3-12.4 27.7-27.7 27.7z m0-42.7c-8.2 0-14.9 6.7-14.9 14.9s6.7 14.9 14.9 14.9 14.9-6.7 14.9-14.9S929 802 920.8 802z" fill="#333333" p-id="4870"></path><path d="M853.3 896m-42.7 0a42.7 42.7 0 1 0 85.4 0 42.7 42.7 0 1 0-85.4 0Z" fill="#FF9C00" p-id="4871"></path><path d="M853.3 949.3c-29.4 0-53.3-23.9-53.3-53.3s23.9-53.3 53.3-53.3 53.3 23.9 53.3 53.3-23.9 53.3-53.3 53.3z m0-85.3c-17.6 0-32 14.4-32 32s14.4 32 32 32 32-14.4 32-32-14.3-32-32-32z" fill="#333333" p-id="4872"></path><path d="M654.2 813.8c27.7-35.4 43.8-82.4 42-133.4-3.7-106-83.1-189.2-177.3-185.9-94.2 3.3-167.6 91.9-163.9 197.8 3.7 106 83.1 189.2 177.3 185.9 14-0.5 27.5-2.8 40.3-6.9" fill="#FFE2C4" p-id="4873"></path><path d="M526.9 899.7c-49.5 0-96.3-20.7-132.5-58.7-37.1-38.9-58.6-91.4-60.6-147.9s15.8-110.4 50.1-151.8c34.9-42.1 82.6-66.3 134.3-68.1 51.7-1.8 101 19 138.8 58.6 37.1 38.9 58.6 91.4 60.6 147.9 1.9 54.2-14.6 106.5-46.5 147.3-7.3 9.3-20.7 10.9-29.9 3.7-9.3-7.3-10.9-20.7-3.7-29.9 25.7-32.9 39-75.3 37.5-119.5-3.3-94-72.9-168.2-155.2-165.4-82.3 2.9-146.6 81.7-143.3 175.8C379.6 783.8 446.7 857 527 857c1.5 0 3.1 0 4.6-0.1 11.8-0.4 23.5-2.4 34.7-5.9 11.2-3.5 23.2 2.8 26.7 14s-2.8 23.2-14 26.7c-14.9 4.6-30.3 7.3-45.9 7.8-2.1 0.1-4.2 0.2-6.2 0.2z" fill="#333333" p-id="4874"></path><path d="M485.1 171.9c145.1 0 386.8 193.4 338.5 386.8-48.4 193.4-531.9 241.8-628.6 48.4s145-435.2 290.1-435.2z" fill="#E57B49" p-id="4875"></path><path d="M476.3 754.4c-53.8 0-105.6-7.2-150.4-21.1-73.4-22.8-126.2-62.7-152.5-115.4-40.8-81.7-30.9-179.1 27.9-274.3 32.9-53.2 79.5-102.4 131.4-138.6 53-37 107.1-57.3 152.5-57.3 94.7 0 219.3 71.6 296.3 170.2 29.2 37.4 49.9 76.3 61.6 115.9 13.2 44.6 14.6 88.6 4 130.8-12.7 50.6-51.2 95.1-111.5 128.8-52.2 29.1-120.3 49.4-192 57.3-22.6 2.4-45.1 3.7-67.3 3.7z m8.8-558.3c-35 0-80.5 17.7-124.8 48.6-46.6 32.5-88.4 76.7-117.9 124.3-23.7 38.3-38.3 76.7-43.4 114.1-5.6 40.5 0.4 78.6 17.6 113.1 14.2 28.3 47.1 67.1 123.6 90.8 57.1 17.8 127.5 23.3 198.1 15.5C603.7 695.3 665.4 677 712 651c61.1-34.1 81.7-72.3 88.2-98.3 8.4-33.7 7.3-69.2-3.5-105.3-10-33.7-28-67.3-53.4-99.9C709.9 304.9 664.7 266 616 238c-47-27.1-93.5-41.9-130.9-41.9z" fill="#333333" p-id="4876"></path><path d="M248.786866 661.980794a73.50294 277.5111 86 1 0 553.670194-38.716392 73.50294 277.5111 86 1 0-553.670194 38.716392Z" fill="#F9BC7A" p-id="4877"></path><path d="M807.3 583.2c-68.5-24-178.5-32.9-300.5-20.1-118.3 12.4-221.4 42.5-284 78.7" fill="#F9BC7A" p-id="4878"></path><path d="M234.8 662.7l-24.2-41.9c68.5-39.6 175.5-69.4 293.6-81.8 60.2-6.3 120.6-7.7 174.5-3.9 53 3.7 100.2 12.4 136.5 25.2l-16 45.6c-67.7-23.8-176.1-30.8-290-18.8-109.9 11.6-212.5 39.9-274.4 75.6z" fill="#333333" p-id="4879"></path><path d="M476.3 754.4c-53.8 0-105.6-7.2-150.4-21.1-73.4-22.8-126.2-62.7-152.5-115.4-40.8-81.7-30.9-179.1 27.9-274.3 32.9-53.2 79.5-102.4 131.4-138.6 53-37 107.1-57.3 152.5-57.3 94.7 0 219.3 71.6 296.3 170.2 29.2 37.4 49.9 76.3 61.6 115.9 13.2 44.6 14.6 88.6 4 130.8-12.7 50.6-51.2 95.1-111.5 128.8-52.2 29.1-120.3 49.4-192 57.3-22.6 2.4-45.1 3.7-67.3 3.7z m8.8-558.3c-35 0-80.5 17.7-124.8 48.6-46.6 32.5-88.4 76.7-117.9 124.3-23.7 38.3-38.3 76.7-43.4 114.1-5.6 40.5 0.4 78.6 17.6 113.1 14.2 28.3 47.1 67.1 123.6 90.8 57.1 17.8 127.5 23.3 198.1 15.5C603.7 695.3 665.4 677 712 651c61.1-34.1 81.7-72.3 88.2-98.3 8.4-33.7 7.3-69.2-3.5-105.3-10-33.7-28-67.3-53.4-99.9C709.9 304.9 664.7 266 616 238c-47-27.1-93.5-41.9-130.9-41.9z" fill="#333333" p-id="4880"></path><path d="M618.1 846.7m-21.3 0a21.3 21.3 0 1 0 42.6 0 21.3 21.3 0 1 0-42.6 0Z" fill="#333333" p-id="4881"></path><path d="M632.24719 435.185311m-63.649401 6.689822a64 64 0 1 0 127.298802-13.379643 64 64 0 1 0-127.298802 13.379643Z" fill="#FFD7D1" p-id="4882"></path><path d="M377.649585 461.944598m-63.649402 6.689821a64 64 0 1 0 127.298803-13.379643 64 64 0 1 0-127.298803 13.379643Z" fill="#FFD7D1" p-id="4883"></path><path d="M413.002057 392.669763m-27.548256 2.895439a27.7 27.7 0 1 0 55.096513-5.790877 27.7 27.7 0 1 0-55.096513 5.790877Z" fill="#333333" p-id="4884"></path><path d="M498.710654 472.447808c-13.174577-0.023008-26.500269-4.353818-37.490772-13.253753-7.363637-5.962956-8.492545-16.703792-2.519136-23.967977 5.962956-7.363637 16.703792-8.492545 23.967977-2.519136 10.990504 8.899934 27.101758 7.206573 36.001693-3.783931 5.962956-7.363637 16.703792-8.492545 23.967978-2.519136 7.363637 5.962956 8.492545 16.703792 2.519136 23.967978-11.747913 14.507465-29.053495 22.057752-46.446876 22.075955z" fill="#333333" p-id="4885"></path><path d="M582.766945 374.826755m-27.548257 2.895438a27.7 27.7 0 1 0 55.096513-5.790877 27.7 27.7 0 1 0-55.096513 5.790877Z" fill="#333333" p-id="4886"></path><path d="M962.7 239.5l-26.6 14.6-14.6 26.6-14.6-26.6-26.6-14.6 26.6-14.6 14.6-26.6 14.6 26.6 26.6 14.6z" fill="#FFFE07" fill-opacity=".734" p-id="4887"></path><path d="M921.5 297.3L901 260l-37.4-20.5L901 219l20.5-37.4L942 219l37.4 20.5L942 260l-20.5 37.3zM897 239.5l15.8 8.7 8.7 15.8 8.7-15.8 15.8-8.7-15.8-8.7-8.7-15.8-8.7 15.8-15.8 8.7z" fill="#333333" p-id="4888"></path><path d="M642 675.1c-2 0-4-0.7-5.6-2.1-3.6-3.1-3.9-8.5-0.8-12l32.1-36.9c3.1-3.6 8.5-3.9 12-0.8 3.6 3.1 3.9 8.5 0.8 12l-32.1 36.9c-1.7 1.9-4 2.9-6.4 2.9zM595.8 678.2c-1 0-2-0.2-2.9-0.5-4.4-1.6-6.7-6.5-5.1-10.9l16.7-45.9c1.6-4.4 6.5-6.7 10.9-5.1 4.4 1.6 6.7 6.5 5.1 10.9l-16.7 45.9c-1.3 3.5-4.5 5.6-8 5.6zM553.9 685.4c-3.8 0-7.2-2.5-8.2-6.3l-12.6-47.2c-1.2-4.6 1.5-9.2 6-10.4 4.5-1.2 9.2 1.5 10.4 6l12.6 47.2c1.2 4.6-1.5 9.2-6 10.4-0.7 0.2-1.4 0.3-2.2 0.3zM510.2 687.4c-3 0-5.9-1.6-7.5-4.4L479 640.2c-2.3-4.1-0.8-9.3 3.3-11.6 4.1-2.3 9.3-0.8 11.6 3.3l23.7 42.8c2.3 4.1 0.8 9.3-3.3 11.6-1.2 0.7-2.7 1.1-4.1 1.1zM457.8 690.2c-2.6 0-5.1-1.2-6.8-3.4l-29.4-39.1c-2.8-3.8-2.1-9.1 1.7-11.9 3.8-2.8 9.1-2.1 11.9 1.7l29.4 39.1c2.8 3.8 2.1 9.1-1.7 11.9-1.5 1.2-3.3 1.7-5.1 1.7zM402.1 694.6c-2.2 0-4.3-0.8-6-2.4L361.4 658c-3.4-3.3-3.4-8.7-0.1-12.1 3.3-3.4 8.7-3.4 12.1-0.1l34.7 34.1c3.4 3.3 3.4 8.7 0.1 12.1-1.7 1.7-3.9 2.6-6.1 2.6z" fill="#854218" p-id="4889"></path></svg>
             <i>空腹血糖</i>
           </span>
           <span class="header-item-title">
-          <b>{{ healthMetrics.visceralFat[0] }}</b><i>mmol/L</i></span></li>
+          <b>{{ healthMetrics.visceralFat[HealthDataLength] }}</b><i>mmol/L</i></span></li>
       </ul>
       </transition>
        <span class="icon-btn" @click="nextBtn"><el-icon><i-ep-Right /></el-icon></span>
@@ -703,21 +1071,42 @@ const bindHealthData  = async () => {
           </div>
         </div>
       </div>
-      <!-- <div class="body-item">
-        {{ healthMetrics.healthStatus[0] }}
-      </div> -->
         </div>
         <div class="footer-container">
       <div id="height-weight" class="footer-item" style="width: 100%; height: 100%;"></div>
       <div id="blood-pressure" class="footer-item" style="width: 100%; height: 100%;"></div>
-        <!-- <li id="blood-glucose" class="health-data-item blood-glucose"></li>
-      <li id="blood-lipid" class="health-data-item blood-lipid"></li>
-      <li id="heart-rate" class="health-data-item heart-rate"></li> -->
         </div>
     </div>
 </template>
 
 <style lang="scss" scoped>
+.header{
+  @extend .flex-align-center;
+  justify-content: space-between;
+  .header-button{
+    display: flex;
+    .el-select{
+      width:rem(100);
+    }
+  }
+}
+.el-form{
+  .el-form-item{
+    padding-bottom: rem(20);
+  }
+  .el-date-editor.el-input{
+    width: 100%;
+  }
+}
+.healthdata-table{
+  padding-bottom: rem(20);
+  :deep(.cell){
+    display: flex;
+  }
+}
+.createBtn{
+  margin: 0 rem(10);
+}
 h1{
   height: 9.2vh;
   min-height: rem(50);
@@ -812,10 +1201,10 @@ h1{
       &:last-child{
         flex:1;
         p{
-          overflow: hidden; /* 隐藏溢出内容 */ 
-          display: -webkit-box; /* 使用 Webkit 的 box 模型 */
-          -webkit-line-clamp: 6; /* 限制显示 3 行 */
-          -webkit-box-orient: vertical; /* 垂直排列内容 */
+          overflow: hidden; // 隐藏溢出内容s
+          display: -webkit-box; // 使用 Webkit 的 box 模型
+          -webkit-line-clamp: 6; // 限制显示 3 行
+          -webkit-box-orient: vertical; // 垂直排列内容
         }
       }
     }

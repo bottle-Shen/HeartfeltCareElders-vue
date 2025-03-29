@@ -75,7 +75,9 @@ const postForm = ref({
   coverImage: null as File | null, // 封面图文件对象
   video: null as File | null, // 视频文件对象
   images: [] as File[], // 多张图片文件对象
+  uploadType: 'image', // 默认选择上传图片
 });
+
 // 表单验证规则
 const postFormRules = {
   title: [
@@ -194,7 +196,7 @@ const addPostBtn = async () => {
     await addPost(formData);
     ElMessage.success('帖子发布成功');
     showPostForm.value = false; // 关闭表单弹窗
-    postForm.value = { title: '', content: '', coverImage: null, video: null, images: [] }; // 清空表单
+    postForm.value = { title: '', content: '', coverImage: null, video: null, images: [],uploadType: 'image' }; // 清空表单
   } catch (error) {
     console.error('帖子发布失败：', error);
     ElMessage.error('帖子发布失败，请稍后再试');
@@ -279,7 +281,6 @@ onUnmounted(() => {
       >
       <el-form-item label="封面图" prop="coverImage" required>
         <input type="file" @change="onCoverImageChange" accept="image/*">
-        <!-- <img  alt="封面图" style="max-width: 100%; height: auto;"> -->
       </el-form-item>
         <el-form-item label="标题" prop="title">
           <el-input
@@ -300,8 +301,15 @@ onUnmounted(() => {
             :rows="15"
           ></el-input>
         </el-form-item>
-
-        <el-form-item label="视频" prop="video">
+        <!-- 选择上传图片或视频 -->
+         <el-form-item label="上传类型" prop="uploadType">
+      <el-radio-group v-model="postForm.uploadType">
+        <el-radio label="image">上传图片</el-radio>
+        <el-radio label="video">上传视频</el-radio>
+      </el-radio-group>
+    </el-form-item>
+    <!-- 视频上传组件 -->
+        <el-form-item v-if="postForm.uploadType === 'video'" label="视频" prop="video">
         <el-upload
           ref="videoUpload"
           :limit="1"
@@ -314,11 +322,11 @@ onUnmounted(() => {
           :auto-upload="false"
           :file-list="videoFileList"
         >
-          <el-button style="position: relative; margin: -5px"><i class="el-icon-circle-plus-outline" style="color: #66b1ff;">上传视频</i></el-button>
+          <el-button class="primary-button">上传视频</el-button>
         </el-upload>
       </el-form-item>
-
-      <el-form-item label="图片" prop="images">
+      <!-- 图片上传组件 -->
+      <el-form-item v-if="postForm.uploadType === 'image'" label="图片" prop="images">
         <el-upload
           ref="imageUpload"
           :limit="5"
@@ -377,19 +385,12 @@ onUnmounted(() => {
     max-height: 80vh; //高度限制
     overflow: auto;
   }
-// :deep(.el-dialog){
-//   width:80%;
-//   min-width: rem(300);
-//   height: 70% !important;
-//   min-height: rem(500);
-//  .el-form{
-//     width: 100%;
-//   }
-//   .el-button{
-//     @extend .button;
-//   }
-  
-// }
+  .el-form-item {
+    padding-bottom: rem(18);
+    &:last-child{
+      padding-bottom: rem(0);
+    }
+  }
   .post-item {
     max-width: rem(315);
     padding-bottom: rem(30);

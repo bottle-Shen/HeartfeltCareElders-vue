@@ -6,7 +6,7 @@ import { store } from '@/store'
 export const CommentContent = ref('')
 
 //  获取全部帖子
-export const getSocial =(params: { page?: number, search?: string })=> {
+export const getSocial =(params: { page?: number})=> {
     return request({
         url: `social/posts/`,
         method: 'GET',
@@ -17,6 +17,21 @@ export const getSocial =(params: { page?: number, search?: string })=> {
     }).catch((error) => {
       console.error(error)
       throw error// 重新抛出错误，以便在 Vuex 中捕获
+  });
+}
+// 搜索帖子
+export const searchPost = async (params: { page?: number, search?: string }) => {
+  return request({
+    url: `social/posts/`,
+    method: 'GET',
+    params: {
+      page: params.page,
+      search: params.search,
+    },
+  }).then(response => {
+    return response.data
+  }).catch((error) => {
+    console.error(error)
   });
 }
 // 获取单个帖子
@@ -200,7 +215,7 @@ export const addComment = async(postId:number,commentContent:string,userId:numbe
 const getWebSocketUrl = (postId: number) => {
   const baseURL = request.defaults.baseURL || ''
   const wsUrl = baseURL.replace('http', 'ws')
-  return `${wsUrl}social/ws/posts/${postId}/`
+  return `${wsUrl}/social/ws/posts/${postId}/`
 }
 
 export let socket: WebSocket | null = null;

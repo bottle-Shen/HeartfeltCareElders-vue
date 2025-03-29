@@ -2,7 +2,7 @@ import type { Module } from 'vuex'
 import { type RootState } from '@/store/index'
 // import { store, type RootState } from '@/store/index'
 import type { SocialData,CommentData } from '@/@types/social'
-import { getSocial,UserLikePost,getUserSocial } from '@/api/social'
+import { getSocial,UserLikePost,getUserSocial,searchPost } from '@/api/social'
 import SecureLS from 'secure-ls';
 const secret = import.meta.env.VUE_APP_ENCRYPTION_SECRET || 'default-secret';
 const ls = new SecureLS({ encodingType: 'aes', encryptionSecret: secret });
@@ -12,14 +12,20 @@ export interface PostState {
     likedPosts: number[]; // 存储点赞的帖子
     likedPostsId: number[]; // 存储点赞的帖子ID
     socialData: SocialData[];// 所有帖子
+    searchQuery:string,// 搜索帖子关键词
+    searchPostList: SocialData[];// 全部帖子搜索
     currentPageUserPosts: number; // 用户发布帖子的当前页码
     currentPageLikedPosts: number; // 用户点赞帖子的当前页码
+    currentPageSearchPosts: number;// 全部帖子搜索当前页码
     loadingUserPosts: boolean; // 用户发布帖子的加载状态
     loadingLikedPosts: boolean; // 用户点赞帖子的加载状态
+    loadingSearchPosts: boolean;// 全部帖子搜索加载状态
     finishedUserPosts: boolean; // 用户发布帖子是否加载完成
     finishedLikedPosts: boolean; // 用户点赞帖子是否加载完成
+    finishedSearchPosts: boolean;// 全部帖子搜索是否加载完成
     loadedPagesUserPosts: Set<number>; // 缓存已加载的页码（用户发布帖子）
     loadedPagesLikedPosts: Set<number>; // 缓存已加载的页码（用户点赞帖子）
+    loadedPagesSearchPosts: Set<number>;// 全部帖子搜索已加载的页码
     currentPage: number;// 全部帖子当前页码
     loading: boolean;
     finished: boolean;
@@ -39,15 +45,21 @@ export const PostModule: Module<PostState, RootState> = {
       userPosts: [],// 用户发布的帖子
       likedPosts: [],// 用户点赞的帖子
       likedPostsId: [],// 用户点赞的帖子ID
+      searchQuery: '',// 搜索查询关键词
+      searchPostList: [],// 全部帖子搜索
       socialData: [],// 所有帖子
       currentPageUserPosts: 1,
       currentPageLikedPosts: 1,
+      currentPageSearchPosts: 1,
       loadingUserPosts: false,
       loadingLikedPosts: false,
+      loadingSearchPosts: false,
       finishedUserPosts: false,
       finishedLikedPosts: false,
+      finishedSearchPosts: false,
       loadedPagesUserPosts: new Set(),
       loadedPagesLikedPosts: new Set(),
+      loadedPagesSearchPosts: new Set(),
       currentPage: 1, // 当前页码
       loading: false, // 加载状态
       finished: false, // 是否加载完成
@@ -63,6 +75,7 @@ export const PostModule: Module<PostState, RootState> = {
   mutations: {
       // 设置用户发布的帖子
         SET_USER_POSTS(state, posts: SocialData[]) {
+          console.log('SET_USER_POSTS called', posts);
           state.userPosts = posts;
         },
         // 追加用户发布的帖子
@@ -75,15 +88,32 @@ export const PostModule: Module<PostState, RootState> = {
         },
         // 设置用户点赞的帖子
         SET_LIKED_POSTS(state, postIds: number[]) {
+          console.log('SET_LIKED_POSTS called', postIds);
           state.likedPosts = postIds;
+        },
+        // 设置用户帖子搜索关键词
+        SET_SEARCH_QUERY(state, query: string) {
+          state.searchQuery = query;
+        },
+        // 设置用户搜索的帖子列表
+        SET_SEARCH_POST_LIST(state, posts: SocialData[]) {
+          state.searchPostList = posts;
         },
         // 追加用户点赞的帖子
         APPEND_LIKED_POSTS(state, postIds: number[]) {
           state.likedPosts.push(...postIds);
         },
+        // 追加用户搜索的帖子列表
+        APPEND_SEARCH_POST_LIST(state, posts: SocialData[]) {
+          state.searchPostList.push(...posts);
+        },
         // 设置用户帖子当前页码
         SET_CURRENT_PAGE_USER_POSTS(state, page: number) {
           state.currentPageUserPosts = page;
+        },
+        // 设置用户帖子搜索当前页码
+        SET_CURRENT_PAGE_SEARCH_POSTS(state, page: number) {
+          state.currentPageSearchPosts = page;
         },
         // 设置用户点赞帖子当前页码
         SET_CURRENT_PAGE_LIKED_POSTS(state, page: number) {
@@ -93,6 +123,10 @@ export const PostModule: Module<PostState, RootState> = {
         SET_LOADING_USER_POSTS(state, loading: boolean) {
           state.loadingUserPosts = loading;
         },
+        // 加载更多用户帖子搜索
+        SET_LOADING_SEARCH_POSTS(state, loading: boolean) {
+          state.loadingSearchPosts = loading;
+        },
         // 加载更多用户点赞帖子
         SET_LOADING_LIKED_POSTS(state, loading: boolean) {
           state.loadingLikedPosts = loading;
@@ -100,6 +134,10 @@ export const PostModule: Module<PostState, RootState> = {
         // 加载完成用户帖子
         SET_FINISHED_USER_POSTS(state, finished: boolean) {
           state.finishedUserPosts = finished;
+        },
+        // 加载完成用户帖子搜索
+        SET_FINISHED_SEARCH_POSTS(state, finished: boolean) {
+          state.finishedSearchPosts = finished;
         },
         // 加载完成用户点赞帖子
         SET_FINISHED_LIKED_POSTS(state, finished: boolean) {
@@ -109,6 +147,10 @@ export const PostModule: Module<PostState, RootState> = {
         CACHE_LOADED_PAGE_USER_POSTS(state, page: number) {
           state.loadedPagesUserPosts.add(page);
         },
+        // 缓存已加载的页码用户帖子搜索
+        CACHE_LOADED_PAGE_SEARCH_POSTS(state, page: number) {
+          state.loadedPagesSearchPosts.add(page);
+        },
         // 缓存已加载的页码用户点赞帖子
         CACHE_LOADED_PAGE_LIKED_POSTS(state, page: number) {
           state.loadedPagesLikedPosts.add(page);
@@ -116,6 +158,10 @@ export const PostModule: Module<PostState, RootState> = {
         // 清空已加载的页码用户帖子
         CLEAR_LOADED_PAGES_USER_POSTS(state) {
           state.loadedPagesUserPosts.clear();
+        },
+        // 清空已加载的页码用户帖子搜索
+        CLEAR_LOADED_PAGES_SEARCH_POSTS(state) {
+          state.loadedPagesSearchPosts.clear();
         },
         // 清空已加载的页码用户点赞帖子
         CLEAR_LOADED_PAGES_LIKED_POSTS(state) {
@@ -447,6 +493,53 @@ export const PostModule: Module<PostState, RootState> = {
         }
       } catch (error) {
         console.error('Failed to fetch liked posts:', error);
+      }
+    },
+    // 获取搜索帖子数据
+    async fetchSearchSocialList({ state, commit }) {
+      // console.log(`Current Page: ${state.currentPageSearchPosts}, Loaded Pages: ${Array.from(state.loadedPagesSearchPosts)}`);
+      // console.log(`fetchSocialData called, current page: ${state.currentPageSearchPosts}`);
+      // 如果当前页已经加载过，直接返回
+      if (state.loadedPagesSearchPosts.has(state.currentPageSearchPosts)) {
+        console.log(`页码:${state.currentPageSearchPosts}已经加载过，直接返回.`);
+        return;
+      }
+      if (state.loadingSearchPosts|| state.finishedSearchPosts) return;
+
+      commit('SET_LOADING_SEARCH_POSTS', true);
+      try {
+        const params = {
+          page: state.currentPageSearchPosts,
+          search: state.searchQuery,
+        };
+        const response = await searchPost(params);
+        const newItems = response.results || [];
+
+        if (newItems.length === 0) {
+          commit('SET_FINISHED_SEARCH_POSTS', true);
+        } else {
+          if (state.currentPageSearchPosts === 1) {
+            // 如果是第一页，直接设置数据，而不是追加
+            commit('SET_SEARCH_POST_LIST', newItems);
+          } else {
+            commit('APPEND_SEARCH_POST_LIST', newItems); // 追加新数据
+          }
+          commit('CACHE_LOADED_PAGE_SEARCH_POSTS', state.currentPageSearchPosts); // 缓存已加载的页码
+        }
+      } catch (error) {
+        console.error('Failed to fetch social data:', error);
+        commit('SET_FINISHED_SEARCH_POSTS', true); // 如果请求失败，标记为加载完成
+      } finally {
+        commit('SET_LOADING_SEARCH_POSTS', false);
+      }
+      console.log(`fetchSocialData finished, current page: ${state.currentPageSearchPosts}`);
+    },
+    // 加载更多搜索帖子数据
+    async loadMoreSearchSocialData({ state, commit }) {
+      // 只有在未完成加载且不是正在加载时才触发加载更多
+      if (!state.finishedSearchPosts && !state.loadingSearchPosts) {
+        commit('SET_CURRENT_PAGE_SEARCH_POSTS', state.currentPageSearchPosts + 1); // 增加页码
+        await this.dispatch('post/fetchSearchSocialList'); // 调用加载数据
       }
     },
   },

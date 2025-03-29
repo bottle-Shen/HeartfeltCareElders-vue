@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute, useRouter, type RouteLocationNormalized } from 'vue-router';
 import { isDataLoaded,socket,CommentContent,initializeWebSocket,getSocialById, getComments,likePost,handleAvatarPath } from '@/api/social';
 import type { SocialData } from '@/@types/social';
 import { formatDate } from '@/utils'
@@ -11,21 +11,17 @@ const route = useRoute();
 const router = useRouter();
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);//判断用户是否登录
 const userId = computed(() => store.getters['user/getUserId']); // 用户ID从 Vuex 中获取
-console.log(userId.value);
-const postId = parseInt(route.params.id as string, 10); // 确保 postId 是数字类型
-console.log(postId);
-// 获取全局加载状态
-const isLoading = computed(() => store.state.loading.isLoading);
-console.log(isLoading.value);
+const postId = ref<number>(parseInt(route.params.id as string, 10)); // 确保 postId 是数字类型,10 表示十进制
+// console.log(postId);
 // 直接从 Vuex 的 socialData 中获取帖子数据
 const post = computed<SocialData | null>(() => {
-  return store.state.post.socialData.find((item:SocialData) => item.id === postId) || null;
+  return store.state.post.socialData.find((item:SocialData) => item.id === postId.value) || null;
 });
 const isAnimating = ref(false); // 动画状态
 const isHovered = ref(false);// 悬浮状态
 // 判断用户是否点赞
 const isLiked = computed(() => {
-  return store.getters['post/isPostLiked'](postId);
+  return store.getters['post/isPostLiked'](postId.value);
 });
 // 点赞功能
 const toggleLike = async (postId: number, post: SocialData) => {
@@ -68,7 +64,7 @@ const submitComment = async () => {
         type: "comment",
         user_id: userId.value,
         content: CommentContent.value,
-        post_id: postId,
+        post_id: postId.value,
       })
     );
   }
@@ -79,35 +75,65 @@ const submitComment = async () => {
 const initializeWebSocketConnection = (postId: number, userId: number) => {
   initializeWebSocket(postId, userId)
 };
-
-onMounted(async () => {
+const loadPostAndComments = async (postId: number,route:RouteLocationNormalized) => {
   try {
     // 设置全局加载状态为 true
     store.commit('loading/SET_LOADING', true);
     // 初始化用户点赞记录
     await store.dispatch('post/initializeLikedPosts');
+    // 根据路由名称决定加载逻辑
+    if (route.name === 'searchPostDetail') {
+      // 如果是从搜索页面进入，从 Vuex 的 searchPostList 获取帖子数据
+      const searchPost = store.state.post.searchPostList.find((item: SocialData) => item.id === postId);
+      if (searchPost) {
+        store.commit('post/updatePost', searchPost); // 更新 Vuex 的 socialData 状态
+      } else {
+        console.error('搜索帖子数据为空');
+        ElMessage.error('帖子加载失败，请稍后重试');
+        return; // 提前返回，避免继续加载评论
+      }
+    } else if (route.name === 'interactDetail') {
+      // 如果是从单页社交互动帖子进入，从后端获取帖子数据
+      const postResponse = await getSocialById(postId);
+      if (postResponse) {
+        store.commit('post/updatePost', postResponse); // 更新 Vuex 的 socialData 状态
+      } else {
+        console.error('帖子数据为空');
+        ElMessage.error('帖子加载失败，请稍后重试');
+        return; // 提前返回，避免继续加载评论
+      }
+    }
+
 
     // 同时获取帖子和评论数据
-    const [postResponse, commentsResponse] = await Promise.all([
-      getSocialById(postId),
-      getComments(postId)
-    ]);
+    // const [postResponse, commentsResponse] = await Promise.all([
+    //   getSocialById(postId),
+    //   getComments(postId)
+    // ]);
 
-    if (postResponse) {
-      // 更新 Vuex 的 socialData 状态
-      store.commit('post/updatePost', postResponse); // 更新特定帖子
+    // if (postResponse) {
+    //   // 更新 Vuex 的 socialData 状态
+    //   store.commit('post/updatePost', postResponse); // 更新特定帖子
 
-      // 更新当前帖子的评论数据
+    //   // 更新当前帖子的评论数据
+    //   store.commit('post/updatePostComments', {
+    //     postId: postResponse.id,
+    //     comments: commentsResponse || []
+    //   });
+    // 无论从哪个路由进入，都加载评论数据
+    const commentsResponse = await getComments(postId);
+    if (commentsResponse) {
       store.commit('post/updatePostComments', {
-        postId: postResponse.id,
+        postId: postId,
         comments: commentsResponse || []
       });
+    } else {
+      console.error('评论数据为空');
+      ElMessage.error('评论加载失败，请稍后重试');
+    }
+
 
       isDataLoaded.value = true; // 标记数据加载完成
-    } else {
-      console.error('帖子数据为空');
-      ElMessage.error('帖子加载失败，请稍后重试');
-    }
   } catch (error) {
     console.error('加载帖子或评论失败:', error);
     ElMessage.error('加载帖子或评论失败，请稍后重试');
@@ -115,10 +141,13 @@ onMounted(async () => {
     // 设置全局加载状态为 false
     store.commit('loading/SET_LOADING', false);
   }
-
+};
+onMounted(async () => {
+  // 在组件挂载时加载帖子和评论数据
+  await loadPostAndComments(postId.value,route);
   // 在数据加载完成后初始化 WebSocket 连接
   if (isDataLoaded.value) {
-    initializeWebSocketConnection(postId, userId.value); // 初始化 WebSocket 连接
+    initializeWebSocketConnection(postId.value, userId.value); // 初始化 WebSocket 连接
   }
 });
 
@@ -127,14 +156,26 @@ onUnmounted(() => {
     socket.close()
   }
 });
-  // sessionStorage.removeItem("scrollPosition"); // 清除滚动位置
+
+// 监听路由参数 id 的变化
+watch(() => route.params.id, (newId) => {
+  const newPostId = parseInt(newId as string, 10);
+  console.log('postId changed:', newPostId);
+  postId.value = newPostId;
+
+  // 关闭旧的 WebSocket 连接
+  if (socket) {
+    socket.close();
+  }
+
+  // 初始化新的 WebSocket 连接
+  initializeWebSocketConnection(newPostId, userId.value);
+
+  // 重新加载帖子和评论数据
+  loadPostAndComments(newPostId);
+});
 </script>
 <template>
-  <!-- 如果 isLoading 为 true，显示加载提示 -->
-    <!-- <div v-if="isLoading" class="isLoading">
-      <LoadingCom />
-    </div> -->
-    <!-- 如果 isLoading 为 false，显示正常内容 -->
   <div class="interact-detail w-full h-full body">
     <img class="image-bac w-full h-full" :src="post?.image" :alt="post?.title"/>
     <div class="interact-container">

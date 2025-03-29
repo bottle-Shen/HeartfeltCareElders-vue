@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { getDocument } from '@/api/document';
+import { getDocument,getUserElderlyHealthDocument,getCaregiverElderlyHealthDocument } from '@/api/document';
+import { getElderlyList} from '@/api/healthData'
 import type { HealthData } from '@/@types/healthdata'
 import { useStore } from 'vuex'
+import type { elderlyInfoResponse } from '@/@types/userInfo'
+const selectedElderly = ref<number>(1)// 选择的老人用户ID
+const elderlyList = ref<elderlyInfoResponse[]>([])// 机构人员绑定的老人用户列表
 const store = useStore()
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);// 获取用户是否登录
 const sortDirection = ref<'asc' | 'desc'>('asc'); // 默认为正序
-
+const getUserType = computed(() => store.getters['user/getUserType']);
 interface documentData {
     created_at: string,
     file: string,
@@ -14,6 +18,7 @@ interface documentData {
     health_data: HealthData,
 }
 const documentData = ref<documentData[]>([])// 文档数据
+const hasDocumentData = ref(false);// 用于标记是否有文档数据
 const documentURL = ref<string[]>([])// 文档下载URL
 const documentTimes = ref<string[]>([]); // 存储用户测量时间
 const pageSize = ref(20); // 每页显示的条数
@@ -34,18 +39,47 @@ const sortData = () => {
 // 获取文档
 const getDocumentBtn = async (page: number, limit: number) => {
     try {
+        // 设置全局加载状态
+        store.commit('loading/SET_LOADING', true);
+        // 重置状态
         finished.value = false;
-        const response = await getDocument(page, limit);
-        // 更新当前页的数据
-        documentData.value = response.results;
-        documentURL.value = documentData.value.map(item => item.file);
-        documentTimes.value = documentURL.value.map(url => formatDate(extractTime(url)));
-        sortData(); // 排序数据
+        let response;
+        if (getUserType.value === 1) {
+            response = await getDocument(page, limit);
+        } else if (getUserType.value === 2) {
+            response = await getUserElderlyHealthDocument(page, limit);
+        } else if (getUserType.value === 3) {
+            response = await getCaregiverElderlyHealthDocument(selectedElderly.value,page, limit);
+        } else {
+            throw new Error("未知的用户类型");
+        }
+        // 更新文档数据
+        documentData.value = response.results || [];
+        hasDocumentData.value = documentData.value.length > 0;
+        // 如果有数据，处理数据-更新当前页的数据
+        if (hasDocumentData.value) {
+          // 提取文件 URL
+          documentURL.value = documentData.value.map(item => item.file);
+
+          // 格式化时间
+          documentTimes.value = documentURL.value.map(url => formatDate(extractTime(url)));
+
+          // 排序数据
+          sortData();
+        }
+
+        // 判断是否加载完所有数据（例如分页加载）
+        if (response.results.length < limit) {
+          finished.value = true; // 没有更多数据
+        }
     } catch (error) {
         console.error('获取文档失败:', error);
-        finished.value = true;
-        ElMessage.error('没有更多数据了');
-    }
+        hasDocumentData.value = false;
+        // ElMessage.error('没有更多数据了');
+    } finally {
+        // 清除全局加载状态
+        store.commit('loading/SET_LOADING', false);
+  }
 };
 
 // 提取时间的函数
@@ -82,6 +116,7 @@ const paginatedTimes = computed(() => {
 const nextPage = async () => {
     if (finished.value) {
         ElMessage.warning('没有更多数据了');
+        finished.value = true;
         return;
     }
     currentPage.value++;
@@ -99,10 +134,29 @@ const toggleSortDirection = () => {
   sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
   sortData(); // 重新排序
 };
+// 切换老人用户时的处理
+const handleElderlyChange = () => {
+  // 重置当前页码
+  currentPage.value = 1;
+  // 重置文档数据
+  documentData.value = [];
+  documentURL.value = [];
+  documentTimes.value = [];
+  hasDocumentData.value = false;
+  finished.value = false;
+
+  // 调用 getDocumentBtn 方法重新加载数据
+  getDocumentBtn(currentPage.value, pageSize.value);
+};
 onMounted(async () => {
   store.commit('loading/SET_LOADING', true); // 设置全局加载状态为 true
   try {
     if (isAuthenticated.value) {
+      if(getUserType.value === 3){
+        const response = await getElderlyList();
+        elderlyList.value = response;
+        console.log('elderlyList',elderlyList.value)
+      }
       await getDocumentBtn(currentPage.value, pageSize.value); // 等待异步操作完成
     }
   } catch (error) {
@@ -112,12 +166,25 @@ onMounted(async () => {
     store.commit('loading/SET_LOADING', false); // 设置全局加载状态为 false
   }
 });
-
 </script>
 <template>
     <div class="knowledge-page">
     <div v-if="isAuthenticated">
-        <div class="sort-buttons">
+        <el-select class="elderly-select" v-if="getUserType === 3" v-model="selectedElderly" placeholder="请选择老人" @change="handleElderlyChange">
+          <el-option
+            v-for="elderly in elderlyList"
+            :key="elderly.elderly_id"
+            :label="elderly.username"
+            :value="elderly.elderly_id"
+          >
+            用户名:{{ elderly.username }}
+          </el-option>
+        </el-select>
+        <div class="noFound-item" v-if="!hasDocumentData">
+            暂无健康档案
+        </div>
+        <div v-else>
+            <div class="sort-buttons">
             <el-button @click="toggleSortDirection" class="link-button sort-button" plain>{{ sortDirection === 'asc' ? '降序' : '升序' }}</el-button>
         </div>
         <ul>
@@ -137,6 +204,7 @@ onMounted(async () => {
             <span>第 {{ currentPage }} 页 / 共 {{ Math.ceil(documentURL.length / pageSize) }} 页</span>
             <el-button class="link-button" @click="nextPage" link :disabled="finished">下一页</el-button>
         </div>
+        </div>
     </div>
     <!-- 未登录 -->
     <div v-else class="not-logged-in">
@@ -149,6 +217,9 @@ onMounted(async () => {
 
 <style scoped lang="scss">
 .knowledge-page{
+    .elderly-select,.noFound-item{
+        padding-top: rem(15);
+    }
     .sort-buttons{
         padding:1.4vh 0;
     }
@@ -162,7 +233,7 @@ onMounted(async () => {
         }
     }
     .pagination{
-        margin-top: rem(5);
+        margin: rem(15) 0;
         display: flex;
         align-items: center;
     }
