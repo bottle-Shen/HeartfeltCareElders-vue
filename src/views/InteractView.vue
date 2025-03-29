@@ -382,7 +382,8 @@ onUnmounted(() => {
     position: fixed;
     // right: 0;
     // top: 0;
-    max-height: 80vh; //高度限制
+    // max-height: 80vh; //高度限制
+    height: 100%;
     overflow: auto;
   }
   .el-form-item {
@@ -392,7 +393,7 @@ onUnmounted(() => {
     }
   }
   .post-item {
-    max-width: rem(315);
+    // max-width: rem(315);
     padding-bottom: rem(30);
     // padding-right: rem(80);
     // padding: rem(30) 0;

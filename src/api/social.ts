@@ -40,7 +40,7 @@ export const getSocialById = (id: number) => {
     url: `social/posts/${id}/`,
     method: 'GET',
   }).then(response => {
-      console.log(response)
+      // console.log(response)
     return response.data
   }).catch((error) => {
     console.error(error)
@@ -73,7 +73,7 @@ export const addPost = (formData: FormData) => {
             'Content-Type': 'multipart/form-data' // 确保设置正确的 Content-Type
         }
     }).then(response => {
-        console.log('发布帖子',response);
+        // console.log('发布帖子',response);
         return response.data;
     }).catch((error) => {
         console.error(error);
@@ -109,12 +109,12 @@ export const likePost = (postId: number, post: SocialData,store:Store<PostState>
       if (response.status === 201) {
         post.likes_count += 1
         store.commit('post/addLikedPost', postId);
-        ElMessage.success('点赞成功')
+        // ElMessage.success('点赞成功')
       }
       if (response.status === 204) {
         post.likes_count -= 1
         store.commit('post/removeLikedPost', postId);
-        ElMessage.success('取消点赞成功')
+        // ElMessage.success('取消点赞成功')
       }
     }).catch((error) => {
       console.error(error)
@@ -242,7 +242,7 @@ export const initializeWebSocket = (postId: number,userId:number) => {
   const sendHeartbeat = () => {
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({ type: 'heartbeat' }));
-      console.log('Heartbeat sent');
+      // console.log('Heartbeat sent');
     }
   };
   // 定期发送心跳
@@ -275,11 +275,11 @@ export const initializeWebSocket = (postId: number,userId:number) => {
         const {type,message} = JSON.parse(event.data);
         // console.log('Parsed message:', type, message); // 打印解析后的消息
       if (!isDataLoaded.value) {
-        console.log('数据未加载完成');
+        // console.log('数据未加载完成');
         return;
       }
       if (type === "heartbeat") {
-        console.log('心跳消息');
+        // console.log('心跳消息');
         stopHeartbeat(); // 清除当前心跳定时器
         startHeartbeat(); // 重新开始心跳机制
       }
@@ -339,7 +339,7 @@ export const initializeWebSocket = (postId: number,userId:number) => {
     }
   }
   socket.onclose = () => {
-    console.log('WebSocket链接已关闭');
+    // console.log('WebSocket链接已关闭');
     stopHeartbeat();// 停止心跳机制
   };
   socket.onerror = (error) => {

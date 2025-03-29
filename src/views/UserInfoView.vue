@@ -138,7 +138,6 @@ const avatarFile = ref<File | null>(null); // 用于保存文件对象
 const avatarUrl = ref<string | null>(null); // 用于保存头像预览 URL
 const dialogVisible = ref(false); // 控制弹窗显示
 const currentUploadType = ref<string | null>(null); // 当前上传类型：'avatar' 或 'background'
-const showRealNameAuthCom = ref(false)
 const signatureDefaultText = "用一段简单的个性介绍，展示您的独特风采~"// 定义个性签名默认文本
 const showVerificationCode = ref(false); // 是否显示验证码相关字段
 const parentAddress = ref<string>(''); // 存储地址选择器的值
@@ -278,7 +277,7 @@ const fetchUserInfo = async () => {
       Object.assign(changedParams.value, response);
     }
     // isShow.value = true; // 显示用户信息页面
-    console.log('获取到的用户信息：', userInfoForm.value);
+    // console.log('获取到的用户信息：', userInfoForm.value);
   }catch (error) {
     console.error('获取用户信息失败：', error);
   }finally {
@@ -289,7 +288,7 @@ const fetchUserInfo = async () => {
 const saveUserInfo = async () => {
     try {
     const response = await updateUserInfo(changedParams.value);
-    console.log('更新', response);
+    // console.log('更新', response);
       // 更新成功，退出编辑模式
       isEditMode.value = false;
       // 更新成功后，更新store中的信息
@@ -456,18 +455,6 @@ const disabledDate = (time: Date) => {
   return time.getTime() > Date.now()
 }
 
-const submitRealNameAndIdCard = () => {
-  showRealNameAuthCom.value = true
-};
-
-// 接收子组件传递的实名认证信息
-// const handleRealNameAuthSuccess = (real_name: string, id_card: string) => {
-//   changedParams.value.user.real_name = real_name;
-//   changedParams.value.user.id_card = id_card;
-//   // 调用更新接口
-//   saveUserInfo();
-//   showRealNameAuthCom.value = false
-// };
 const toggleEditMode = () => {
   if (!isEditMode.value) {
     // 进入编辑模式

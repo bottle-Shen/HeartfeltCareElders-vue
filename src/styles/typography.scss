@@ -15,6 +15,7 @@
     background-color: rgba(0, 0, 0, 0.5);
     .el-overlay-dialog {
         .el-dialog {
+            min-width: rem(300);
             padding: rem(30);
             background-color: var(--white);
             box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
@@ -25,6 +26,9 @@
                 padding-bottom: rem(20);
                 display: flex;
                 justify-content: space-between;
+                .el-dialog__headerbtn:hover .el-dialog__close{
+                    color: var(--blue);
+                }
             }
 
             .el-dialog__body {
@@ -105,7 +109,14 @@ body{
 b,strong{
     font-weight: 700;
 }
-
+// ----------element输入框样式----------
+:deep(.el-input__wrapper.is-focus),:deep(.el-textarea__inner.is-focus),
+:deep(.el-select__wrapper.is-focused){
+    box-shadow: 0 0 0 1px var(--blue) inset;
+}
+.el-select-dropdown__item.is-selected{
+    color: var(--blue);
+}
 // ----------工具类----------
 .text-center {//居中对齐文本
     text-align: center;

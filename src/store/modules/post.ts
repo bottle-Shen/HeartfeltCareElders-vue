@@ -75,7 +75,7 @@ export const PostModule: Module<PostState, RootState> = {
   mutations: {
       // 设置用户发布的帖子
         SET_USER_POSTS(state, posts: SocialData[]) {
-          console.log('SET_USER_POSTS called', posts);
+          // console.log('SET_USER_POSTS called', posts);
           state.userPosts = posts;
         },
         // 追加用户发布的帖子
@@ -88,7 +88,7 @@ export const PostModule: Module<PostState, RootState> = {
         },
         // 设置用户点赞的帖子
         SET_LIKED_POSTS(state, postIds: number[]) {
-          console.log('SET_LIKED_POSTS called', postIds);
+          // console.log('SET_LIKED_POSTS called', postIds);
           state.likedPosts = postIds;
         },
         // 设置用户帖子搜索关键词
@@ -436,11 +436,11 @@ export const PostModule: Module<PostState, RootState> = {
     },
   // 获取全部帖子数据
     async fetchSocialData({ state, commit }) {
-      console.log(`Current Page: ${state.currentPage}, Loaded Pages: ${Array.from(state.loadedPages)}`);
-      console.log(`fetchSocialData called, current page: ${state.currentPage}`);
+      // console.log(`Current Page: ${state.currentPage}, Loaded Pages: ${Array.from(state.loadedPages)}`);
+      // console.log(`fetchSocialData called, current page: ${state.currentPage}`);
       // 如果当前页已经加载过，直接返回
       if (state.loadedPages.has(state.currentPage)) {
-        console.log(`页码:${state.currentPage}已经加载过，直接返回.`);
+        // console.log(`页码:${state.currentPage}已经加载过，直接返回.`);
         return;
       }
       if (state.loading || state.finished) return;
@@ -472,7 +472,7 @@ export const PostModule: Module<PostState, RootState> = {
       } finally {
         commit('SET_LOADING', false);
       }
-      console.log(`fetchSocialData finished, current page: ${state.currentPage}`);
+      // console.log(`fetchSocialData finished, current page: ${state.currentPage}`);
     },
     // 加载更多全部帖子数据
     async loadMoreData({ state, commit }) {
@@ -486,7 +486,7 @@ export const PostModule: Module<PostState, RootState> = {
     async initializeLikedPosts({ commit }) {
       try {
         const response = await UserLikePost({page: 1});// 加载第一页数据
-        console.log('打印返回的数据结构',response); // 打印返回的数据结构
+        // console.log('打印返回的数据结构',response); // 打印返回的数据结构
         if (response && response.results) {
           const likedPostIds = response.results.map((item: SocialData) => item.id);// 提取 id
           commit('SET_LIKED_POSTS_ID', likedPostIds);
@@ -501,7 +501,7 @@ export const PostModule: Module<PostState, RootState> = {
       // console.log(`fetchSocialData called, current page: ${state.currentPageSearchPosts}`);
       // 如果当前页已经加载过，直接返回
       if (state.loadedPagesSearchPosts.has(state.currentPageSearchPosts)) {
-        console.log(`页码:${state.currentPageSearchPosts}已经加载过，直接返回.`);
+        // console.log(`页码:${state.currentPageSearchPosts}已经加载过，直接返回.`);
         return;
       }
       if (state.loadingSearchPosts|| state.finishedSearchPosts) return;

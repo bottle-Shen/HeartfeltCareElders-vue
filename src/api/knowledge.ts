@@ -20,7 +20,7 @@ export const getKnowledgeById = (id: number) => {
     url: `knowledge/knowledges/${id}/`,
     method: 'GET',
   }).then(response => {
-      console.log(response)
+      // console.log(response)
     return response.data;
   });
 }
@@ -31,7 +31,7 @@ export const createKnowledge = () => {
     url: 'knowledge/knowledges/',
     method: 'POST',
   }).then(response => {
-      console.log(response)
+      // console.log(response)
     return response.data;
   });
 }
@@ -42,7 +42,7 @@ export const updateKnowledge = () => {
     url: 'knowledge/knowledges/',
     method: 'PATCH',
   }).then(response => {
-      console.log(response)
+      // console.log(response)
     return response.data;
   });
 }
@@ -53,7 +53,7 @@ export const deleteKnowledge = () => {
     url: 'knowledge/knowledges/',
     method: 'DELETE',
   }).then(response => {
-      console.log(response)
+      // console.log(response)
     return response.data;
   });
 }

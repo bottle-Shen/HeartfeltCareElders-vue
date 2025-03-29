@@ -359,7 +359,7 @@ const resetForm = () => {
     </div>
     <!-- 更多活动弹窗 -->
   <el-dialog v-model="dialogVisible" title="更多活动">
-    <div v-for="activity in moreActivities" :key="activity.id" class="activity-item">
+    <div v-for="activity in moreActivities" :key="activity.id" class="more-activity flex-between">
       <div class="activity-content">
         <p class="activity-title">活动名称：{{ activity.title }}</p>
         <p class="activity-description">活动介绍：{{ activity.description }}</p>
@@ -466,7 +466,7 @@ const resetForm = () => {
       <template #default="scope">
           <div v-if = "isAuthenticated">
             <div v-if="getUserType === 3">
-              <el-button class="primary-button" v-debounce:click="()=>deleteBtn(scope.row.id)">删除活动</el-button>
+              <el-button class="primary-button danger" v-debounce:click="()=>deleteBtn(scope.row.id)">删除活动</el-button>
             </div>
             <div v-else>
               <el-button class="primary-button" v-if="!hasRegistered(scope.row.id) && !activityEndedStatus[scope.row.id]" v-debounce:click="()=>activityBtn(scope.row.id)">确认报名</el-button>
@@ -530,8 +530,13 @@ const resetForm = () => {
     display: flex;
     flex-direction: column;
     flex:1 1 auto;
-    min-width: rem(280);
+    min-width: rem(300);
     // height: 300px;
+  }
+  .more-activity{
+    div{
+      padding-left: 1vw;
+    }
   }
   .is-selected {
   // color: #1989fa;
@@ -608,9 +613,22 @@ const resetForm = () => {
 .calendar-item{
   height: 100%;
   .el-calendar{
+  --el-calendar-selected-bg-color:var(--white-blue-rgb);
   flex:1;
   height: 100%;
   color:var(--blue);
+  .el-button{
+    @include hover{
+      &:hover{
+        background-color:var(--white-blue-rgb);
+        border: 1px solid transparent;
+        color:var(--blue);
+      }
+    }
+  }
+  :deep(.el-calendar-table td.is-today){
+    color:var(--blue);
+  }
   :deep(.el-calendar-table:not(.is-range) td.next),
   :deep(.el-calendar-table:not(.is-range) td.prev) {
     p{
@@ -672,40 +690,5 @@ const resetForm = () => {
 :deep(.el-calendar-table thead th){
  color: var(--dark-blue);
 }
-// .activity-title{
-//   color: #FBBFDD;
-// }
-// .view-more{
-//   font-size: 12px;
-//   color: #F1BA78;
-// }
-// .el-col {
-//   height: calc(100vh - var(--header-height));
-//   border-radius: 4px;
-//   border:1px solid red;
-// }
-// .grid-content {
-//   display: flex;
-//   border-radius: 4px;
-//   min-height: 36px;
-//   flex-direction: column
-// }
-// .item1{
-//   border:1px solid red;
-// }
-// .item2{
-//   border:1px solid red;
-// }
-@media (max-width: 768px) {
-    .worktable-item{
-      flex-direction: column;
-      // padding: 20px 0px;
-    }
-    .worktable-left,
-    .worktable-right {
-      width: 100%;
-      margin-right: 0;
-    }
-  }
 }
 </style>

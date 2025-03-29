@@ -155,6 +155,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
+  // 如果目标路由需要加载数据，设置加载状态
   const store = useStore();
   if (to.meta.requiresLoading) {
     store.commit('loading/SET_LOADING', true);

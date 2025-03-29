@@ -877,7 +877,7 @@ const toggleTableVisibility = () => {
         </span>
       </template>
     </el-dialog>
-        <el-button class="primary-button" @click="toggleTableVisibility">
+        <el-button class="primary-button  danger" @click="toggleTableVisibility">
       {{ isTableVisible ? '隐藏' : '更新/删除' }}
     </el-button>
         <el-button class="primary-button createBtn" @click="showdialogVisible">上传</el-button>
@@ -945,7 +945,7 @@ const toggleTableVisibility = () => {
         <!-- 根据用户是否登录显示不同的按钮 -->
       <template #default="scope">
             <el-button class="primary-button" v-debounce:click="()=>openUpdateDialog(scope.row)">更新</el-button>
-            <el-button class="primary-button" v-debounce:click="()=>deleteBtn(scope.row.id)">删除</el-button>
+            <el-button class="primary-button danger" v-debounce:click="()=>deleteBtn(scope.row.id)">删除</el-button>
       </template>
     </el-table-column>
   </el-table>

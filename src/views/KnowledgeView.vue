@@ -60,8 +60,8 @@ onUnmounted(() => {
             <ul class="cards" v-for="(knowledge,index) in knowledgeData" :key="knowledge.id">
             <li class="card" :class="`color-${index % 4}`">
                 <router-link :to="`/knowledge/${knowledge.id}`">
-                    <p class="tip">{{ knowledge.title }}</p>
-                    <p class="second-text">{{ knowledge.content }}</p>
+                      <p class="tip">{{ knowledge.title }}</p>
+                      <p class="second-text">{{ knowledge.content }}</p>
                 </router-link>
             </li>
          </ul>
@@ -78,7 +78,8 @@ h1{
     padding: 2.1vh 0;
 }
 .knowledge-list{
-    max-height: 80vh; //高度限制
+    // max-height: 80vh; //高度限制
+    height: 100%;
     overflow: auto;
     display: flex;
     justify-content: center;
@@ -98,10 +99,10 @@ h1{
     justify-content: center;
     flex-direction: column;
     text-align: center;
-    height: 100px;
+    height: rem(100);
     // width: 240px;
     // width: 100%;
-    border-radius: 10px;
+    border-radius: rem(10);
     color: var(--black);
     cursor: pointer;
     transition: 400ms;
@@ -110,6 +111,8 @@ h1{
     width: 100%;
     font-size: 1em;
     font-weight: 700;
+    overflow: hidden;// 隐藏超出部分
+    text-overflow: ellipsis; // 显示省略号
     }
     p.second-text {
       width: 100%;

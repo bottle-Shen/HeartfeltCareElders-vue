@@ -321,7 +321,7 @@ const resetSetForm = () => {
             <el-input placeholder="请填写紧急联系人电话" v-model="changedParams.emergency_phone" />
           </template>
           <template v-else>
-            <div v-if="userInfoForm.emergency_phone">{{ userInfoForm.emergency_phone }}</div>
+            <div v-if="userInfoForm.emergency_phone">{{ hidePhoneNumber(userInfoForm.emergency_phone) }}</div>
             <div v-else>暂未填写</div>
           </template>
         </el-form-item>
@@ -424,7 +424,9 @@ const resetSetForm = () => {
     gap: rem(20);
     box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.055);
   }
-
+  .el-form{
+    padding-bottom: rem(5);
+  }
   .socialContainer {
     height: rem(52);
     background-color: var(--white);

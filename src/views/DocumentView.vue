@@ -155,7 +155,7 @@ onMounted(async () => {
       if(getUserType.value === 3){
         const response = await getElderlyList();
         elderlyList.value = response;
-        console.log('elderlyList',elderlyList.value)
+        // console.log('elderlyList',elderlyList.value)
       }
       await getDocumentBtn(currentPage.value, pageSize.value); // 等待异步操作完成
     }
