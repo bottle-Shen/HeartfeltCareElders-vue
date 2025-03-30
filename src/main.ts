@@ -1,4 +1,3 @@
-// import './assets/main.css'
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
@@ -9,7 +8,7 @@ import router from './router'
 // import "element-plus/theme-chalk/el-message-box.css";
 //vuex状态库
 import { store } from './store'
-import { useDebounceDirective,useThrottleDirective } from "@/utils";
+import { useDebounceDirective, useThrottleDirective } from "@/utils";
 
 //导入axios实例
 import request from './utils/request';
@@ -18,8 +17,6 @@ const app = createApp(App)
 
 // 挂载axios实例到Vue原型上，使其在组件中可用
 app.config.globalProperties.$request = request;
-
-
 app.use(router)
 app.use(store)
 // 注册全局防抖指令

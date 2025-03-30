@@ -3,7 +3,7 @@ import { getHealthData, getElderlyHealthData, getElderlyHealthDataList, getElder
 // import { getHealthData, getElderlyHealthData, getElderlyHealthDataList, getElderlyList, uploadHealthData, updateHealthData, deleteHealthData, getSSEUrl } from '@/api/healthData'
 import { formRules2 } from '@/utils/formRules';
 import { useStore } from 'vuex'
-import * as echarts from 'echarts';
+// import * as echarts from 'echarts/core';
 import { formatDate } from '@/utils'
 // import { formatDate, formatDateToISO } from '@/utils'
 import type{ HealthData } from '@/@types/healthdata'
@@ -17,6 +17,7 @@ import { exampleHealthData } from '@/utils/exampleData'// 导入响应式布局�
 //   previous: string;//上一页的 URL,第一页为空null
 // }
 const store = useStore();
+const echarts = window.echarts;
 // 直接从 store 中获取 getters
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);
 const getUserType = computed(() => store.getters['user/getUserType']);

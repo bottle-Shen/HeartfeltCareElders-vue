@@ -12,17 +12,11 @@ import IconsResolver from 'unplugin-icons/resolver'
 
 import Inspect from 'vite-plugin-inspect'
 
+
 const pathSrc = path.resolve(__dirname, 'src')
 
 // https://vite.dev/config/
 export default defineConfig({
-  // resolve: {
-  //   alias: {//别名
-  //     //ES模块
-  //     '@': fileURLToPath(new URL('./src', import.meta.url))
-  //     // "@":path.resolve(__dirname,"./src") CommonJS模块
-  //   }
-  // }
   resolve: {
     alias: {
       '@': pathSrc,
@@ -90,7 +84,7 @@ export default defineConfig({
           'unplugin-icons': ['unplugin-icons'], // Unplugin Icons
           'sentry': ['@sentry/tracing', '@sentry/vue'], // Sentry
         }
-      }
+      },
     }
   },
   css: {
@@ -117,3 +111,4 @@ export default defineConfig({
     port: 8080, // 修改为其他端口
   },
 })
+
