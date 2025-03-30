@@ -70,11 +70,11 @@ const router = createRouter({
             requiresLoading: true,// 是否需要加载动画
           }
         },
-        {// 咨询服务
-          path: '/consult',
-          name: 'consult',
-          component: () => import('../views/ConsultView.vue')
-        },
+        // {// 咨询服务
+        //   path: '/consult',
+        //   name: 'consult',
+        //   component: () => import('../views/ConsultView.vue')
+        // },
         {// 社交互动
           path: '/interact',
           name: 'interact',

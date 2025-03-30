@@ -60,6 +60,39 @@ export default defineConfig({
     }),
     Inspect(),
   ],
+  build: {
+    target: 'esnext',
+    minify: 'terser', // 使用 Terser 进行压缩
+    terserOptions: {
+      compress: {
+        drop_console: true, // 删除所有 console.* 语句
+        drop_debugger: true, // 删除所有 debugger 语句
+      },
+      output: {
+        comments: false,// 删除所有注释
+      },
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue': ['vue'], // Vue 核心库
+          'vue-router': ['vue-router'], // Vue Router
+          'vuex': ['vuex'], // Vuex
+          'element-plus': ['element-plus'], // Element Plus
+          'echarts': ['echarts'], // ECharts
+          'axios': ['axios'], // Axios
+          'crypto-js': ['crypto-js'], // CryptoJS
+          'secure-ls': ['secure-ls'], // Secure LS
+          'jsrsasign': ['jsrsasign'], // jsrsasign
+          'three': ['three'], // Three.js
+          'vanta': ['vanta'], // Vanta
+          'bootstrap': ['bootstrap'], // Bootstrap
+          'unplugin-icons': ['unplugin-icons'], // Unplugin Icons
+          'sentry': ['@sentry/tracing', '@sentry/vue'], // Sentry
+        }
+      }
+    }
+  },
   css: {
     postcss: {
       plugins: [autoprefixer], // 使用 ES 模块导入的 autoprefixer

@@ -14,9 +14,9 @@ const handleSelect = (index: string) => {
     case '4':
       router.push('/interact');
       break;
-    case '5':
-      router.push('/consult');
-      break;
+    // case '5':
+    //   router.push('/consult');
+    //   break;
     case '6':
       router.push('/document');
       break;
@@ -55,10 +55,10 @@ const handleSelect = (index: string) => {
       <el-icon><i-ep-ChatRound /></el-icon>
       <el-icon>互动贴吧</el-icon>
     </el-menu-item>
-    <el-menu-item index="5">
+    <!-- <el-menu-item index="5">
       <el-icon><i-ep-FirstAidKit /></el-icon>
       <el-icon>咨询服务</el-icon>
-    </el-menu-item>
+    </el-menu-item> -->
     <el-menu-item index="6">
       <el-icon><i-ep-MessageBox /></el-icon>
       <el-icon>健康档案</el-icon>
