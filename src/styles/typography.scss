@@ -66,7 +66,7 @@
 }
 // ----------全局字体样式----------
 html {
-    // font-size: rem(16);
+    font-size: rem(16);
     /* 默认字体大小 */
     // @include mobile {
     //         font-size: rem(10);
@@ -85,14 +85,15 @@ html {
         // }
 }
 body{
+    position: relative;
     box-sizing: content-box;
     font-family: var(--primary-font);
     font-size: rem(16);
     font-weight: 400;
     // 隐藏滚动条
-    // ::-webkit-scrollbar {
-    //     display: none;
-    // }
+    ::-webkit-scrollbar {
+        display: none;
+    }
     @include mobile {
         font-size: rem(10);
     }
@@ -116,6 +117,28 @@ b,strong{
 }
 .el-select-dropdown__item.is-selected{
     color: var(--blue);
+}
+:deep(.el-tabs__item.is-active),:deep(.el-tabs__item:hover){
+    color: var(--blue);
+}
+:deep(.el-tabs__active-bar){
+    background-color: var(--blue);
+}
+:deep(.el-date-picker){// 日期选择器样式
+    @include mobile{
+        width: 70vw;
+        max-width: rem(320);
+        // width: rem(300);
+        .el-picker-panel__content {
+            // box-sizing: border-box;
+            margin: 0;
+            // padding: rem(10);
+            width: 100%;
+        }
+        table{
+            table-layout: auto;
+        }
+    }
 }
 // ----------工具类----------
 .text-center {//居中对齐文本
@@ -165,27 +188,9 @@ b,strong{
 // 样式
 .text,
 .title,
-.subtitle,
-.cta {//统一设置字体
+.subtitle {//统一设置字体
     @extend .primary-font;
 }
-
-// .fake-bold {//使用 -webkit-text-stroke 创建伪加粗效果
-//     -webkit-text-stroke-width: rem(0.25);
-//     -webkit-text-stroke-color: var(--cream);
-// }
-
-.title {//标题样式，使用 clamp() 使字体大小响应式
-    font-size: clamp(8px, 2.5vw, 22px);
-    @extend .font-regular;
-    cursor: pointer;
-    @include hover {
-        &:hover {
-            color: var(--blue);
-        }
-    }
-}
-
 
 .body {//正文样式，使用 @extend 继承工具类，并通过 @include desktop 提供响应式调整。
     // @extend .font-light;
@@ -207,12 +212,25 @@ b,strong{
     // }
 }
 
-.title-big {
-    font-size: rem(32);
-    // line-height: 1.1;
-    @include mobile{
-        font-size: rem(20);
+.title {
+    //标题样式，使用 clamp() 使字体大小响应式
+    font-size: clamp(16px, 2.5vw, 22px);
+    @extend .font-regular;
+    cursor: pointer;
+
+    @include hover {
+        &:hover {
+            color: var(--blue);
+        }
     }
+}
+
+.title-big {
+    // font-size: rem(32);
+    font-size: clamp(20px, 2.5vw, 32px);
+    // @include mobile{
+    //     font-size: rem(20);
+    // }
     // @include base.desktop {
     //     font-size: rem(128);
     // }
@@ -225,58 +243,19 @@ b,strong{
 }
 
 .h2 {//大标题样式
-    // @extend .primary-font, .uppercase;
     font-size: rem(32);
     text-align: center;
-    // line-height: 1.2;
-    // text-transform: uppercase;
-    // font-weight: 300;
-    // margin-bottom: rem(-32);
-
-    // @include desktop {
-    //     font-size: rem(264);
-    // }
 }
 
-// 表单样式
-// .form-bg {
-//     background-color: var(--white);
-// }
-// .label{
-//     // padding: 0;
-//     text-align: center;
-//     font-size: rem(16);
-//     color:var(--blue);
-// }
-// .text{
-//     font-size: rem(14);
-//     color: var(--dark-blue);
-// }
-// .link{
-//     // font-size: rem(14);
-//     // color: var(--blue);
-//     cursor: pointer;
-//     @include hover{
-//         &:hover {
-//             color: var(--blue);
-//         }
-//     }
-// }
 // ------按钮样式开始------
 .button {
-    // height: rem(48);
     background-color: var(--blue);
     color: var(--white);
     padding: 0 rem(5);
     cursor: pointer;
     font-size: rem(14);
-    // letter-spacing: 0.2em;
     @include rounded-border;
     @include shadow;
-    @include mobile{
-        color: aqua;
-        // font-size: rem(10);
-    }
     // @include hover {
     //     &:hover {
     //         color: var(--blue);
@@ -288,14 +267,29 @@ b,strong{
 .primary-button {
     background-color: var(--blue);
     color: var(--white);
-    // border-radius: 50px;
     font-size: rem(16);
     padding: 0 rem(5);
     cursor: pointer;
+    @include mobile {
+        font-size: rem(10);
+        padding: 0 rem(3);
+    }
+    @include hover {
+        &:hover {
+            color: var(--blue);
+            background-color: transparent;
+        }
+    }
 }
 .primary-button.danger {
     background-color: var(--red);
     color: var(--white);
+    @include hover {
+        &:hover {
+            color: var(--red);
+            background-color: transparent;
+        }
+    }
 }
 .submit-button {
     border-radius: 50px;

@@ -172,7 +172,7 @@ watch(() => route.params.id, (newId) => {
   initializeWebSocketConnection(newPostId, userId.value);
 
   // 重新加载帖子和评论数据
-  loadPostAndComments(newPostId);
+  loadPostAndComments(newPostId,route);
 });
 </script>
 <template>
@@ -190,18 +190,20 @@ watch(() => route.params.id, (newId) => {
             </el-carousel-item>
           </el-carousel>
           <!-- 判断是否有视频 -->
-           <video v-else-if="post?.video" controls class="video-player w-full h-full">
+           <video v-else-if="post?.video" controls class="video-player w-full h-full" autoplay>
              <source :src="post.video" type="video/mp4">
               您的设备不支持视频播放。
             </video>
             <!-- 默认情况：显示封面图 -->
              <img v-else :src="post?.image" :alt="post?.title"/>
       </span>
-      <div class="post-info">
+      <div class="post-infotime">
+        <div class="post-info">
         <p>{{ post?.user.username }}</p>
         <p>{{ post?.title }}&nbsp;{{ post?.content }}</p>
       </div>
       <p class="time body-s">发布时间：{{ formatDate(post?.created_at) }}</p>
+      </div>
     </div>
     <div class="actions">
       <div class="actions-item">
@@ -446,6 +448,25 @@ watch(() => route.params.id, (newId) => {
         display: flex;
         align-items: flex-end;
         z-index: 3;
+      }
+    }
+    @include mobile{
+      .post-infotime{
+        .post-info{
+          width: 100%;
+          bottom: rem(30);
+          p{
+            white-space: nowrap; // 防止文字换行
+            overflow: hidden; // 隐藏超出部分
+            text-overflow: ellipsis; // 显示省略号
+          }
+        }
+        .time{
+          width: 100%;
+          white-space: nowrap; // 防止文字换行
+          overflow: hidden; // 隐藏超出部分
+          text-overflow: ellipsis; // 显示省略号
+        }
       }
     }
 }

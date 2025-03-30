@@ -10,7 +10,8 @@ const postList = computed(() => store.state.post.searchPostList);
 const socialDataContainerRef = ref<HTMLElement | null>(null)// 滚动容器的引用
 const loading = computed(() => store.state.post.loadingSearchPosts)// 获取加载状态
 const finished = computed(() => store.state.post.finishedSearchPosts)// 获取加载完成状态
-
+// 检测是否有搜索结果
+const noResults = computed(() => postList.value.length === 0);
 // 使用无限滚动逻辑
 const { cleanup: cleanupPostList, restoreScrollPosition: restorePostListScroll,
       resetScrollPosition:resetPostListScroll,
@@ -45,7 +46,7 @@ onMounted(async () => {
       console.error('搜索失败：', error);
     }
   }
-  console.log('恢复滚动位置');
+  // console.log('恢复滚动位置');
     restorePostListScroll()// 恢复滚动位置
     addPostListeners()
     store.commit('loading/SET_LOADING', false);
@@ -89,6 +90,9 @@ onBeforeRouteLeave((to) => {
       <h1>搜索结果</h1>
     </div>
     <div ref="socialDataContainerRef" class="post-list">
+      <div v-if="noResults" class="no-results">
+        暂无搜索结果
+      </div>
       <div v-for="(post,index) in postList" :key="post.id" class="post-item">
         <router-link :to="`/searchpost/${post.id}`" @click="recordViewHistory(post)">
           <!-- 添加对post和post.user的校验，否则在重新回到列表页时user字段为undefined报错。 -->
@@ -98,7 +102,7 @@ onBeforeRouteLeave((to) => {
       <!-- 加载状态 -->
         <LoadingCom v-if="loading" class="loading"/>
         <!-- 没有更多数据 -->
-        <div v-if="finished" class="finished">没有更多数据了</div>
+        <div v-if="!noResults && finished" class="finished">没有更多数据了</div>
     </div>
   </div>
 </template>

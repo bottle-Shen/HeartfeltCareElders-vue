@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { useStore } from 'vuex';
+import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
-import type { SocialData } from '@/@types/social';
-import { getUserSocial } from '@/api/social'
-const store = useStore();
-const user = computed(() => store.getters['user/getUser']);
-const router = useRouter();
+import type { SocialData } from '@/@types/social'
+const store = useStore()
+const user = computed(() => store.getters['user/getUser'])
+const router = useRouter()
 const activeName = ref('1')// 默认选中的项
 // 获取最后三个帖子并倒序显示的通用函数
 //参数类型ComputedRef<SocialData[]>，可以直接传入 computed 的结果
@@ -209,6 +208,9 @@ onMounted(async() => {
         border-radius: rem(10);
       }
     }
+  }
+  @include mobile{
+    width: 100%;
   }
 }
 </style>

@@ -4,26 +4,3 @@
 @function rem($px, $base-font-size-px: 16) {
     @return #{calc($px / $base-font-size-px)}rem;
 };
-
-// @function str-replace($string, $search, $replace) {
-//     $index: str-index($string, $search);
-
-//     @if $index {
-//         @return str-slice($string, 1, $index - 1)+$replace +str-replace(str-slice($string, $index + str-length($search)), $search, $replace);
-//     }
-
-//     @return $string;
-// }
-
-
-// @function tint-color($color, $weight) {
-//     @return mix(white, $color, $weight);
-// }
-
-// @function shade-color($color, $weight) {
-//     @return mix(black, $color, $weight);
-// }
-
-// @function shift-color($color, $weight) {
-//     @return if($weight > 0, shade-color($color, $weight), tint-color($color, -$weight));
-// }

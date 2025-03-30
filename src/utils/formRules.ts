@@ -88,7 +88,7 @@ export const formRules2: FormRules = reactive({
 })
 export const formRules3: FormRules = reactive({
   //常用手机号码
-    common_phone: [
+    'user.common_phone': [
         { required: false, message: '请输入常用手机号', trigger: 'blur' },
         { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
     ],

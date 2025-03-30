@@ -1,8 +1,5 @@
 <script setup lang="ts">
-// import SetCom from './BottomCom.vue'
-
 const router = useRouter();
-
 const handleSelect = (index: string) => {
   switch (index) {
     case '1':
@@ -25,6 +22,9 @@ const handleSelect = (index: string) => {
       break;
     case '7':
       router.push({ path: '/userInfo', query: { tab: 'first' } });
+      break;
+    case '8':
+      router.push('/setting');
       break;
     default:
       break;
@@ -67,11 +67,11 @@ const handleSelect = (index: string) => {
       <el-icon><i-ep-User /></el-icon>
       <el-icon>个人主页</el-icon>
     </el-menu-item>
+    <el-menu-item index="8">
+      <el-icon><i-ep-Setting /></el-icon>
+      <el-icon>设置</el-icon>
+    </el-menu-item>
   </el-menu>
-  <!-- <div class="sidebar-bottom">
-    <SetCom/>
-    <SetCom/>
-  </div> -->
 </template>
 
 <style scoped lang="scss">

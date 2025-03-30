@@ -34,4 +34,7 @@ const handleConfirmPasswordInput = (value: string) => {
 .el-input{
     height: rem(48);
 }
+.el-form-item{
+    padding-bottom: rem(18);
+}
 </style>

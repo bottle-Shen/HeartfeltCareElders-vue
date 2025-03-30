@@ -2,8 +2,6 @@
 // import  SearchCom from './SearchCom.vue'
 import { useStore } from 'vuex';
 import UserInfoCom from './UserInfoCom.vue'
-import { Search } from '@element-plus/icons-vue'
-import { searchPost } from '@/api/social'
 const store = useStore();
 
 // 直接从 store 中获取 getters
@@ -51,13 +49,14 @@ const goToUserInfo = () => {
     <!-- <el-input class="search h-full" @keyup.enter="handleSearch" v-model="searchQuery" placeholder="请输入搜索内容" :prefix-icon="Search" /> -->
     <SearchCom class="search" @search="handleSearch" :placeholder="'请输入想搜索的帖子内容'" @clear="handleClear"/>
     <div v-if="isAuthenticated" class="info flex-end">
-      <div class="info-items">
+      <!-- <div class="info-items">
       <div class="icon-container">
       <el-icon class="icon" @click="$router.push('/setting')">
         <i-ep-Tools/>
       </el-icon>
-      <span>设置</span></div>
+      <span>设置</span>
     </div>
+    </div> -->
       <!-- <el-icon class="info-items icon">
         <i-ep-BellFilled />
       </el-icon> -->
@@ -76,6 +75,11 @@ const goToUserInfo = () => {
     </div>
     <i-ep-Menu @click="toggleHeaderMenu" class="header-menu"/>
   </div>
+  <transition name="slide-x">
+    <div class="header-menu-com" v-show="headerMenuVisible">
+      <UserInfoCom />
+    </div>
+  </transition>
 </template>
 <style scoped lang="scss">
 .element-header{
@@ -192,5 +196,14 @@ const goToUserInfo = () => {
     }
   }
 }
-
+.header-menu-com{
+  display: none;
+ @include mobile{
+  display: block;
+  width: 75%;
+  max-width: rem(350);
+  position: absolute;
+  right: 0;
+ }
+}
 </style>

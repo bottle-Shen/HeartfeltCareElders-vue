@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { updateTheme,currentThemeIndex } from '@/utils/modules/themeUtils'
+import SecureLS from 'secure-ls'
+const secret = import.meta.env.VITE_ENCRYPTION_SECRET || 'default-secret'
+const ls = new SecureLS({ encodingType: 'aes', encryptionSecret: secret });
+
 import { useStore } from 'vuex';
 const store = useStore();
 
@@ -46,11 +51,19 @@ const updateIsMobile = () => {
   // 判断是否为移动端
   isMobile.value = window.innerWidth <= getMobileBreakpoint();
 };
-
+// 初始化主题设置-加载本地存储的主题设置
+const initializeTheme = () => {
+  const savedThemeIndex = ls.get('currentThemeIndex');
+  if (savedThemeIndex !== null) {
+    currentThemeIndex.value = parseInt(savedThemeIndex, 10);
+  }
+  updateTheme(currentThemeIndex.value); // 使用保存的主题或默认主题
+};
 // 在组件挂载时初始化 isMobile 的值
 onMounted(() => {
   updateIsMobile(); // 初始化 isMobile 的值
   window.addEventListener('resize', updateIsMobile); // 监听窗口大小变化
+  initializeTheme(); // 初始化主题设置
 });
 
 // 在组件销毁时移除监听器
@@ -67,14 +80,11 @@ onUnmounted(() => {
     </div>
     <!-- 如果 isLoading 为 false，显示正常内容 -->
   <RouterView/>
-  <!-- <div class="body">
-    <RouterView/>
-  </div> -->
 </template>
 
 <style lang="scss" scoped>
 .isLoading {
   // 全局加载样式-typography.scss
-  // 这里去掉.isLoading则失效
+  position: absolute;
 }
 </style>

@@ -33,9 +33,9 @@ import type {SocialData} from '@/@types/social'
 import { addPost } from '@/api/social'
 import { useStore } from 'vuex'
 import { useInfiniteScroll } from '@/utils'
+import type { UploadFile, UploadFiles } from 'element-plus';
 
 const store = useStore()
-const userId = store.getters['user/getUserId']//获取用户id
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated'])//判断用户是否登录
 const showPostForm = ref(false); // 控制表单弹窗的显示
 const socialData = computed(() => store.state.post.socialData)// 获取帖子数据
@@ -93,8 +93,8 @@ const postFormRules = {
   ]
 }
 
-const videoFileList = ref([]);
-const imageFileList = ref([]);
+const videoFileList = ref<UploadFiles>([]);
+const imageFileList = ref<UploadFiles>([]);
 
 // 封面图上传验证
 const onCoverImageChange = (event: Event) => {
@@ -108,7 +108,7 @@ const onCoverImageChange = (event: Event) => {
 
 // 视频上传验证
 const beforeVideoUpload = (file:File) => {
-  console.log("触发视频上传验证", file);
+  // console.log("触发视频上传验证", file);
   const isVideo = file.type.startsWith('video/');
   if (!isVideo) {
     ElMessage.error('只能上传视频文件');
@@ -116,17 +116,17 @@ const beforeVideoUpload = (file:File) => {
   return isVideo;
 };
 // 视频文件发生变化时
-const handleVideoChange = (file, fileList) => {
-  console.log("视频文件发生变化", file, fileList);
-  if (beforeVideoUpload(file.raw)) {// 手动调用beforeVideoUpload
-    postForm.value.video = file.raw; // 存储视频文件对象
+const handleVideoChange = (file: UploadFile, fileList: UploadFiles) => {
+  // console.log("视频文件发生变化", file, fileList);
+  if (beforeVideoUpload(file.raw!)) {// 手动调用beforeVideoUpload
+    postForm.value.video = file.raw!; // 存储视频文件对象
   }
   videoFileList.value = fileList; // 同步到 videoFileList
 };
 
 // 多图片上传验证
-const beforeImageUpload = (file) => {
-  console.log("触发图片上传验证", file);
+const beforeImageUpload = (file:File) => {
+  // console.log("触发图片上传验证", file);
   const isImage = file.type.startsWith('image/');
   if (!isImage) {
     ElMessage.error('只能上传图片文件');
@@ -134,28 +134,39 @@ const beforeImageUpload = (file) => {
   return isImage;
 };
 // 图片组文件发生变化时
-const handleImageChange = (file, fileList) => {
-  console.log("图片组文件发生变化", file, fileList);
-  postForm.value.images = fileList.map((item: any) => item.raw); // 更新图片文件列表
+const handleImageChange = (file: UploadFile,fileList: UploadFiles) => {
+  // console.log("图片组文件发生变化", file, fileList);
+  // 过滤掉 undefined 值，并提取 raw 属性
+  const validFiles = fileList
+    .filter((item) => item.raw !== undefined)
+    .map((item) => item.raw!);  // 使用非空断言操作符 (!) 确保 item.raw 是 File 类型
+  postForm.value.images = validFiles;// 更新图片文件列表
   imageFileList.value = fileList; // 同步到 imageFileList
 };
 // 图片移除时
-const handleImageRemove = (file, fileList) => {
-  console.log("移除图片", file);
-  postForm.value.images = fileList.map((item: any) => item.raw); // 更新图片文件列表
+const handleImageRemove = (file: UploadFile,fileList: UploadFiles) => {
+  // console.log("移除图片", file);
+  const validFiles = fileList
+    .filter((item) => item.raw !== undefined)
+    .map((item) => item.raw!);
+  postForm.value.images = validFiles; // 更新图片文件列表
   imageFileList.value = fileList; // 同步到 imageFileList
 };
 // 视频上传
-const handleVideoSuccess = (file) => {
-  postForm.value.video = file.raw; // 存储文件对象
+const handleVideoSuccess = (file: UploadFile) => {
+  if (file.raw) {
+    postForm.value.video = file.raw; // 存储文件对象
+  } else {
+    console.warn("文件对象为空，无法存储");
+  }
 };
 
 // 多图片上传
-const handleImageSuccess = (response, file) => {
+const handleImageSuccess = (file: File) => {
   postForm.value.images.push(file); // 存储文件对象
 };
 
-const handleVideoRemove = (file, fileList) => {
+const handleVideoRemove = () => {// 移除视频
   postForm.value.video = null;
 };
 
@@ -202,42 +213,42 @@ const addPostBtn = async () => {
     ElMessage.error('帖子发布失败，请稍后再试');
   }
 }
-const saveToDraft = () => {
-  const draftData = {
-    title: postForm.value.title,
-    content: postForm.value.content,
-    // 不保存文件对象，因为它们无法存储到 localStorage
-  };
+// const saveToDraft = () => {
+//   const draftData = {
+//     title: postForm.value.title,
+//     content: postForm.value.content,
+//     // 不保存文件对象，因为它们无法存储到 localStorage
+//   };
 
-  // 从 localStorage 获取现有的草稿列表
-  const drafts = JSON.parse(localStorage.getItem('drafts') || '[]');
+//   // 从 localStorage 获取现有的草稿列表
+//   const drafts = JSON.parse(localStorage.getItem('drafts') || '[]');
 
-  // 添加新的草稿
-  drafts.push(draftData);
+//   // 添加新的草稿
+//   drafts.push(draftData);
 
-  // 保存到 localStorage
-  localStorage.setItem('drafts', JSON.stringify(drafts));
+//   // 保存到 localStorage
+//   localStorage.setItem('drafts', JSON.stringify(drafts));
 
-  ElMessage.success('帖子已保存到草稿箱');
-};
-const handleClose = (done:() => void) => {
-  if (postForm.value.title || postForm.value.content || postForm.value.coverImage || postForm.value.video || postForm.value.images.length > 0) {
-    ElMessageBox.confirm('您有未保存的帖子内容，是否保存到草稿箱？', '提示', {
-      confirmButtonText: '保存到草稿箱',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }).then(() => {
-      // 保存到草稿箱
-      saveToDraft();
-      done();
-    }).catch(() => {
-      // 用户取消保存
-      done();
-    });
-  } else {
-    done();
-  }
-};
+//   ElMessage.success('帖子已保存到草稿箱');
+// };
+// const handleClose = (done:() => void) => {
+//   if (postForm.value.title || postForm.value.content || postForm.value.coverImage || postForm.value.video || postForm.value.images.length > 0) {
+//     ElMessageBox.confirm('您有未保存的帖子内容，是否保存到草稿箱？', '提示', {
+//       confirmButtonText: '保存到草稿箱',
+//       cancelButtonText: '取消',
+//       type: 'warning'
+//     }).then(() => {
+//       // 保存到草稿箱
+//       saveToDraft();
+//       done();
+//     }).catch(() => {
+//       // 用户取消保存
+//       done();
+//     });
+//   } else {
+//     done();
+//   }
+// };
 // 关闭表单弹窗
 // const handleClose = () => {
 //   showPostForm.value = false
@@ -268,10 +279,10 @@ onUnmounted(() => {
       </div>
     </div>
     <!-- 发布帖子的表单 -->
+     <!-- :before-close="handleClose" -->
     <el-dialog
       title="发布帖子"
       v-model="showPostForm"
-      :before-close="handleClose"
     >
       <el-form
       class="w-full"

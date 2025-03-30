@@ -4,9 +4,9 @@ import { useRoute } from "vue-router";
 import { getKnowledgeById } from "@/api/knowledge";
 import type { IKnowledge } from "@/@types/knowledge";
 import { formatDate } from '@/utils'
-import { useStore } from 'vuex'
+// import { useStore } from 'vuex'
 // 定义响应式数据
-const store = useStore()
+// const store = useStore()
 const route = useRoute();
 const router = useRouter(); // 获取路由实例
 const knowledge = ref<IKnowledge | null>(null);
@@ -65,16 +65,5 @@ onUnmounted(() => {
         justify-content: flex-end;
         @extend .body-s;
     }
-}
-.knowledge-detail {
-    // max-width: 800px;
-    // margin: 0 auto;
-    // padding: 20px;
-}
-
-.knowledge-image {
-    // max-width: 100%;
-    // height: auto;
-    // border-radius: 8px;
 }
 </style>

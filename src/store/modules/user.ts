@@ -74,7 +74,7 @@ export const userModule: Module<UserState, RootState> = {
       // 恢复默认主题
       updateTheme(0);
       // console.log('currentThemeIndex', ls.get('currentThemeIndex'));
-      // ls.remove('currentThemeIndex');// 清空本地存储中存储的当前主题索引
+      ls.remove('currentThemeIndex');// 清空本地存储中存储的当前主题索引
       sessionStorage.clear(); // 清空会话存储中的所有信息
       
       // 清空 post 模块的 Vuex 状态

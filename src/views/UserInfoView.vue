@@ -2,17 +2,12 @@
 import { userInfo,userInfoForm } from '@/utils/form'
 import type { user,UserInfoFormType,IUserInfo, elderlyInfoResponse, familyInfoResponse, caregiverInfoResponse } from '@/@types/userInfo'
 import { getUserInfo, updateUserInfo,uploadAvatar,uploadBackground } from '@/api/userInfo';
-import { hidePhoneNumber } from '@/utils/modules/hidePhoneNumber';
-// import { formRules } from '@/utils/formRules'
-import type { userActivityData } from "@/@types/activities"
-import { getUserActivityData } from '@/api/activities';
 import { ElMessage, ElDialog } from 'element-plus'
 import type { TabsPaneContext } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import type { UploadProps,UploadFile } from 'element-plus'
 import { useStore } from 'vuex';
-import { countdown, isCounting, sendSms } from '@/utils/modules/captchaUtils'
-import { UserLikePost, getUserSocial } from '@/api/social'
+import { countdown, isCounting } from '@/utils/modules/captchaUtils'
 import { useInfiniteScroll } from '@/utils'
 import type {SocialData} from '@/@types/social'
 import router from '@/router';
@@ -21,19 +16,16 @@ import { useRoute} from 'vue-router';
 const route = useRoute();
 const activeName = ref('first')// 默认选中的标签页
 const userPostsContainerRef = ref<HTMLElement | null>(null)// 滚动容器的引用
-const userActivitiesData = ref<userActivityData[]>([])// 用户参加的活动数据
 const viewHistory = computed(() => store.state.post.viewHistory);// 仓库获取观看历史
 // 获取用户帖子和点赞帖子的数据
 const userPosts = computed(() => store.state.post.userPosts);
 const likedPosts = computed(() => store.state.post.likedPosts);
-// 加载状态和完成状态
+// 加载状态
 const loadingUserPosts = computed(() => store.state.post.loadingUserPosts);
-const finishedUserPosts = computed(() => store.state.post.finishedUserPosts);
 const loadingLikedPosts = computed(() => store.state.post.loadingLikedPosts);
-const finishedLikedPosts = computed(() => store.state.post.finishedLikedPosts);
 const loadingViewHistory = computed(() => store.state.post.loadingViewHistory);
-const finishedViewHistory = computed(() => store.state.post.finishedViewHistory);
-const handleClick = (tab: TabsPaneContext, event: Event) => {
+
+const handleClick = (tab: TabsPaneContext) => {
   // console.log(tab, event);
   // console.log(tab.props.name); // 使用 tab.props.name
   // 更新路由，添加当前激活的标签页名称作为查询参数
@@ -60,9 +52,6 @@ const handleClick = (tab: TabsPaneContext, event: Event) => {
   } else if (tab.props.name === 'third') {
     getUserViewHistoryData();
   }
-  // else if (tab.props.name === 'fourth') {
-  //   fetchUserActivityData();
-  // }
   // 清除滚动位置
   const container = userPostsContainerRef.value;
   if (container) {
@@ -86,21 +75,7 @@ const getUserLikeData = async () => {
 const getUserViewHistoryData = async () => {
   await store.dispatch('post/loadViewHistoryFromLocalStorage');
 }
-// 用户参加的活动
-// const fetchUserActivityData = async () => {
-//   const response = await getUserActivityData();
-//   console.log('用户参加的活动数据', response);
-//   // 处理用户活动数据
-//   userActivitiesData.value = response.map((activity: userActivityData) => {
-//     return {
-//       ...activity,
-//       event: {
-//         ...activity.event,
-//       },
-//     }
-//   })
-//   store.commit('activities/setUserActivity', userActivitiesData.value)
-// }
+
 // 使用无限滚动逻辑-用户发布的帖子-用户点赞的帖子
 const { cleanup: cleanupUserPosts,
   restoreScrollPosition: restoreUserPostsScroll,
@@ -141,9 +116,7 @@ const currentUploadType = ref<string | null>(null); // 当前上传类型：'ava
 const signatureDefaultText = "用一段简单的个性介绍，展示您的独特风采~"// 定义个性签名默认文本
 const showVerificationCode = ref(false); // 是否显示验证码相关字段
 const parentAddress = ref<string>(''); // 存储地址选择器的值
-// // 当前用户的 ID
-// const currentUserId = store.state.user.user.id;
-// console.log('当前用户的 ID:', currentUserId);
+
 // 监听 parentAddress 的变化，并同步到 changedParams
 watch(parentAddress, (newValue) => {
   changedParams.value.user.address = newValue;
@@ -180,9 +153,6 @@ onMounted(async() => {
       } else if (activeName.value === 'third') {
         getUserViewHistoryData(); // 加载用户观看历史
       }
-      // else if (activeName.value === 'fourth') {
-      //   fetchUserActivityData(); // 加载用户参加的活动数据
-      // }
     }
   } catch (error) {
     console.error('加载用户资料失败:', error);
@@ -313,19 +283,19 @@ const handleAvatarSuccess: UploadProps['onSuccess'] = async (
       avatarUrl.value = URL.createObjectURL(file.raw!); // 更新头像预览
 }
 // 头像上传前验证
-const beforeAvatarUpload: UploadProps['beforeUpload'] = (file: File) => {
-  // const isJPG = file.type === "image/jpeg";
-  // const isPNG = file.type === "image/png";
-  // const isLt2M = file.size / 1024 / 1024 < 2;
-  //     if (!isJPG && !isPNG) {
-  //       ElMessage.error("上传头像图片只能是 JPG 或 PNG 格式!");
-  //       return false
-  //     } else if (!isLt2M) {
-  //       ElMessage.error("上传头像图片大小不能超过 2MB!");
-  //       return false
-  //     }
-  //     return true
-}
+// const beforeAvatarUpload: UploadProps['beforeUpload'] = (file: File) => {
+//   const isJPG = file.type === "image/jpeg";
+//   const isPNG = file.type === "image/png";
+//   const isLt2M = file.size / 1024 / 1024 < 2;
+//       if (!isJPG && !isPNG) {
+//         ElMessage.error("上传头像图片只能是 JPG 或 PNG 格式!");
+//         return false
+//       } else if (!isLt2M) {
+//         ElMessage.error("上传头像图片大小不能超过 2MB!");
+//         return false
+//       }
+//       return true
+// }
 // 头像选择后生成本地预览
 const handleAvatarChange = (uploadFile: UploadFile) => {
   const rawFile = uploadFile.raw; // 获取原始文件对象
@@ -386,9 +356,9 @@ const cancelEdit = () => {
   isEditMode.value = false; // 退出编辑模式
 };
 // 弹窗关闭时的回调
-const handleDialogClose = () => {
-  cancelEdit();// 取消编辑
-};
+// const handleDialogClose = () => {
+//   cancelEdit();// 取消编辑
+// };
 // 背景图上传成功（仅本地预览）
 const handleBackgroundSuccess: UploadProps['onSuccess'] = async (
       file
@@ -397,19 +367,19 @@ const handleBackgroundSuccess: UploadProps['onSuccess'] = async (
 }
 
 // 背景图上传前验证
-const beforeBackgroundUpload: UploadProps['beforeUpload'] = (file: File) => {
-  // const isJPG = file.type === "image/jpeg";
-  // const isPNG = file.type === "image/png";
-  // const isLt2M = file.size / 1024 / 1024 < 2;
-  //     if (!isJPG && !isPNG) {
-  //       ElMessage.error("上传背景图片只能是 JPG 或 PNG 格式!");
-  //       return false
-  //     } else if (!isLt2M) {
-  //       ElMessage.error("上传背景图片大小不能超过 2MB!");
-  //       return false
-  //     }
-  //     return true
-}
+// const beforeBackgroundUpload: UploadProps['beforeUpload'] = (file: File) => {
+//   const isJPG = file.type === "image/jpeg";
+//   const isPNG = file.type === "image/png";
+//   const isLt2M = file.size / 1024 / 1024 < 2;
+//       if (!isJPG && !isPNG) {
+//         ElMessage.error("上传背景图片只能是 JPG 或 PNG 格式!");
+//         return false
+//       } else if (!isLt2M) {
+//         ElMessage.error("上传背景图片大小不能超过 2MB!");
+//         return false
+//       }
+//       return true
+// }
 
 // 背景图选择后生成本地预览
 const handleBackgroundChange = (uploadFile: UploadFile) => {
@@ -510,13 +480,13 @@ onBeforeRouteLeave(() => {
       </template>
       <template v-else>
         <!-- 编辑模式：显示上传组件 -->
+         <!-- :before-upload="beforeBackgroundUpload" -->
         <el-upload
           class="background background-uploader"
           action=""
           :show-file-list="false"
           :on-change="handleBackgroundChange"
           :on-success="handleBackgroundSuccess"
-          :before-upload="beforeBackgroundUpload"
           :headers="uploadHeaders"
           name="background"
         >
@@ -537,13 +507,13 @@ onBeforeRouteLeave(() => {
       </template>
       <template v-else>
         <!-- 编辑模式：显示上传组件 -->
+         <!-- :before-upload="beforeAvatarUpload" -->
         <el-upload
           class="avatar avatar-uploader"
           action=""
           :show-file-list="false"
           :on-change="handleAvatarChange"
           :on-success="handleAvatarSuccess"
-          :before-upload="beforeAvatarUpload"
           :headers="uploadHeaders"
           name="avatar"
         >
@@ -561,7 +531,7 @@ onBeforeRouteLeave(() => {
           <el-input placeholder="请输入用户名" v-model="changedParams.user.username" />
         </template>
         <template v-else>
-          <div>{{ userInfoForm.username }}</div>
+          <div class="form-username">{{ userInfoForm.username }}</div>
         </template>
       </el-form-item>
 
@@ -582,49 +552,11 @@ onBeforeRouteLeave(() => {
           <div>{{ userInfoForm.sex }}</div>
         </template>
       </el-form-item>
-
-      <!-- 绑定手机号 -->
-      <!-- <el-form-item prop="phone">
-        <template v-if="isEditMode">
-          <el-input placeholder="请输入手机号" v-model="changedParams.user.phone" />
-          <el-button
-            v-if="changedParams.user.phone"
-            type="primary"
-            @click="sendSms"
-            :disabled="isCounting"
-            :loading="isCounting"
-          >
-            {{ isCounting ? `${countdown}秒后重新获取` : "获取验证码" }}
-          </el-button>
-        </template>
-        <template v-else>
-          <div>{{ hidePhoneNumber(userInfoForm.phone) }}</div>
-        </template>
-      </el-form-item> -->
-
-      <!-- 常用手机号 -->
-      <!-- <el-form-item prop="common_phone">
-        <template v-if="isEditMode">
-          <el-input placeholder="请输入常用手机号" v-model="changedParams.user.common_phone" />
-          <el-button
-            v-if="changedParams.user.common_phone"
-            type="primary"
-            @click="sendSms"
-            :disabled="isCounting"
-            :loading="isCounting"
-          >
-            {{ isCounting ? `${countdown}秒后重新获取` : "获取验证码" }}
-          </el-button>
-        </template>
-        <template v-else>
-          <div>{{ hidePhoneNumber(userInfoForm.common_phone) }}</div>
-        </template>
-      </el-form-item> -->
-
       <!-- 出生日期 -->
       <el-form-item prop="birthday">
         <template v-if="isEditMode">
           <el-date-picker
+          :teleported="false"
             v-model="changedParams.user.birthday"
             type="date"
             placeholder="请选择您的出生日期"
@@ -662,113 +594,17 @@ onBeforeRouteLeave(() => {
           <div>{{ userInfoForm.address }}</div>
         </template>
       </el-form-item>
-
-      <!-- 根据用户类型显示不同的信息 -->
-      <div class="elderly-item" v-if="isElderlyUserInfo(userInfoForm)">
-        <!-- 紧急联系人 -->
-        <!-- <el-form-item prop="emergency_contact">
-          <template v-if="isEditMode">
-            <el-input placeholder="请填写紧急联系人" v-model="changedParams.emergency_contact" />
-          </template>
-          <template v-else>
-            <div>{{ userInfoForm.emergency_contact }}</div>
-          </template>
-        </el-form-item> -->
-
-        <!-- 紧急联系人电话 -->
-        <!-- <el-form-item prop="emergency_phone">
-          <template v-if="isEditMode">
-            <el-input placeholder="请填写紧急联系人电话" v-model="changedParams.emergency_phone" />
-          </template>
-          <template v-else>
-            <div>{{ userInfoForm.emergency_phone }}</div>
-          </template>
-        </el-form-item> -->
-
-        <!-- 健康状况 -->
-        <!-- <el-form-item label="健康状况" prop="health_status">
-          <template v-if="isEditMode">
-            <el-input v-model="changedParams.health_status" />
-          </template>
-          <template v-else>
-            <div>{{ userInfoForm.health_status }}</div>
-          </template>
-        </el-form-item> -->
-      </div>
-
-      <div class="family-item" v-else-if="isFamilyUserInfo(userInfoForm)">
-        <!-- 与老人关系 -->
-        <el-form-item label="与老人关系" prop="relation">
-          <template v-if="isEditMode">
-            <el-select v-model="changedParams.relation">
-              <el-option label="母女/母子" value="母女/母子" />
-              <el-option label="父女/父子" value="父女/父子" />
-              <el-option label="爷孙" value="爷孙" />
-              <el-option label="其它" value="其它" />
-            </el-select>
-          </template>
-          <template v-else>
-            <div>{{ userInfoForm.relation }}</div>
-          </template>
-        </el-form-item>
-
-        <!-- 现在家庭住址 -->
-        <el-form-item label="现在家庭住址" prop="common_address">
-          <template v-if="isEditMode">
-            <el-input v-model="changedParams.common_address" />
-          </template>
-          <template v-else>
-            <div>{{ userInfoForm.common_address }}</div>
-          </template>
-        </el-form-item>
-      </div>
-
-      <div class="caregiver-item" v-else-if="isCaregiverUserInfo(userInfoForm)">
-        <!-- 部门 -->
-        <el-form-item label="部门" prop="department">
-          <template v-if="isEditMode">
-            <el-input v-model="changedParams.department" />
-          </template>
-          <template v-else>
-            <div>{{ userInfoForm.department }}</div>
-          </template>
-        </el-form-item>
-
-        <!-- 职位 -->
-        <el-form-item label="职位" prop="position">
-          <template v-if="isEditMode">
-            <el-input v-model="changedParams.position" />
-          </template>
-          <template v-else>
-            <div>{{ userInfoForm.position }}</div>
-          </template>
-        </el-form-item>
-      </div>
-
-      <div class="noFound-item" v-else>
-        <div>未找到用户信息</div>
-      </div>
-
       <!-- 操作按钮 -->
       <el-form-item class="button-group">
         <template v-if="!isEditMode">
-          <el-button type="primary" @click="toggleEditMode">修改资料</el-button>
+          <el-button class="primary-button" @click="toggleEditMode">修改资料</el-button>
         </template>
         <template v-else>
-          <el-button type="primary" @click="saveUserInfo">保存</el-button>
-          <el-button @click="toggleEditMode">取消</el-button>
+          <el-button class="primary-button" @click="saveUserInfo">保存</el-button>
+          <el-button class="primary-button" @click="toggleEditMode">取消</el-button>
         </template>
       </el-form-item>
     </el-form>
-
-    <!-- 实名认证 -->
-    <!-- <div v-if="!changedParams.user.real_name || !changedParams.user.id_card">
-      <el-button type="primary" @click="submitRealNameAndIdCard">前往实名认证</el-button>
-    </div>
-    <div v-else>
-      <span>已实名</span>
-      <el-button type="primary" @click="submitRealNameAndIdCard">点击更换</el-button>
-    </div> -->
    </div>
    <div class="userInfo-right">
       <el-tabs v-model="activeName" class="demo-tabs" @tab-click="handleClick">
@@ -834,17 +670,6 @@ onBeforeRouteLeave(() => {
             没有更多数据
           </div> -->
         </el-tab-pane>
-        <!-- <el-tab-pane label="活动" name="fourth">
-          <ul class="userpost-list" v-if="userActivitiesData.length > 0">
-            <li class="userpost-item" v-for="activity in userActivitiesData" :key="activity.id">
-              <h3 class="title">{{ activity.event.title }}</h3>
-              <p class="body-s text">{{ activity.event.description }}</p>
-              <div class="userpost-item-bottom">
-                <span class="userpost-item-bottom-like"></span>
-              </div>
-            </li>
-          </ul>
-        </el-tab-pane> -->
       </el-tabs>
    </div>
   </div>
@@ -923,9 +748,9 @@ onBeforeRouteLeave(() => {
     }
   }
   .el-form{
-    height: rem(320);
-    overflow: hidden; // 隐藏溢出部分
-    text-overflow: ellipsis; // 溢出时显示省略号
+    height: rem(350);
+    // overflow: hidden; // 隐藏溢出部分
+    // text-overflow: ellipsis; // 溢出时显示省略号
     display: flex;
     flex-direction: column;
     position: relative;
@@ -934,9 +759,8 @@ onBeforeRouteLeave(() => {
   }
   .el-form-item{
     width: 50%;
-    // display: block;
-    :deep(.el-form-item__content){
-      width: 30%;
+    .form-username{
+      @extend .ellipsis;
     }
   }
   .background-container{
@@ -1016,8 +840,5 @@ onBeforeRouteLeave(() => {
     transform: translate(-50%, -50%);
     z-index: 1; // 确保“+”号在头像上方
   }
-.el-button{
-  @extend .button;
-}
 }
 </style>

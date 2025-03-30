@@ -516,6 +516,8 @@ export const PostModule: Module<PostState, RootState> = {
         const newItems = response.results || [];
 
         if (newItems.length === 0) {
+          // 设置搜索帖子列表为空，并标记为加载完成
+          commit('SET_SEARCH_POST_LIST', []);
           commit('SET_FINISHED_SEARCH_POSTS', true);
         } else {
           if (state.currentPageSearchPosts === 1) {
@@ -532,7 +534,7 @@ export const PostModule: Module<PostState, RootState> = {
       } finally {
         commit('SET_LOADING_SEARCH_POSTS', false);
       }
-      console.log(`fetchSocialData finished, current page: ${state.currentPageSearchPosts}`);
+      // console.log(`fetchSocialData finished, current page: ${state.currentPageSearchPosts}`);
     },
     // 加载更多搜索帖子数据
     async loadMoreSearchSocialData({ state, commit }) {

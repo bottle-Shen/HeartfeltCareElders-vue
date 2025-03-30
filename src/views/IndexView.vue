@@ -3,12 +3,12 @@ import SidebarCom from '@/components/SidebarCom.vue';
 import HeaderCom from '@/components/HeaderCom.vue';
 import { Opportunity } from '@element-plus/icons-vue'
 import { useDraggable } from '@/composables/useDraggable';
-import { useStore } from 'vuex'
+// import { useStore } from 'vuex'
 // 导入响应式布局逻辑
 import { useResponsiveLayout } from '@/composables/useResponsiveLayout';
 const { isAsideVisible,toggleAside } = useResponsiveLayout();
 // 定义响应式数据
-const store = useStore()
+// const store = useStore()
 // ------------拖拽按钮开始------------
 const draggableButton = ref<{ $el: HTMLElement } | null>(null); // 定义 ref
 const buttonWidth = ref(0); // 按钮宽度

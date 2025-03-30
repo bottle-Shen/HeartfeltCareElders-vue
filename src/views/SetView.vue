@@ -2,12 +2,11 @@
 import { resetForm, userInfo,userInfoForm } from '@/utils/form'
 import type { user,UserInfoFormType,IUserInfo, elderlyInfoResponse, familyInfoResponse, caregiverInfoResponse } from '@/@types/userInfo'
 import { getUserInfo, updateUserInfo } from '@/api/userInfo';
-import { hidePhoneNumber } from '@/utils/modules/hidePhoneNumber';
+import { hidePhoneNumber,encryptName } from '@/utils/modules/hidePhoneNumber';
 import { formRules3 } from '@/utils/formRules'
 import { useStore } from 'vuex';
 import { countdown, isCounting, sendSms } from '@/utils/modules/captchaUtils'
-import { UserLikePost, getUserSocial } from '@/api/social'
-import { themeColors,updateTheme } from '@/utils/modules/themeUtils'
+import { themeColors,updateTheme,currentThemeIndex } from '@/utils/modules/themeUtils'
 import RealNameAuthCom from '@/components/RealNameAuthCom.vue'// 实名认证组件,引入才能重置子组件表单
 import { form } from '@/utils/form'
 import SecureLS from 'secure-ls'
@@ -19,7 +18,6 @@ const ls = new SecureLS({ encodingType: 'aes', encryptionSecret: secret });
 const store = useStore()
 const ruleFormRef = ref()// 表单引用
 const showRealNameAuthCom = ref(false)
-const showVerificationCode = ref(false); // 是否显示验证码相关字段
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);// 获取用户是否登录
 const isEditMode = ref(false);// 响应式控制是否处于编辑模式
 const isPhone = ref(false);// 绑定手机号编辑模式
@@ -36,20 +34,6 @@ onMounted(async() => {
     store.commit('loading/SET_LOADING', true); // 设置全局加载状态为 true
     if (isAuthenticated.value) {
         fetchUserInfo();// 初始化用户信息
-    }
-    // 加载本地存储的主题设置
-    const savedThemeIndex = ls.get('currentThemeIndex');
-    if (savedThemeIndex !== null) {
-      currentThemeIndex.value = parseInt(savedThemeIndex, 10);
-      if (currentThemeIndex.value >= 0 && currentThemeIndex.value < themeColors.value.length) {
-        updateTheme(currentThemeIndex.value);
-      } else {
-        console.warn('Invalid theme index:', currentThemeIndex.value);
-        currentThemeIndex.value = 0; // 设置为默认主题
-        updateTheme(currentThemeIndex.value);
-      }
-    } else {
-      updateTheme(currentThemeIndex.value); // 使用默认主题
     }
   } catch (error) {
     console.error('加载用户资料失败:', error);
@@ -178,13 +162,6 @@ const handleRealNameAuthSuccess = (real_name: string, id_card: string) => {
   showRealNameAuthCom.value = false
 };
 const toggleEditMode = () => {
-  // if (!isEditMode.value) {
-  //   // 进入编辑模式
-  //   showVerificationCode.value = false; // 隐藏验证码相关字段
-  // } else {
-  //   // 退出编辑模式
-  //   showVerificationCode.value = false; // 隐藏验证码相关字段
-  // }
   resetSetForm()
   isEditMode.value = !isEditMode.value;
 };
@@ -215,7 +192,7 @@ const toggleRealNameAuth = () => {// 切换实名认证组件的显示和隐藏
   }
 }
 
-const currentThemeIndex = ref(0); // 默认选择第一个主题
+// const currentThemeIndex = ref(0); // 默认选择第一个主题
 
 const selectTheme = (index: number) => {
   currentThemeIndex.value = index;
@@ -290,7 +267,7 @@ const resetSetForm = () => {
       </el-form-item>
 
       <!-- 常用手机号 -->
-      <el-form-item label="常用手机号" prop="common_phone">
+      <el-form-item label="常用手机号" prop="user.common_phone">
         <template v-if="isEditMode">
           <el-input placeholder="请输入常用手机号" v-model="changedParams.user.common_phone" />
         </template>
@@ -300,8 +277,6 @@ const resetSetForm = () => {
         </template>
       </el-form-item>
 
-
-
       <!-- 根据用户类型显示不同的信息 -->
       <div class="elderly-item" v-if="isElderlyUserInfo(userInfoForm)">
         <!-- 紧急联系人 -->
@@ -310,7 +285,7 @@ const resetSetForm = () => {
             <el-input placeholder="请填写紧急联系人" v-model="changedParams.emergency_contact" />
           </template>
           <template v-else>
-            <div v-if="userInfoForm.emergency_contact">{{ userInfoForm.emergency_contact }}</div>
+            <div v-if="userInfoForm.emergency_contact">{{ encryptName(userInfoForm.emergency_contact) }}</div>
             <div v-else>暂未填写</div>
           </template>
         </el-form-item>
@@ -345,7 +320,7 @@ const resetSetForm = () => {
         </el-form-item>
 
         <!-- 现家庭住址 -->
-        <el-form-item label="现家庭住址" prop="common_address">
+        <el-form-item label="详细地址" prop="common_address">
           <template v-if="isEditMode">
             <el-input v-model="changedParams.common_address" />
           </template>
@@ -443,25 +418,25 @@ const resetSetForm = () => {
   }
 
   .container2:hover {
-    background: linear-gradient(to right, #0db166 27%, #f6c138 27%);
+    background: linear-gradient(to right, #94f4c9 27%, var(--yellow) 27%);
     transition-duration: .3s;
   }
 
   .container3:hover {
-    background: linear-gradient(to right, #E6A23C 27%, #F56C6C 27%);
+    background: linear-gradient(to right, #f8d39c 27%, var(--coral) 27%);
     transition-duration: .3s;
   }
 
   .container4:hover {
-    background: linear-gradient(to right, #F56C6C 27%, #E6A23C 27%);
+    background: linear-gradient(to right, #FFA78F 27%, #E6A23C 27%);
     transition-duration: .3s;
   }
   .container5:hover {
-    background: linear-gradient(to right, #909399 27%, #B3B3B3 27%);
+    background: linear-gradient(to right, #bdc0c6 27%, #B3B3B3 27%);
     transition-duration: .3s;
   }
   .container6:hover {
-    background: linear-gradient(to right, #B37FEB 27%, #FFA78F 27%);
+    background: linear-gradient(to right, #d8bdf4 27%, #FFA78F 27%);
     transition-duration: .3s;
   }
 
@@ -513,5 +488,8 @@ const resetSetForm = () => {
 }
 .togglephone-btn{
   padding-left: rem(10);
+}
+.el-form-item{
+  padding-bottom: rem(18);
 }
 </style>

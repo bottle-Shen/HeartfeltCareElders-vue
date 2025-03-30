@@ -70,11 +70,6 @@ const router = createRouter({
             requiresLoading: true,// 是否需要加载动画
           }
         },
-        {// 记录-测试
-          path: '/record',
-          name: 'record',
-          component: () => import('../views/RecordView.vue')
-        },
         {// 咨询服务
           path: '/consult',
           name: 'consult',
@@ -122,36 +117,9 @@ const router = createRouter({
           //   requiresLoading: true,// 是否需要加载动画
           // }
         },
-        {
-          path: '/test',
-          name: 'test',
-          component: () => import('../views/testView.vue')
-        }
       ]
     },
-    {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue')
-    }
   ],
-  // scrollBehavior(to: RouteLocationNormalizedLoaded, from: RouteLocationNormalizedLoaded, savedPosition: ScrollPosition | null): ScrollPosition | undefined{
-  //       // 如果保存了滚动位置，直接返回
-  //       if (savedPosition) {
-  //           return savedPosition;
-  //       }
-  //     // 如果从知识详情页返回到列表页，恢复之前保存的滚动位置
-  //       if (to.name === "KnowledgeView" && from.name === "KnowDetailView") {
-  //           return { top: savedPosition ? parseInt(savedPosition, 10) : 0 };
-  //       }
-
-
-  //       // 默认返回顶部
-  //       return { top: 0 };
-  //   },
 })
 
 router.beforeEach((to, from, next) => {

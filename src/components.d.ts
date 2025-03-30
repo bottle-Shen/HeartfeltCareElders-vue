@@ -65,6 +65,7 @@ declare module 'vue' {
     IEpOpportunity: typeof import('~icons/ep/opportunity')['default']
     IEpReading: typeof import('~icons/ep/reading')['default']
     IEpRight: typeof import('~icons/ep/right')['default']
+    IEpSetting: typeof import('~icons/ep/setting')['default']
     IEpTools: typeof import('~icons/ep/tools')['default']
     IEpTrendCharts: typeof import('~icons/ep/trend-charts')['default']
     IEpUser: typeof import('~icons/ep/user')['default']

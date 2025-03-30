@@ -2,7 +2,7 @@
 import zhCn from "element-plus/dist/locale/zh-cn.mjs"
 import type { CalendarDateType, CalendarInstance } from 'element-plus'
 import type {CreateActivityData} from "@/@types/activities"
-import { deleteActivityData,getActivityDataByOrg,createActivityData,getActivityData,getUserActivityData,registerActivity,cancelRegisterActivity,searchUserActivity } from "@/api/activities";
+import { deleteActivityData,getActivityDataByOrg,createActivityData,getActivityData,getUserActivityData,registerActivity,cancelRegisterActivity } from "@/api/activities";
 import { useStore } from 'vuex'
 import { formatDate,formatDateToISO } from '@/utils'
 import type { ActivityData, ActivitiesByDate,userActivityData } from "@/@types/activities"
@@ -530,7 +530,7 @@ const resetForm = () => {
     display: flex;
     flex-direction: column;
     flex:1 1 auto;
-    min-width: rem(300);
+    min-width: rem(230);
     // height: 300px;
   }
   .more-activity{
@@ -538,9 +538,6 @@ const resetForm = () => {
       padding-left: 1vw;
     }
   }
-  .is-selected {
-  // color: #1989fa;
-}
 .activity-calendar{
   padding-right: 1vw;
   // height: 100%;
@@ -647,9 +644,6 @@ const resetForm = () => {
       }
     }
   }
-  .calendar-day{
-    // background-color: red;
-  }
   :deep(.el-calendar__header) {
     height: rem(60);
     padding: 0;
@@ -659,9 +653,6 @@ const resetForm = () => {
       width: 100%;
       @extend .flex-between;
       font-size: rem(16);
-      .el-button {
-        // color: #5B91AD;
-      }
     }
   }
   :deep(.el-calendar__body){
@@ -669,8 +660,6 @@ const resetForm = () => {
     padding: 0;
     font-size: rem(16);
     text-align: center;
-    :deep(.el-calendar-table){
-    } 
   }
   :deep(.el-calendar-table thead th){
         height: rem(40);

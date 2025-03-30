@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { SocialData, addPostParams } from '@/@types/social'
+import type { SocialData } from '@/@types/social'
 import type { Store } from 'vuex'
 import type { PostState } from '@/store/modules/post'
 import { store } from '@/store'

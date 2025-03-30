@@ -200,12 +200,15 @@ h1{
 .radio-group > :deep(.el-form-item__content){
   justify-content: flex-end;
 }
-:deep(.el-form-item__label){
-  // @extend .label;
-}
 .el-form{
   width:80%;/* 确保有明确的宽度 */
   padding:rem(30) rem(60) rem(50);
+  .el-form-item{
+    padding-bottom: rem(18);
+    &:last-child{
+      padding-bottom: 0;
+    }
+  }
   .el-input{
     height: rem(48);
   }

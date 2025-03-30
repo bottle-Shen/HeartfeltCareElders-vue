@@ -88,6 +88,7 @@ const propsCascader: CascaderProps = {
     <!-- 所在地 -->
      <el-form-item prop="address">
        <el-cascader 
+       :teleported="false"
        :props="propsCascader"
        v-model="selectedAddress"
        placeholder="请选择所在地"
@@ -96,5 +97,13 @@ const propsCascader: CascaderProps = {
   </div>
 </template>
 <style scoped lang="scss">
-
+:deep(.el-cascader-panel){// 地址级联选择器
+    @include mobile{
+        flex-direction: column;
+        .el-cascader-menu{
+          padding-bottom: rem(10);
+          border-bottom: 1px solid var(--gray-rgb);
+        }
+    }
+}
 </style>

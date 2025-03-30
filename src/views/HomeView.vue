@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { getHealthData, getElderlyHealthData, getElderlyHealthDataList, getElderlyList, uploadHealthData, updateHealthData, deleteHealthData, getSSEUrl } from '@/api/healthData'
+import { getHealthData, getElderlyHealthData, getElderlyHealthDataList, getElderlyList, uploadHealthData, updateHealthData, deleteHealthData } from '@/api/healthData'
+// import { getHealthData, getElderlyHealthData, getElderlyHealthDataList, getElderlyList, uploadHealthData, updateHealthData, deleteHealthData, getSSEUrl } from '@/api/healthData'
 import { formRules2 } from '@/utils/formRules';
 import { useStore } from 'vuex'
 import * as echarts from 'echarts';
-import { formatDate,formatDateToISO } from '@/utils'
-import type{ HealthData,HealthDataFormType } from '@/@types/healthdata'
+import { formatDate } from '@/utils'
+// import { formatDate, formatDateToISO } from '@/utils'
+import type{ HealthData } from '@/@types/healthdata'
 import type { elderlyInfoResponse } from '@/@types/userInfo'
 import type { ElForm } from 'element-plus';
 import { exampleHealthData } from '@/utils/exampleData'// 导入响应式布局逻辑
@@ -1203,7 +1205,8 @@ h1{
         p{
           overflow: hidden; // 隐藏溢出内容s
           display: -webkit-box; // 使用 Webkit 的 box 模型
-          -webkit-line-clamp: 6; // 限制显示 3 行
+          -webkit-line-clamp: 6; // 限制显示 6 行-非标准的属性，主要用于实现多行文本的截断效果
+          line-clamp: 6;// 提高兼容性，定义标准的 line-clamp 属性
           -webkit-box-orient: vertical; // 垂直排列内容
         }
       }

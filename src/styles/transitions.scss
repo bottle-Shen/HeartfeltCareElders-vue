@@ -1,8 +1,4 @@
 @use '@/styles/base.module' as *;
-// 定义变量（假设之前定义的变量仍然有效）
-// $primary-transition: 0.3s ease; // 主要过渡时间
-// $easeQuartOut: cubic-bezier(0.26, 1, 0.48, 1); // 从之前代码中继承的贝塞尔曲线
-
 // Vue 过渡类
 // 动画活动样式
 .fade-enter-active {

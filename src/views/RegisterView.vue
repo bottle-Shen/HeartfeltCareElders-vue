@@ -114,6 +114,10 @@ onBeforeRouteLeave(() => {
     }
       .el-form-item{
         @extend .flex-center;
+        padding-bottom: rem(18);
+        &:last-child{
+          padding-bottom: 0;
+        }
       }
       .el-input{
     height: rem(48);
@@ -131,10 +135,6 @@ onBeforeRouteLeave(() => {
       .radio-group > :deep(.el-form-item__content){
           justify-content: flex-end;
         }
-      
-      :deep(.el-form-item__label){
-        // @extend .label;
-      }
         .el-button{
           // @extend .button;// 继承全局按钮样式
           @extend .w-full;
