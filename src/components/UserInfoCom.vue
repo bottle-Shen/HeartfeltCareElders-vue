@@ -11,11 +11,18 @@ const activeName = ref('1')// 默认选中的项
 const getLastThreePosts = (posts: ComputedRef<SocialData[]>) => computed(() => {
   return posts.value.slice(0,3);// 获取前三个帖子
 });
+const handleImagePath = (path: string) => {
+  // 检查路径是否已经是完整的 URL
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  // 如果不是完整的 URL，则拼接完整的 URL
+  return `${import.meta.env.VITE_BASE_URL}${path}`;
+};
 // 我的喜欢
-// const likedPosts = computed(() => store.state.post.likedPosts as SocialData[]);
 const likedPosts = computed(() => store.state.post.likedPosts.map((post:SocialData) => ({
   ...post,
-  image: `${import.meta.env.VITE_BASE_URL}${post.image}`
+  image: handleImagePath(post.image)
 }))as SocialData[]);
 const lastThreeLikedPosts = getLastThreePosts(likedPosts);
 // 发布
@@ -25,7 +32,7 @@ const lastThreeUserPosts = getLastThreePosts(userPosts);
 const viewHistory = computed(() => store.state.post.viewHistory.map((post: SocialData) => ({
   ...post,
   // image: `${import.meta.env.VITE_BASE_URL}${post.image}`
-  image: `${post.image}`
+  image: handleImagePath(post.image)
 })) as SocialData[]);
 const lastThreeViewHistory = getLastThreePosts(viewHistory);
 // 退出登录
@@ -47,15 +54,18 @@ const getUserViewHistoryData = async () => {
 // 悬停时展开面板
 const handleMouseEnter = async(name:string) => {
   activeName.value = name;
-  // 按需加载数据
-  if (name === '1' && likedPosts.value.length === 0) {
-    await getUserLikeData();
-  }
-  if (name === '2' && viewHistory.value.length === 0) {
-    await getUserViewHistoryData();
-  }
-  if (name === '3' && userPosts.value.length === 0) {
-    await getUserSocialData();
+  // 每次悬停时重新加载数据
+  try {
+    if (name === '1') {
+      await getUserLikeData();
+    } else if (name === '2') {
+      await getUserViewHistoryData();
+    } else if (name === '3') {
+      await getUserSocialData();
+    }
+  } catch (error) {
+    console.error('加载数据失败:', error);
+    ElMessage.error('加载数据失败，请稍后重试');
   }
 };
 onMounted(async() => {

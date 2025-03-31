@@ -121,7 +121,7 @@ const fetchUserInfo = async () => {
       Object.assign(changedParams.value, response);
     }
     // isShow.value = true; // 显示用户信息页面
-    console.log('获取到的用户信息：', userInfoForm.value);
+    // console.log('获取到的用户信息：', userInfoForm.value);
   }catch (error) {
     console.error('获取用户信息失败：', error);
   }

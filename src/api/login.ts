@@ -23,7 +23,7 @@ interface LoginResponse {
 
 export const login =(data: LoginParams):Promise<LoginResponse> => {
     return request({
-      url: 'users/login/',
+      url: 'api/users/login/',
       method: 'POST',
       data
     }).then(response => {

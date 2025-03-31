@@ -9,9 +9,8 @@ export const uploadAvatar = (file:File):Promise<string> => {
     headers: {
       'Authorization': `Bearer ${store.state.user.token}`,
     },
-    url: '/users/upload_avatar/',
+    url: 'api//users/upload_avatar/',
     method: 'POST',
     data: formData
   })
 }
-// http://localhost:8000/api/v1/users/upload_avatar/

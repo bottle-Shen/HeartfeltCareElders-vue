@@ -6,7 +6,7 @@ import type { getRegisterActivityDataParams,CreateActivityData } from '@/@types/
 // 获取全部活动数据
 export const getActivityData =()=> {
     return request({
-        url: 'activities/events/',
+        url: 'api/activities/events/',
         method: 'GET',
     }).then(response => {
       if (response.status === 200) {
@@ -23,7 +23,7 @@ export const getActivityData =()=> {
 //  获取用户参加的活动数据
 export const getUserActivityData =()=> {
     return request({
-        url: `activities/registrations/my-activities/`,
+        url: `api/activities/registrations/my-activities/`,
         method: 'GET',
     }).then(response => {
       if (response.status === 200) {
@@ -38,7 +38,7 @@ export const getUserActivityData =()=> {
 //  用户报名活动
 export const registerActivity =(params: getRegisterActivityDataParams)=> {
     return request({
-        url: 'activities/registrations/',
+        url: 'api/activities/registrations/',
         method: 'POST',
       data:{
           user: params.user_id,
@@ -61,7 +61,7 @@ export const registerActivity =(params: getRegisterActivityDataParams)=> {
 // 用户取消报名活动
 export const cancelRegisterActivity =(params: getRegisterActivityDataParams)=> {
     return request({
-        url: `activities/registrations/cancel/${params.event_id}/`,
+        url: `api/activities/registrations/cancel/${params.event_id}/`,
         method: 'DELETE',
     }).then(response => {
       if (response.status === 204) {
@@ -79,7 +79,7 @@ export const cancelRegisterActivity =(params: getRegisterActivityDataParams)=> {
 // 搜索用户活动
 export const searchUserActivity =(params:string)=> {
     return request({
-        url: `activities/registrations/?search=${params}`,
+        url: `api/activities/registrations/?search=${params}`,
         method: 'GET',
     }).then(response => {
       if (response.status === 200) {
@@ -94,7 +94,7 @@ export const searchUserActivity =(params:string)=> {
 // 机构人员创建活动数据
 export const createActivityData =(params:CreateActivityData)=> {
     return request({
-        url: 'activities/events/',
+        url: 'api/activities/events/',
         method: 'POST',
         data:{
             title: params.title,
@@ -115,7 +115,7 @@ export const createActivityData =(params:CreateActivityData)=> {
 // 获取机构人员创建的活动数据
 export const getActivityDataByOrg =()=> {
     return request({
-        url: 'activities/events/my-events/',
+        url: 'api/activities/events/my-events/',
         method: 'GET',
     }).then(response => {
       if (response.status === 200) {
@@ -129,7 +129,7 @@ export const getActivityDataByOrg =()=> {
 // 机构人员删除活动数据
 export const deleteActivityData =(params:number)=> {
     return request({
-        url: `activities/events/${params}/delete-my-event/`,
+        url: `api/activities/events/${params}/delete-my-event/`,
         method: 'DELETE',
     }).then(response => {
       if (response.status === 200) {

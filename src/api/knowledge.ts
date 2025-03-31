@@ -4,7 +4,7 @@ import request from '@/utils/request'
 // 获取知识列表（支持分页和搜索）
 export const getKnowledge = (params: { page?: number, search?: string }) => {
   return request({
-    url: 'knowledge/knowledges/',
+    url: 'api/knowledge/knowledges/',
     method: 'GET',
     params,
   }).then(response => {
@@ -17,7 +17,7 @@ export const getKnowledge = (params: { page?: number, search?: string }) => {
 // 获取单个知识
 export const getKnowledgeById = (id: number) => {
   return request({
-    url: `knowledge/knowledges/${id}/`,
+    url: `api/knowledge/knowledges/${id}/`,
     method: 'GET',
   }).then(response => {
       // console.log(response)
@@ -28,7 +28,7 @@ export const getKnowledgeById = (id: number) => {
 // 创建知识
 export const createKnowledge = () => {
   return request({
-    url: 'knowledge/knowledges/',
+    url: 'api/knowledge/knowledges/',
     method: 'POST',
   }).then(response => {
       // console.log(response)
@@ -39,7 +39,7 @@ export const createKnowledge = () => {
 // 更新知识
 export const updateKnowledge = () => {
   return request({
-    url: 'knowledge/knowledges/',
+    url: 'api/knowledge/knowledges/',
     method: 'PATCH',
   }).then(response => {
       // console.log(response)
@@ -50,7 +50,7 @@ export const updateKnowledge = () => {
 // 删除知识
 export const deleteKnowledge = () => {
   return request({
-    url: 'knowledge/knowledges/',
+    url: 'api/knowledge/knowledges/',
     method: 'DELETE',
   }).then(response => {
       // console.log(response)

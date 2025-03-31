@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter, type RouteLocationNormalized } from 'vue-router';
-import { isDataLoaded,socket,CommentContent,initializeWebSocket,getSocialById, getComments,likePost,handleAvatarPath } from '@/api/social';
+import { deletePost,updatePost,isDataLoaded,socket,CommentContent,initializeWebSocket,getSocialById, getComments,likePost,handleAvatarPath } from '@/api/social';
 import type { SocialData } from '@/@types/social';
 import { formatDate } from '@/utils'
+import type { ElForm } from 'element-plus';
 import { useStore } from 'vuex';
 
 const store = useStore();
@@ -13,6 +14,37 @@ const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);//
 const userId = computed(() => store.getters['user/getUserId']); // 用户ID从 Vuex 中获取
 const postId = ref<number>(parseInt(route.params.id as string, 10)); // 确保 postId 是数字类型,10 表示十进制
 // console.log(postId);
+const showPostForm = ref(false); // 控制表单弹窗的显示
+const isMoreShow = ref(false);// 控制更多按钮的显示
+const MoreBtn = (event: MouseEvent) => {
+  if (post.value?.isCommentsVisible) {
+    // 如果 commentContainer 显示，则不执行返回操作
+    return;
+  }
+  event.stopPropagation(); // 阻止事件冒泡--避免触发父组件的点击其它位置关闭弹窗事件
+  isMoreShow.value = !isMoreShow.value;
+}
+// 表单数据
+const postForm = ref({
+  title: '',
+  content: '',
+  coverImage: null as File | null, // 封面图文件对象
+  coverImageUrl: '',
+});
+// 表单验证规则
+const postFormRules = {
+  title: [
+    { required: true, message: '请输入帖子标题', trigger: 'blur' },
+    { min: 3, max: 50, message: '标题长度应在3到50个字符之间', trigger: 'blur' }
+  ],
+  content: [
+    { required: true, message: '请输入帖子内容', trigger: 'blur' },
+    { min: 5, max: 500, message: '内容长度应在5到500个字符之间', trigger: 'blur' }
+  ],
+  coverImage: [
+    { required: true, message: '封面图不能为空', trigger: 'change' }
+  ]
+}
 // 直接从 Vuex 的 socialData 中获取帖子数据
 const post = computed<SocialData | null>(() => {
   return store.state.post.socialData.find((item:SocialData) => item.id === postId.value) || null;
@@ -24,13 +56,17 @@ const isLiked = computed(() => {
   return store.getters['post/isPostLiked'](postId.value);
 });
 // 点赞功能
-const toggleLike = async (postId: number, post: SocialData) => {
-  if (!post) return
+const toggleLike = async (postId: number, postData: SocialData) => {
+  if (isMoreShow.value || post.value?.isCommentsVisible) {
+    // 如果 moreBox 或 commentContainer 显示，则不执行点赞操作
+    return;
+  }
+  if (!postData) return
 
       // 调用 likePost API，并传递 store
     // 触发动画
   isAnimating.value = true;
-    await likePost(postId, post, store);
+    await likePost(postId, postData, store);
   // 动画结束，重置状态
     setTimeout(() => {
       isAnimating.value = false;
@@ -38,11 +74,20 @@ const toggleLike = async (postId: number, post: SocialData) => {
 };
 // 返回按钮的逻辑
 const goBack = () => {
+  if (isMoreShow.value || post.value?.isCommentsVisible) {
+    // 如果 moreBox 或 commentContainer 显示，则不执行返回操作
+    return;
+  }
   router.back(); // 返回到上一个页面
 };
 
 // 点击评论图标时切换评论区的显示状态
-const toggleComments = () => {
+const toggleComments = (event: MouseEvent) => {
+  if (isMoreShow.value) {
+    // 如果 moreBox 显示，则不执行返回操作
+    return;
+  }
+  event.stopPropagation(); // 阻止事件冒泡--避免触发父组件的点击其它位置关闭弹窗事件
   if (post.value) {
     post.value.isCommentsVisible = !post.value.isCommentsVisible;
   }
@@ -142,6 +187,147 @@ const loadPostAndComments = async (postId: number,route:RouteLocationNormalized)
     store.commit('loading/SET_LOADING', false);
   }
 };
+// 获取帖子的发布人ID
+const postAuthorId = computed(() => {
+  const post = store.state.post.socialData.find((item: SocialData) => item.id === postId.value);
+  return post ? post.user.id : null; // 获取发布者的 id
+});
+// 判断当前用户是否是帖子作者
+const isPostAuthor = computed(() => {
+  return userId.value === postAuthorId.value; // 比较当前用户 ID 和帖子作者 ID
+});
+// 修改帖子
+const editPost = () => {
+  if (post.value) {
+    postForm.value = {
+      title: post.value.title,
+      content: post.value.content,
+      coverImage: null, // 封面图文件对象，初始为空
+      coverImageUrl: post.value.image // 保存封面图的 URL，用于显示
+    };
+  }
+  showPostForm.value = true; // 显示修改帖子表单
+};
+// 封面图上传验证
+const onCoverImageChange = (event: Event) => {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (file && file.type.startsWith('image/')) {
+    postForm.value.coverImage = file; // 直接存储文件对象
+    // 使用 FileReader 读取文件内容并更新封面图预览
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      postForm.value.coverImageUrl = e.target?.result as string; // 更新封面图预览
+    };
+    reader.readAsDataURL(file);
+  } else {
+    ElMessage.error('请选择有效的图片文件');
+    postForm.value.coverImage = null; // 清空无效的文件选择
+    postForm.value.coverImageUrl = ''; // 清空封面图预览
+  }
+};
+const postFormRef = ref<InstanceType<typeof ElForm> | null>(null);// 获取表单引用
+// 提交修改帖子表单
+const submitEditPost = async () => {
+  try {
+    // 确保 postFormRef.value 不为 null
+    if (!postFormRef.value) {
+      console.error('表单引用未初始化');
+      ElMessage.error('表单验证失败，请稍后再试');
+      return;
+    }
+    // 验证表单
+    const isValid = await postFormRef.value.validate();
+    if (!isValid) {
+      ElMessage.error('表单验证失败，请检查输入内容');
+      return; // 如果验证不通过，直接返回
+    }
+    const formData = new FormData();
+    formData.append('title', postForm.value.title);
+    formData.append('content', postForm.value.content);
+    if (postForm.value.coverImage) {
+      // 添加封面图
+      formData.append('image', postForm.value.coverImage);
+    } else if (post.value && post.value.image) {
+      // 如果没有新的封面图文件，传递原始封面图的 URL 或文件名
+      formData.append('image', post.value.image);
+    }
+    // 调用更新帖子的 API
+    await updatePost(postId.value, formData);
+    ElMessage.success('帖子修改成功');
+    showPostForm.value = false; // 关闭表单
+    isMoreShow.value = false
+    // 重新加载数据
+    await loadPostAndComments(postId.value,route);
+  } catch (error) {
+    console.error('帖子修改失败：', error);
+    ElMessage.error('帖子修改失败，请稍后再试');
+  }
+};
+
+// 取消修改帖子
+const cancelEditPost = () => {
+  showPostForm.value = false; // 关闭表单
+  if (postFormRef.value) {
+    postFormRef.value.resetFields(); // 重置表单数据和验证状态
+  }
+};
+// 删除帖子
+const deleteUserPost = async () => {
+  try {
+    // 调用删除帖子的 API
+    await deletePost(postId.value);
+    ElMessage.success('帖子删除成功');
+    if (postFormRef.value) {
+      postFormRef.value.resetFields(); // 重置表单数据和验证状态
+    }
+    router.push('/userInfo?tab=first'); // 跳转到主页或其他页面
+  } catch (error) {
+    console.error('帖子删除失败：', error);
+    ElMessage.error('帖子删除失败，请稍后再试');
+  }
+};
+// 弹窗关闭时重置表单
+const resetFormOnClose = () => {
+  if (postFormRef.value) {
+    postFormRef.value.resetFields(); // 重置表单数据和验证状态
+  }
+};
+// 点击页面其他地方隐藏
+const handleClickOutside = (event: MouseEvent) => {
+  const moreBox = document.querySelector('.more-box');
+  const commentContainer = document.querySelector('.comment-container');
+  // 如果 moreBox 被显示，且点击位置不在 moreBox 内部，则隐藏 moreBox
+  if (isMoreShow.value && moreBox && !moreBox.contains(event.target as Node)) {
+    isMoreShow.value = false;
+    console.log('点击了页面其他地方');
+  }
+  // 如果 commentContainer 被显示，且点击位置不在 commentContainer 内部，则隐藏 commentContainer
+  if (post.value?.isCommentsVisible && commentContainer && !commentContainer.contains(event.target as Node)) {
+    if (post.value) { // 确保 post.value 不为 null
+      post.value.isCommentsVisible = false;
+    }
+  }
+};
+// 监听 isMoreShow 的变化
+watch(isMoreShow, (newVal) => {
+  if (newVal) {
+    // 当 isMoreShow 为 true 时绑定事件监听器
+    document.addEventListener('click', handleClickOutside);
+  } else {
+    // 当 isMoreShow 为 false 时移除事件监听器
+    document.removeEventListener('click', handleClickOutside);
+  }
+});
+// 监听 post.value?.isCommentsVisible 的变化
+watch(() => post.value?.isCommentsVisible, (newVal) => {
+  if (newVal) {
+    // 当评论框显示时绑定事件监听器
+    document.addEventListener('click', handleClickOutside);
+  } else {
+    // 当评论框隐藏时移除事件监听器
+    document.removeEventListener('click', handleClickOutside);
+  }
+});
 onMounted(async () => {
   // 在组件挂载时加载帖子和评论数据
   await loadPostAndComments(postId.value,route);
@@ -155,6 +341,7 @@ onUnmounted(() => {
   if (socket) {
     socket.close()
   }
+  document.removeEventListener('click', handleClickOutside);
 });
 
 // 监听路由参数 id 的变化
@@ -177,6 +364,56 @@ watch(() => route.params.id, (newId) => {
 </script>
 <template>
   <div class="interact-detail w-full h-full body">
+    <el-dialog
+      title="修改帖子"
+      v-model="showPostForm"
+      @closed="resetFormOnClose"
+    >
+      <el-form
+      class="w-full"
+        ref="postFormRef"
+        :model="postForm"
+        :rules="postFormRules"
+      >
+      <el-form-item label="封面图" prop="coverImage" required>
+        <!-- 自定义按钮 -->
+        <label for="custom-file-upload" class="custom-file-upload">
+          修改封面图
+        </label>
+        <!-- 隐藏的原生文件输入 -->
+        <input id="custom-file-upload" type="file" @change="onCoverImageChange" accept="image/*" style="display: none;">
+        <div v-if="postForm.coverImageUrl">
+            <img :src="postForm.coverImageUrl" alt="封面图" style="max-width: 100%; height: auto;">
+          </div>
+      </el-form-item>
+        <el-form-item label="标题" prop="title">
+          <el-input
+            v-model="postForm.title"
+            placeholder="请输入帖子标题"
+            maxlength="50"
+            show-word-limit
+          ></el-input>
+        </el-form-item>
+
+        <el-form-item label="内容" prop="content">
+          <el-input
+            type="textarea"
+            v-model="postForm.content"
+            placeholder="请输入帖子内容"
+            maxlength="500"
+            show-word-limit
+            :rows="15"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button class="primary-button" @click="cancelEditPost">取消</el-button>
+          <el-button class="primary-button" @click="submitEditPost">修改</el-button>
+        </span>
+      </template>
+    </el-dialog>
     <img class="image-bac w-full h-full" :src="post?.image" :alt="post?.title"/>
     <div class="interact-container">
     <!-- 返回按钮 -->
@@ -228,6 +465,9 @@ watch(() => route.params.id, (newId) => {
         </svg>
         <span>{{ post?.comments_count }}</span>
       </div>
+      <div v-if="isPostAuthor" class="actions-item" @click="MoreBtn">
+        <svg t="1743436148619" class="icon comment-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2612" width="200" height="200"><path d="M512 64.7C265.3 64.7 64.7 265.3 64.7 512S265.3 959.3 512 959.3 959.3 758.7 959.3 512 758.7 64.7 512 64.7z m275.2 722.5c-35.7 35.7-77.4 63.8-123.7 83.4-48 20.3-99 30.6-151.5 30.6s-103.5-10.3-151.5-30.6c-46.3-19.6-88-47.7-123.7-83.4s-63.8-77.4-83.4-123.7c-20.3-48-30.6-99-30.6-151.5s10.3-103.5 30.6-151.5c19.6-46.3 47.7-88 83.4-123.7s77.4-63.8 123.7-83.4c48-20.3 99-30.6 151.5-30.6s103.5 10.3 151.5 30.6c46.3 19.6 88 47.7 123.7 83.4s63.8 77.4 83.4 123.7c20.3 48 30.6 99 30.6 151.5s-10.3 103.5-30.6 151.5c-19.6 46.4-47.6 88-83.4 123.7z" p-id="2613"></path><path d="M550.2 451.6c-9.3-5.4-19.8-8.1-30.3-8.1s-21 2.7-30.3 8.1c-18.7 10.8-30.3 30.9-30.3 52.5 0 33.4 27.2 60.6 60.6 60.6 33.4 0 60.6-27.2 60.6-60.6 0-21.6-11.6-41.7-30.3-52.5zM330.5 443.5c-33.4 0-60.6 27.2-60.6 60.6 0 33.4 27.2 60.6 60.6 60.6s60.6-27.2 60.6-60.6c0-33.4-27.2-60.6-60.6-60.6zM709.3 443.5c-33.4 0-60.6 27.2-60.6 60.6 0 33.4 27.2 60.6 60.6 60.6 33.4 0 60.6-27.2 60.6-60.6 0-33.4-27.2-60.6-60.6-60.6z"  p-id="2614"></path></svg>
+      </div>
     </div>
     </div>
     <div v-if="post?.isCommentsVisible" class="comment-container">
@@ -250,6 +490,14 @@ watch(() => route.params.id, (newId) => {
       <el-button class="primary-button" type="primary" @click="submitComment" :disabled="!isAuthenticated || !CommentContent.trim()">评论</el-button>
       </div>
     </div>
+    <transition name="slide-y">
+      <div v-show="isMoreShow" class="more-box">
+        <div class="flex-center h-full w-full">
+          <el-button class="primary-button" @click="editPost">修改</el-button>
+          <el-button class="primary-button danger" @click="deleteUserPost">删除</el-button>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -258,6 +506,20 @@ watch(() => route.params.id, (newId) => {
   display: flex;
   position: relative;
   color: var(--white);
+  .more-box{
+    width: 100%;
+    height: rem(100);
+    border-radius: rem(10) rem(10) 0 0;
+    background-color: var(--bg-one);
+    position: absolute;
+    bottom: 0;
+    z-index: 1;
+  }
+  .el-form-item{
+      &:nth-child(2){
+        padding-bottom: rem(18);
+      }
+  }
   .like {
     position: relative;
     display: inline-block;

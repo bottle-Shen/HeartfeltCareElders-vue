@@ -8,7 +8,7 @@ export const CommentContent = ref('')
 //  获取全部帖子
 export const getSocial =(params: { page?: number})=> {
     return request({
-        url: `social/posts/`,
+        url: `api/social/posts/`,
         method: 'GET',
         params,
     }).then(response => {
@@ -22,7 +22,7 @@ export const getSocial =(params: { page?: number})=> {
 // 搜索帖子
 export const searchPost = async (params: { page?: number, search?: string }) => {
   return request({
-    url: `social/posts/`,
+    url: `api/social/posts/`,
     method: 'GET',
     params: {
       page: params.page,
@@ -37,7 +37,7 @@ export const searchPost = async (params: { page?: number, search?: string }) => 
 // 获取单个帖子
 export const getSocialById = (id: number) => {
   return request({
-    url: `social/posts/${id}/`,
+    url: `api/social/posts/${id}/`,
     method: 'GET',
   }).then(response => {
       // console.log(response)
@@ -50,7 +50,7 @@ export const getSocialById = (id: number) => {
 // 获取用户自己的帖子
 export const getUserSocial =(params: { page?: number})=> {
     return request({
-        url: `social/posts/my-posts/`,
+        url: `api/social/posts/my-posts/`,
         method: 'GET',
         params,
     }).then(response => {
@@ -66,7 +66,7 @@ export const getUserSocial =(params: { page?: number})=> {
 // 发布帖子
 export const addPost = (formData: FormData) => {
     return request({
-        url: `social/posts/`,
+        url: `api/social/posts/`,
         method: 'POST',
         data: formData, // 直接传递 FormData 对象
         headers: {
@@ -80,30 +80,42 @@ export const addPost = (formData: FormData) => {
         throw error; // 抛出错误，以便在调用处捕获
     });
 }
-// export const addPost = (params: addPostParams) => {
-//     return request({
-//         url: `social/posts/`,
-//         method: 'POST',
-//         data: {
-//             title: params.title,
-//             content: params.content,
-//             // user_id:params.user_id,
-//             image: params.image,// 封面图
-//             images: params.images,// 图片列表
-//             video: params.video,//视频
-//         }
-//     }).then(response => {
-//       // console.log(response.data)
-//       return response.data
-//     }).catch((error) => {
-//       console.error(error)
-//     })
-// }
+// 删除帖子
+export const deletePost = (postId: number) => {
+    return request({
+        url: `api/social/posts/${postId}/`,
+        method: 'DELETE',
+    }).then(response => {
+      if (response.status === 204) {
+        // ElMessage.success('删除成功')
+      }
+    }).catch((error) => {
+      console.error(error)
+      // ElMessage.error('删除失败')
+    })
+}
+// 更新帖子
+export const updatePost = (postId: number, formData: FormData) => {
+    return request({
+        url: `api/social/posts/${postId}/update_post/`,
+        method: 'PUT',
+        data: formData, // 直接传递 FormData 对象
+        headers: {
+            'Content-Type': 'multipart/form-data' // 确保设置正确的 Content-Type
+        }
+    }).then(response => {
+        // console.log('更新帖子', response);
+        return response.data;
+    }).catch((error) => {
+        console.error(error);
+        throw error; // 抛出错误，以便在调用处捕获
+    });
+};
 
 // 点赞帖子
 export const likePost = (postId: number, post: SocialData,store:Store<PostState>) => {
     return request({
-        url: `social/posts/${postId}/like/`,
+        url: `api/social/posts/${postId}/like/`,
         method: 'POST',
     }).then(response => {
       if (response.status === 201) {
@@ -124,7 +136,7 @@ export const likePost = (postId: number, post: SocialData,store:Store<PostState>
 // 获取用户点赞过的帖子
 export const UserLikePost = (params: { page?: number}) => {
     return request({
-        url: `social/likes/my-likes/`,
+        url: `api/social/likes/my-likes/`,
         method: 'GET',
         params,
     }).then(response => {
@@ -139,7 +151,7 @@ export const UserLikePost = (params: { page?: number}) => {
 // 获取评论
 export const getComments = (postId: number) => {
     return request({
-        url: `social/posts/${postId}/comments/`,
+        url: `api/social/posts/${postId}/comments/`,
         method: 'GET',
     }).then(response => {
       if (response.status === 200) {
@@ -174,7 +186,7 @@ export const addComment = async(postId:number,commentContent:string,userId:numbe
   }
   // 发送 HTTP 请求添加评论
   await request({
-    url: `social/comments/`,
+    url: `api/social/comments/`,
     method: 'POST',
     data: {
       comment_content: commentContent,
@@ -215,7 +227,7 @@ export const addComment = async(postId:number,commentContent:string,userId:numbe
 const getWebSocketUrl = (postId: number) => {
   const baseURL = request.defaults.baseURL || ''
   const wsUrl = baseURL.replace('http', 'ws')
-  return `${wsUrl}/social/ws/posts/${postId}/`
+  return `${wsUrl}/api/social/ws/posts/${postId}/`
 }
 
 export let socket: WebSocket | null = null;

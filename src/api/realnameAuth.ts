@@ -7,7 +7,7 @@ interface getRealNameParams {
 
 export const getRealName =(data: getRealNameParams)=> {
     return request({
-        url: 'users/realname_auth/',
+        url: 'api/users/realname_auth/',
         method: 'POST',
         data,
     }).then(response => {

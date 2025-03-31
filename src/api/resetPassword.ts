@@ -11,7 +11,7 @@ interface ResetParams {
 
 export const reset =(data: ResetParams)=> {
     return request({
-        url: 'users/reset_password/',
+        url: 'api/users/reset_password/',
         method: 'POST',
         data,
     }

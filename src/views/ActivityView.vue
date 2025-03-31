@@ -236,11 +236,11 @@ const activityForm = ref({
   description: '',
   location: '',
 })
-import type { ElForm } from 'element-plus';
+import type { ElForm,FormRules } from 'element-plus';
 const activityFormRef = ref<InstanceType<typeof ElForm> | null>(null);
 
 // 表单验证规则
-const rules = {
+const rules: FormRules = reactive({
   title: [
     { required: true, message: '活动标题不能为空', trigger: 'blur' },
   ],
@@ -255,8 +255,20 @@ const rules = {
   ],
   end_time: [
     { required: true, message: '活动结束时间不能为空', trigger: 'blur' },
+    {
+          validator: (rule, value: string, callback: (error?: string) => void) => {
+            const now = new Date();
+            const endTime = new Date(value);
+            if (endTime <= now) {
+              callback('活动结束时间不能小于当前时间');
+            } else {
+              callback();
+            }
+          },
+          trigger: 'blur',
+        },
   ],
-}
+})
 // 创建活动数据
 const createActivity = async (activityForm: CreateActivityData) => {
   try {
@@ -292,18 +304,24 @@ const createActivity = async (activityForm: CreateActivityData) => {
       }
 }
 // 提交表单
-const submitForm = () => {
+const submitForm = async() => {
   if (activityFormRef.value) {
-    activityFormRef.value.validate((valid: boolean) => {
+    activityFormRef.value.validate(async(valid: boolean) => {
       if (valid) {
-        // 表单验证通过，可以提交数据
-        console.log('表单数据:', activityForm.value);
+        try {
+          // 表单验证通过，可以提交数据
+        // console.log('表单数据:', activityForm.value);
         // 这里可以调用 API 提交数据
-        createActivity(activityForm.value)
-        ActivityDialog.value = false; // 关闭弹窗
+          await createActivity(activityForm.value)
+          ActivityDialog.value = false; // 关闭弹窗
+          resetForm(); // 重置表单
+        } catch (error) {
+          ElMessage.error('活动创建失败，请稍后再试');
+          console.error('创建活动异常：', error);
+        }
       } else {
         // 表单验证失败
-        console.log('表单验证失败');
+        // console.log('表单验证失败');
       }
     });
   }

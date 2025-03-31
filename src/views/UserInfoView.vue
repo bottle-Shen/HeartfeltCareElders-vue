@@ -39,10 +39,10 @@ const handleClick = (tab: TabsPaneContext) => {
     store.commit('post/CLEAR_LOADED_PAGES_USER_POSTS');// 重置缓存页码
   } else if (tab.props.name === 'second') {
     store.commit('post/SET_LIKED_POSTS', []);
-     store.commit('post/SET_CURRENT_PAGE_LIKED_POSTS', 1);
-     store.commit('post/SET_LOADING_LIKED_POSTS', false);
+    store.commit('post/SET_CURRENT_PAGE_LIKED_POSTS', 1);
+    store.commit('post/SET_LOADING_LIKED_POSTS', false);
     store.commit('post/SET_FINISHED_LIKED_POSTS', false);
-     store.commit('post/CLEAR_LOADED_PAGES_LIKED_POSTS');
+    store.commit('post/CLEAR_LOADED_PAGES_LIKED_POSTS');
   }
    // 加载新数据
   if (tab.props.name === 'first') {
@@ -169,6 +169,15 @@ onMounted(async() => {
 });
 
 onUnmounted(() => {
+  // 离开组件时，重置用户帖子和点赞帖子的状态和数据
+  store.commit('post/SET_CURRENT_PAGE_USER_POSTS', 1);// 重置当前页码
+  store.commit('post/SET_LOADING_USER_POSTS', false);// 重置加载状态
+  store.commit('post/SET_FINISHED_USER_POSTS', false);// 重置完成状态
+  store.commit('post/CLEAR_LOADED_PAGES_USER_POSTS');// 重置缓存页码
+  store.commit('post/SET_CURRENT_PAGE_LIKED_POSTS', 1);
+  store.commit('post/SET_LOADING_LIKED_POSTS', false);
+  store.commit('post/SET_FINISHED_LIKED_POSTS', false);
+  store.commit('post/CLEAR_LOADED_PAGES_LIKED_POSTS');
   // 移除滚动监听器和清理资源
   removeUserPostListeners();
   cleanupUserPosts();

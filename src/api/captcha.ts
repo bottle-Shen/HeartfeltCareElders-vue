@@ -14,7 +14,7 @@ export interface getCaptchaResponse {
 
 export const getCaptcha =(data: getCaptchaParams):Promise<getCaptchaResponse>=> {
     return request({
-        url: 'users/get_captcha/',
+        url: 'api/users/get_captcha/',
         method: 'POST',
         data,
     }).then(response => {

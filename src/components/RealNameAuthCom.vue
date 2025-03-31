@@ -50,7 +50,17 @@ const saveUserInfo = async () => {
 const resetFormFromParent = () => {
   resetForm();
 };
-
+// 定义 props 用于接收父组件传递的 placeholder
+const props = defineProps({
+  realNamePlaceholder: {
+    type: String,
+    default: '请输入真实姓名', // 默认值
+  },
+  idCardPlaceholder: {
+    type: String,
+    default: '请输入身份证号', // 默认值
+  },
+});
 defineExpose({
   resetFormFromParent
 });
@@ -66,11 +76,11 @@ defineExpose({
             >
             <!-- 真实姓名 -->
             <el-form-item label="真实姓名" prop="real_name">
-                <el-input v-model="form.real_name"/>
+                <el-input v-model="form.real_name" :placeholder="props.realNamePlaceholder"/>
             </el-form-item>
             <!-- 身份证号 -->
             <el-form-item label="身份证号" prop="id_card">
-                    <el-input v-model="form.id_card"/>
+                    <el-input v-model="form.id_card" :placeholder="props.idCardPlaceholder"/>
             </el-form-item>
             <el-form-item>
               <el-button class="primary-button w-full" @click="saveUserInfo">保存</el-button>

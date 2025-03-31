@@ -27,7 +27,7 @@ interface RegisterResponse {
 
 export const register =(data: RegisterParams):Promise<RegisterResponse> => {
     return request({
-      url: 'users/register/',
+      url: 'api/users/register/',
       method: 'POST',
       data,
     }
@@ -88,7 +88,7 @@ export const register =(data: RegisterParams):Promise<RegisterResponse> => {
 const continueRegistration = (data: RegisterParams) => {
   //发送新的请求，告诉后端用户确认继续注册
   return request({
-    url: 'users/continue_register/',
+    url: 'api/users/continue_register/',
     method: 'POST',
     data: {
       ...data,

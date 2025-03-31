@@ -45,13 +45,13 @@ request.interceptors.request.use(
 // 响应拦截器
 request.interceptors.response.use(
   response => {
-    console.log('拦截器响应成功')
+    // console.log('拦截器响应成功')
     // console.log(response)
 		return response
   },
   // 响应错误处理
   async error => {
-    console.log('拦截器响应失败')
+    // console.log('拦截器响应失败')
     console.log(error)
     if (error.response) {
       //处理HTTP错误码
@@ -72,19 +72,19 @@ request.interceptors.response.use(
                 access_token: response.access,
                 refresh_token: store.state.user.token.refresh_token
               });
-              console.log('刷新令牌成功', response);
-              console.log('重新发起请求');
+              // console.log('刷新令牌成功', response);
+              // console.log('重新发起请求');
               // 更新请求头中的授权令牌
               error.config.headers['Authorization'] = `Bearer ${store.state.user.token.access_token}`;
               // 返回一个新的Promise，确保axios能够自动处理重新发起的请求
               return new Promise((resolve, reject) => {
                 axios(error.config)
               .then(response => {
-                console.log('重新发起请求成功', response);
+                // console.log('重新发起请求成功', response);
                 resolve(response)
               })
               .catch(err => {
-                console.error('重新发起请求失败', err);
+                // console.error('重新发起请求失败', err);
                 reject(err)
               });
         });

@@ -36,6 +36,7 @@ import { useInfiniteScroll } from '@/utils'
 import type { UploadFile, UploadFiles } from 'element-plus';
 
 const store = useStore()
+const router = useRouter();
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated'])//判断用户是否登录
 const showPostForm = ref(false); // 控制表单弹窗的显示
 const socialData = computed(() => store.state.post.socialData)// 获取帖子数据
@@ -181,7 +182,7 @@ const addPostBtn = async () => {
     ElMessage.error('您只能选择上传图片组或视频，但不能同时上传两者');
     return;
   }
-  console.log('检查图片组',postForm.value.images); // 检查图片组
+  // console.log('检查图片组',postForm.value.images); // 检查图片组
   // console.log(postForm.value.video); // 检查视频
 
   // 创建 FormData 对象
@@ -204,10 +205,11 @@ const addPostBtn = async () => {
 
   // 调用 API 发布帖子
   try {
-    await addPost(formData);
+    const response = await addPost(formData);
     ElMessage.success('帖子发布成功');
     showPostForm.value = false; // 关闭表单弹窗
-    postForm.value = { title: '', content: '', coverImage: null, video: null, images: [],uploadType: 'image' }; // 清空表单
+    postForm.value = { title: '', content: '', coverImage: null, video: null, images: [], uploadType: 'image' }; // 清空表单
+    router.push(`/interact/${response.id}`); // 跳转到帖子详情页
   } catch (error) {
     console.error('帖子发布失败：', error);
     ElMessage.error('帖子发布失败，请稍后再试');
@@ -315,8 +317,8 @@ onUnmounted(() => {
         <!-- 选择上传图片或视频 -->
          <el-form-item label="上传类型" prop="uploadType">
       <el-radio-group v-model="postForm.uploadType">
-        <el-radio label="image">上传图片</el-radio>
-        <el-radio label="video">上传视频</el-radio>
+        <el-radio value="image">上传图片</el-radio>
+        <el-radio value="video">上传视频</el-radio>
       </el-radio-group>
     </el-form-item>
     <!-- 视频上传组件 -->

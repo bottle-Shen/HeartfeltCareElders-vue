@@ -22,14 +22,15 @@ const echarts = window.echarts;
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);
 const getUserType = computed(() => store.getters['user/getUserType']);
 const elderlyList = ref<elderlyInfoResponse[]>([])// 机构人员绑定的老人用户列表
-const selectedElderly = ref<number>(1)// 选择的老人用户ID
+const selectedElderly = ref<number | undefined>(undefined)// 选择的老人用户ID
 const isAsideVisible = computed(() => store.getters['asideVisible/isAsideVisible']);
 const dialogVisible = ref(false); // 控制弹窗的显示
 const selectedHealthData = ref<Partial<HealthData>>({});// 当前行的健康数据,Partial 类型将一个类型的所有属性都变为可选的,HealthData可以是不完整的
 const healthDataForm = ref<InstanceType<typeof ElForm> | null>(null);// 表单数据
 const healthData = ref<HealthData[]>([]); // 用于存储健康数据
 const hasHealthData = ref(true); // 用于标记是否有健康数据
-const hasElderlyHealthData = ref(true); // 用于标记机构人员绑定用户是否有健康数据
+const hasElderly = ref(true);// 用于标记是否有老人用户
+const hasElderlyHealthData = ref(true); // 用于标记绑定用户是否有健康数据
 // 存储所有提取的数据
 const healthMetrics = reactive({
   height: [] as number[],
@@ -452,7 +453,15 @@ const fetchHealthData = async () => {
       } else if (getUserType.value === 2) {
         response = await getElderlyHealthData();
       } else if (getUserType.value === 3) {
+        // 检查 selectedElderly 是否为 undefined
+        if (selectedElderly.value === undefined) {
+            hasElderly.value = false;
+            throw new Error("未选择老人用户");
+        }
+        // console.log('selectedElderly',selectedElderly.value)
         response = await getElderlyHealthDataList(selectedElderly.value);
+        hasElderly.value = true;
+        hasElderlyHealthData.value = true;
       } else {
         throw new Error("未知的用户类型");
       }
@@ -550,7 +559,10 @@ onMounted(async() => {
         store.commit('loading/SET_LOADING', true); // 设置
         if(getUserType.value === 3){
           const response = await getElderlyList();
-          elderlyList.value = response;
+          elderlyList.value = response || [];
+          if (elderlyList.value.length > 0) {
+            selectedElderly.value = elderlyList.value[0].elderly_id; // 默认选择第一个老人
+          }
           // console.log('elderlyList',elderlyList.value)
         }
         // 全局加载状态为 true
@@ -594,17 +606,7 @@ onUnmounted(() => {
   resizeObserver.disconnect(); // 停止监听
   stopWatch(); // 停止 watch 监听 isAsideVisible
 });
-// 绑定用户
-const bindHealthData  = async () => {
-  submitRealNameAndIdCard()
-  // try {
-  //   const response = await bindHealthDataToUser();
-  //   console.log('绑定成功', response);
-  //   fetchHealthData(); // 重新加载数据
-  // } catch (error) {
-  //   console.error('绑定失败', error);
-  // }
-}
+
 import { userInfoForm } from '@/utils/form'
 import type { user,UserInfoFormType } from '@/@types/userInfo'
 import { updateUserInfo} from '@/api/userInfo';
@@ -622,9 +624,6 @@ const saveUserInfo = async () => {
   } catch (error) {
     console.error('更新用户信息异常：', error);
   }
-};
-const submitRealNameAndIdCard = () => {
-  showRealNameAuthCom.value = true
 };
 // 响应式数据
 const changedParams = ref<UserInfoFormType>({
@@ -658,6 +657,9 @@ const changedParams = ref<UserInfoFormType>({
         department: store.state.user.department,
         position: store.state.user.position,
 });
+const toggleRealNameAuthCom = () => {// 切换实名认证组件的显示状态
+  showRealNameAuthCom.value = !showRealNameAuthCom.value;
+};
 // 接收子组件传递的实名认证信息
 const handleRealNameAuthSuccess = (real_name: string, id_card: string) => {
   changedParams.value.elderly_real_name = real_name;
@@ -725,11 +727,18 @@ const openUpdateDialog = (row: HealthData) => {
 // 上传健康数据
 const createdHealthData = async (elderlyId:number,HealthData:HealthData) => {
   try {
-    console.log('上传',elderlyId,HealthData)
-    await uploadHealthData(elderlyId, HealthData);
+    // console.log('上传',elderlyId,HealthData)
+    const newHealthData = await uploadHealthData(elderlyId, HealthData);
     // 直接将新数据添加到前端数据
-    healthData.value.push(HealthData);
+    // healthData.value.push(HealthData);
     // fetchHealthData(); // 重新加载数据
+    // 检查返回值是否为 undefined
+    // if (!newHealthData) {
+    //   throw new Error('上传失败，未获取到有效的健康数据');
+    // }
+    // 将新数据添加到前端数据
+    // console.log('newHealthData:', newHealthData);
+    healthData.value.push(newHealthData);
     HealthDataLength.value = healthData.value.length - 1; // 更新长度
     extractHealthData(); // 重新提取数据
     updateCharts(); // 更新图表 
@@ -746,6 +755,10 @@ const saveHealthData = async () => {
       updateBtn(selectedHealthData.value.id,selectedHealthData.value as HealthData)
     } else {
       // 上传操作
+      // 检查 selectedElderly 是否为 undefined
+      if (selectedElderly.value === undefined) {
+        throw new Error("未选择老人用户");
+      }
       createdHealthData(selectedElderly.value,selectedHealthData.value as HealthData);
     }
     dialogVisible.value = false;
@@ -902,13 +915,22 @@ const toggleTableVisibility = () => {
         <template v-if="getUserType === 1">
           暂无健康数据，请联系机构人员或管理员。
         </template>
-        <template v-else-if="getUserType === 2 || getUserType === 3">
-          <div v-if="hasElderlyHealthData">
+        <template v-else-if="getUserType === 2">
+          <div v-if="!hasElderlyHealthData">
             您的账号未绑定任何健康数据，请先绑定健康数据。
-          <button @click="bindHealthData" class="bind-button">绑定健康数据</button>
-           <RealNameAuthCom v-show="showRealNameAuthCom" @real-name-auth-success="handleRealNameAuthSuccess"></RealNameAuthCom>
+          <button @click="toggleRealNameAuthCom" class="bind-button">{{ showRealNameAuthCom ? '返回' : '绑定健康数据' }}</button>
+           <RealNameAuthCom v-show="showRealNameAuthCom" @real-name-auth-success="handleRealNameAuthSuccess"
+           :real-name-placeholder="'请输入绑定老人的真实姓名'"
+           :id-card-placeholder="'请输入绑定老人的身份证号'"
+           ></RealNameAuthCom>
           </div>
           <p v-else>暂无健康数据，请联系机构人员或管理员。</p>
+        </template>
+        <template v-else-if="getUserType === 3">
+          <div v-if="!hasElderly">
+            暂未绑定老人的健康数据，请联系管理员分配老人账户。
+          </div>
+          <p v-if="!hasElderlyHealthData">该老人暂无健康数据，请上传数据。</p>
         </template>
         </p>
     </div>

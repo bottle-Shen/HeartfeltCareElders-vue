@@ -7,7 +7,7 @@ interface getRefreshParams {
 export const getRefresh =(data: getRefreshParams)=> {
   const { refresh_token } = data;
     return request({
-        url: 'users/token/refresh/',
+        url: 'api/users/token/refresh/',
         method: 'POST',
         data: { refresh: refresh_token },
     }).then(response => {

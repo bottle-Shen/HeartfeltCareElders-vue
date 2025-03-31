@@ -6,15 +6,15 @@ export const getUserInfo = (params: UserInfoFormType): Promise<IUserInfo> => {
   let specificId: number | undefined;
   switch (params.user.user_type) {
     case 1: // 老人
-      url = 'users/elderly/';
+      url = 'api/users/elderly/';
       specificId = params.elderly_id;
       break;
     case 2: // 家属
-      url = 'users/family/';
+      url = 'api/users/family/';
       specificId = params.family_id;
       break;
     case 3: // 机构人员
-      url = 'users/caregiver/';
+      url = 'api/users/caregiver/';
       specificId = params.caregiver_id;
       break;
     default:
@@ -42,15 +42,15 @@ export const updateUserInfo = (params: UserInfoFormType): Promise<IUserInfo> => 
   let specificId: number | undefined;
   switch (params.user.user_type) {
     case 1:
-      url = `users/elderly/`;
+      url = `api/users/elderly/`;
       specificId = params.elderly_id;
       break;
     case 2:
-      url = `users/family/`;
+      url = `api/users/family/`;
       specificId = params.family_id;
       break;
     case 3:
-      url = `users/caregiver/`;
+      url = `api/users/caregiver/`;
       specificId = params.caregiver_id;
       break;
     default:
@@ -77,7 +77,7 @@ export const uploadAvatar = (file: File) => {
   const formData = new FormData();
   formData.append('avatar', file);
   return request({
-    url: `users/upload_avatar/`,
+    url: `api/users/upload_avatar/`,
     method: 'POST',
     data: formData,
     headers: {
@@ -100,7 +100,7 @@ export const uploadBackground = (file: File) => {
   const formData = new FormData();
   formData.append('background_image', file);
   return request({
-    url: `users/upload_background/`,
+    url: `api/users/upload_background/`,
     method: 'POST',
     data: formData,
     headers: {
