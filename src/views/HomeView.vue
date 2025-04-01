@@ -3,7 +3,7 @@ import { getHealthData, getElderlyHealthData, getElderlyHealthDataList, getElder
 // import { getHealthData, getElderlyHealthData, getElderlyHealthDataList, getElderlyList, uploadHealthData, updateHealthData, deleteHealthData, getSSEUrl } from '@/api/healthData'
 import { formRules2 } from '@/utils/formRules';
 import { useStore } from 'vuex'
-// import * as echarts from 'echarts/core';
+// import * as echarts from 'echarts';
 import { formatDate } from '@/utils'
 // import { formatDate, formatDateToISO } from '@/utils'
 import type{ HealthData } from '@/@types/healthdata'
@@ -188,7 +188,7 @@ const bmiChartOptions = computed(() =>({
     series: [
       {
         name: '身高cm',
-        type: 'scatter',
+        type: 'line',
         data: healthMetrics.height,
         symbolSize: function(value: number) {
         return value / 10;

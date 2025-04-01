@@ -12,7 +12,7 @@ import IconsResolver from 'unplugin-icons/resolver'
 
 import Inspect from 'vite-plugin-inspect'
 
-import { visualizer } from 'rollup-plugin-visualizer'
+import { visualizer } from 'rollup-plugin-visualizer'// 引入 rollup-plugin-visualizer打包分析
 
 
 const pathSrc = path.resolve(__dirname, 'src')
@@ -26,7 +26,7 @@ export default defineConfig({
   },
   plugins: [//插件
     vue(),
-    visualizer(),
+    visualizer(),// 打包分析
     AutoImport ({
       imports: ["vue", "vue-router", "pinia"], //自动引入vue的ref、toRefs、onmounted等，无需在页面中再次引入
       dts: path.resolve(pathSrc, 'auto-imports.d.ts'), // 生成 `auto-import.d.ts` 全局声明
@@ -69,14 +69,18 @@ export default defineConfig({
         comments: false,// 删除所有注释
       },
     },
+    chunkSizeWarningLimit: 1024 * 1024 * 2, // 分块大小警告设置为 2MB
     rollupOptions: {
       output: {
+        // 分块配置
         manualChunks: {
+          // 静态配置
           'vue': ['vue'], // Vue 核心库
           'vue-router': ['vue-router'], // Vue Router
           'vuex': ['vuex'], // Vuex
           'element-plus': ['element-plus'], // Element Plus
-          'echarts': ['echarts'], // ECharts
+          'lodash-es': ['lodash-es'],
+          // 'echarts': ['echarts'], // ECharts
           'axios': ['axios'], // Axios
           'crypto-js': ['crypto-js'], // CryptoJS
           'secure-ls': ['secure-ls'], // Secure LS
@@ -86,6 +90,7 @@ export default defineConfig({
           'bootstrap': ['bootstrap'], // Bootstrap
           'unplugin-icons': ['unplugin-icons'], // Unplugin Icons
           'sentry': ['@sentry/tracing', '@sentry/vue'], // Sentry
+          'echarts': [path.resolve(__dirname, 'src/echarts.min.js')], // ECharts
         }
       },
     }
