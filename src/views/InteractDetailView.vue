@@ -702,6 +702,7 @@ watch(() => route.params.id, (newId) => {
               color: var(--black);
             }
             .time{
+              padding-top: rem(5);
               color:var(--gray);
             }
           }

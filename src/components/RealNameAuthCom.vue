@@ -93,7 +93,6 @@ defineExpose({
     </div>
 </template>
 <style lang="scss" scoped>
-@use '@/styles/base.module';
 .el-form-item {
   padding-bottom: rem(18);
 }

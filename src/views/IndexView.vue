@@ -80,8 +80,8 @@ const {
     height: 9.7vh;
     min-height: rem(52);
     max-height: rem(104.8);
-    border-bottom: 1px solid var(--white-gray);
-    box-shadow: 0 1px 4px var(--dark-blue-rgb);
+    border-bottom: 1px solid var(--gray);
+    box-shadow: 0 1px 4px var(--gray-rgb);
     background-color: var(--bg-one);
   }
   .el-aside {

@@ -12,6 +12,8 @@ import IconsResolver from 'unplugin-icons/resolver'
 
 import Inspect from 'vite-plugin-inspect'
 
+import { visualizer } from 'rollup-plugin-visualizer'
+
 
 const pathSrc = path.resolve(__dirname, 'src')
 
@@ -24,6 +26,7 @@ export default defineConfig({
   },
   plugins: [//插件
     vue(),
+    visualizer(),
     AutoImport ({
       imports: ["vue", "vue-router", "pinia"], //自动引入vue的ref、toRefs、onmounted等，无需在页面中再次引入
       dts: path.resolve(pathSrc, 'auto-imports.d.ts'), // 生成 `auto-import.d.ts` 全局声明
@@ -90,16 +93,14 @@ export default defineConfig({
   css: {
     postcss: {
       plugins: [autoprefixer], // 使用 ES 模块导入的 autoprefixer
-      syntax: postcssScss // 使用 postcss-scss 作为语法解析器
+      syntax: postcssScss, // 使用 postcss-scss 作为语法解析器
     },
     preprocessorOptions: {
       scss: {
       javascriptEnabled: true,
-      // additionalData: `@use "@/styles/index.scss" as *;`, // 使用 as * 来避免命名空间冲突
-        // additionalData: `@use "@/styles/index.scss" as *;`,
         additionalData: `
         @use "@/styles/index.scss" as *;
-         @use '@/styles/base.module' as *;`,
+         @use '@/styles/base.scss' as *;`,
       api: 'modern-compiler'
       },
   }

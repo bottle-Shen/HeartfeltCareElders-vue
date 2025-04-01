@@ -1,4 +1,3 @@
-import variables from '@/styles/variables.module.scss';
 import { useStore } from 'vuex';
 export function useResponsiveLayout() {
     const store = useStore();

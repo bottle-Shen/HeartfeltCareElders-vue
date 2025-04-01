@@ -82,7 +82,7 @@ onUnmounted(() => {
   <RouterView/>
 </template>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .isLoading {
   // 全局加载样式-typography.scss
   position: absolute;
