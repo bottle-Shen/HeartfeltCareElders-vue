@@ -139,6 +139,9 @@ onMounted(async() => {
         </div>
         <div class="user-info-com-footer">
           <span>
+            <el-button class="primary-button w-full" @click="router.push('/setting')">设置</el-button>
+          </span>
+          <span>
             <el-button class="primary-button w-full" @click="router.push('/reset')">修改密码</el-button>
           </span>
           <span>

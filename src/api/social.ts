@@ -297,11 +297,11 @@ export const initializeWebSocket = (postId: number,userId:number) => {
       }
       if (type === "comment_message") {
         // 更新评论列表
-        console.log('postID', postId)
+        // console.log('postID', postId)
         // 找到对应的帖子
         const post = store.state.post.socialData.find(item => item.id === postId);
-        console.log('socialData:', store.state.post.socialData);
-        console.log('post',post)
+        // console.log('socialData:', store.state.post.socialData);
+        // console.log('post',post)
         if (post) {
           // 确保 post.comments 是一个数组
           if (!Array.isArray(post.comments)) {
@@ -326,7 +326,7 @@ export const initializeWebSocket = (postId: number,userId:number) => {
               post.comments_count = 1;
           }
 
-          console.log("Comment added:");
+          // console.log("Comment added:");
         }
       } else if (type === "like_message") {
         // console.log('Received like message:', message);

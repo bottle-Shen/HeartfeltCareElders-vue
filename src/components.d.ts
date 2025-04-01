@@ -52,7 +52,6 @@ declare module 'vue' {
     IEpMessageBox: typeof import('~icons/ep/message-box')['default']
     IEpReading: typeof import('~icons/ep/reading')['default']
     IEpRight: typeof import('~icons/ep/right')['default']
-    IEpSetting: typeof import('~icons/ep/setting')['default']
     IEpTrendCharts: typeof import('~icons/ep/trend-charts')['default']
     IEpUser: typeof import('~icons/ep/user')['default']
     LoadingCom: typeof import('./components/LoadingCom.vue')['default']

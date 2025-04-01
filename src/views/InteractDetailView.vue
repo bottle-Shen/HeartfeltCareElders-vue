@@ -477,7 +477,7 @@ watch(() => route.params.id, (newId) => {
           <img :src="handleAvatarPath(comment.user.avatar)" alt="用户头像" class="avatar"/>
           <span class="comment-right">
             <p class="username body-s">{{ comment.user.username }}</p>
-            <p class="comment-content">{{ comment.comment_content }}</p>
+            <p class="comment-content body">{{ comment.comment_content }}</p>
             <p class="time body-s">{{ formatDate(comment.created_at) }}</p>
           </span>
         </li>
@@ -692,16 +692,17 @@ watch(() => route.params.id, (newId) => {
           .comment-right{
             width: 80%;
             padding-left: rem(10);
+            padding-bottom: rem(12);
             .username{
               @extend .ellipsis;
               padding-bottom: rem(5);
-              color: var(--black);
+              color: var(--gray);
             }
             .comment-content{
               color: var(--black);
             }
             .time{
-              color:var(--white);
+              color:var(--gray);
             }
           }
         }

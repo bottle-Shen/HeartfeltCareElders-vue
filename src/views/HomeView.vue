@@ -10,6 +10,7 @@ import type{ HealthData } from '@/@types/healthdata'
 import type { elderlyInfoResponse } from '@/@types/userInfo'
 import type { ElForm } from 'element-plus';
 import { exampleHealthData } from '@/utils/exampleData'// 导入响应式布局逻辑
+import RealNameAuthCom from '@/components/RealNameAuthCom.vue'// 实名认证组件,引入才能重置子组件表单
 // const store = useStore()
 // interface CountHealthData{
 //   count: number;//总数据条数
@@ -611,18 +612,19 @@ import { userInfoForm } from '@/utils/form'
 import type { user,UserInfoFormType } from '@/@types/userInfo'
 import { updateUserInfo} from '@/api/userInfo';
 const showRealNameAuthCom = ref(false)
-// 更新用户信息
+// 更新用户信息-绑定用户
 const saveUserInfo = async () => {
     try {
     const response = await updateUserInfo(changedParams.value);
-    console.log('更新', response);
       // 更新成功后，更新store中的信息
     store.commit('user/setUser', response);
-      // 可以在这里更新本地的 userInfo 状态，使其与后端同步
-    userInfoForm.value = response;
-
+      // 更新本地的 userInfo 状态，使其与后端同步
+      userInfoForm.value = response;
+      // 更新成功后重载页面
+      location.reload();
   } catch (error) {
-    console.error('更新用户信息异常：', error);
+    ElMessage.error('未找到该用户,可能该用户尚未实名认证');
+    console.error('未找到该用户：', error);
   }
 };
 // 响应式数据
@@ -652,32 +654,64 @@ const changedParams = ref<UserInfoFormType>({
         common_address: store.state.user.common_address,
         elderly_real_name:store.state.user.elderly_real_name,
         elderly_id_card:store.state.user.elderly_id_card,
+        elderly_phone: store.state.user.elderly_phone,
     //机构人员
       caregiver_id: store.state.user.caregiver_id, // 确保Vuex中存在caregiver_id
         department: store.state.user.department,
         position: store.state.user.position,
 });
+const realNameAuthComRef = ref<InstanceType<typeof RealNameAuthCom> | null>(null); // 子组件的引用
 const toggleRealNameAuthCom = () => {// 切换实名认证组件的显示状态
+  if (showRealNameAuthCom.value) {
+    // 如果当前处于“返回”状态，通知子组件清空表单
+    realNameAuthComRef.value?.resetFormFromParent();
+  }
   showRealNameAuthCom.value = !showRealNameAuthCom.value;
 };
+const showPhoneBindingForm = ref(false);
 // 接收子组件传递的实名认证信息
 const handleRealNameAuthSuccess = (real_name: string, id_card: string) => {
   changedParams.value.elderly_real_name = real_name;
   changedParams.value.elderly_id_card = id_card;
   // 调用更新接口
-  saveUserInfo();
+  // saveUserInfo();
+  // 隐藏实名认证组件
   showRealNameAuthCom.value = false
+  // 显示绑定手机号的表单
+  showPhoneBindingForm.value = true;
 };
+const bindPhone = () => {
+  if (phoneFormRef.value) { // 检查 phoneFormRef.value 是否为 null
+    phoneFormRef.value.validate((valid: boolean) => { // 调用表单验证
+      if (valid) {
+        // 如果表单验证通过
+        changedParams.value.elderly_phone = phoneForm.value.phone;
+        // 调用更新接口
+        saveUserInfo();
+      } else {
+        // 如果表单验证未通过
+        ElMessage.error('手机号格式不正确，请检查后重新输入');
+      }
+    });
+  }
+};
+const phoneForm = ref({
+  phone: '',
+});
+const phoneRules = {
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
+  ],
+};
+const phoneFormRef = ref<InstanceType<typeof ElForm> | null>(null);
 
-
-
-const updateBtn = async(healthDataId: number,HealthData:HealthData) => {
+const updateBtn = async(healthDataId: number,HealthData:HealthData) => {// 机构人员更新健康数据
   try {
     const response = await updateHealthData(healthDataId, HealthData);
-    console.log('更新成功', response);
     HealthData.health_status = response.health_status; 
     // 检查 healthData 的结构
-    console.log('当前 healthData:', healthData.value);
+    // console.log('当前 healthData:', healthData.value);
     // 直接更新前端数据
     const index = healthData.value.findIndex(item => item.id === healthDataId);
     if (index !== -1) {
@@ -695,13 +729,11 @@ const updateBtn = async(healthDataId: number,HealthData:HealthData) => {
     console.error('更新失败', error);
   }
 };
-const deleteBtn = async (healthDataId: number) => {
+const deleteBtn = async (healthDataId: number) => {// 机构人员删除健康数据
   try {
     await deleteHealthData(healthDataId);
-    console.log('删除成功', healthDataId);
     // 如果删除成功，从 healthData 中移除对应的项
     healthData.value = healthData.value.filter(item =>item.id !== healthDataId);
-    console.log('删除成功', healthData.value);
     // fetchHealthData(); // 重新加载数据
     // 更新长度
     HealthDataLength.value = healthData.value.length - 1;
@@ -913,16 +945,28 @@ const toggleTableVisibility = () => {
         <p v-if="isAuthenticated">
         <!-- 根据用户类型显示不同的提示信息 -->
         <template v-if="getUserType === 1">
-          暂无健康数据，请联系机构人员或管理员。
+          暂无健康数据，请联系机构人员或管理员上传。
         </template>
         <template v-else-if="getUserType === 2">
           <div v-if="!hasElderlyHealthData">
-            您的账号未绑定任何健康数据，请先绑定健康数据。
-          <button @click="toggleRealNameAuthCom" class="bind-button">{{ showRealNameAuthCom ? '返回' : '绑定健康数据' }}</button>
-           <RealNameAuthCom v-show="showRealNameAuthCom" @real-name-auth-success="handleRealNameAuthSuccess"
+            您的账号未绑定老人用户，请先绑定用户。
+          <el-button class="primary-button" @click="toggleRealNameAuthCom">{{ showRealNameAuthCom ? '返回' : '绑定' }}</el-button>
+           <RealNameAuthCom v-show="showRealNameAuthCom" ref="realNameAuthComRef" @real-name-auth-success="handleRealNameAuthSuccess"
            :real-name-placeholder="'请输入绑定老人的真实姓名'"
            :id-card-placeholder="'请输入绑定老人的身份证号'"
+           :button-text="'下一步'"
            ></RealNameAuthCom>
+           <!-- 手机号绑定表单 -->
+    <div v-if="showPhoneBindingForm">
+      <el-form :model="phoneForm" :rules="phoneRules" ref="phoneFormRef">
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="phoneForm.phone" placeholder="请输入老人的手机号"></el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-button class="primary-button" @click="bindPhone">确认绑定</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
           </div>
           <p v-else>暂无健康数据，请联系机构人员或管理员。</p>
         </template>
@@ -930,7 +974,7 @@ const toggleTableVisibility = () => {
           <div v-if="!hasElderly">
             暂未绑定老人的健康数据，请联系管理员分配老人账户。
           </div>
-          <p v-if="!hasElderlyHealthData">该老人暂无健康数据，请上传数据。</p>
+          <p v-if="!hasElderlyHealthData && hasElderly">该老人暂无健康数据，请上传数据。</p>
         </template>
         </p>
     </div>

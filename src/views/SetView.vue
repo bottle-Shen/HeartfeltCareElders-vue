@@ -70,6 +70,7 @@ const changedParams = ref<UserInfoFormType>({
       caregiver:store.state.user.caregiver,
       elderly_id_card: store.state.user.elderly_id_card,
       elderly_real_name: store.state.user.elderly_real_name,
+      elderly_phone: store.state.user.elderly_phone,
     //家属
       family_id: store.state.user.user.family_id, // 确保Vuex中存在family_id
         relation:store.state.user.relation,
@@ -160,6 +161,7 @@ const handleRealNameAuthSuccess = (real_name: string, id_card: string) => {
   // 调用更新接口
   saveUserInfo();
   showRealNameAuthCom.value = false
+  isRealNameAuthOpen.value = false
 };
 const toggleEditMode = () => {
   resetSetForm()
@@ -214,6 +216,8 @@ const resetSetForm = () => {
     ruleFormRef.value.resetFields(); // 重置表单数据和验证规则
   }
 };
+// 切换拖拽按钮的显示隐藏-inject获取祖先组件通过 provide 提供的数据或方法
+const toggleButtonVisibility = inject('toggleButtonVisibility') as ((evt: MouseEvent) => void) | undefined;
 </script>
 <template>
   <!-- 用户信息已加载 -->
@@ -309,7 +313,6 @@ const resetSetForm = () => {
             <el-select v-model="changedParams.relation">
               <el-option label="母女/母子" value="母女/母子" />
               <el-option label="父女/父子" value="父女/父子" />
-              <el-option label="爷孙" value="爷孙" />
               <el-option label="其它" value="其它" />
             </el-select>
           </template>
@@ -360,10 +363,10 @@ const resetSetForm = () => {
         </template>
       </el-form-item>
     </el-form>
-
+    <el-button class="primary-button w-full btn" @click="toggleButtonVisibility">切换拖拽按钮的显示隐藏</el-button>
     <!-- 实名认证 -->
     <div v-if="!changedParams.user.real_name || !changedParams.user.id_card">
-      <el-button class="primary-button w-full" @click="toggleRealNameAuth">{{ isRealNameAuthOpen ? '返回' : '前往实名认证' }}</el-button>
+      <el-button class="primary-button w-full btn" @click="toggleRealNameAuth">{{ isRealNameAuthOpen ? '返回' : '前往实名认证' }}</el-button>
     </div>
     <div class="flex-between w-full" v-else>
       <span>已实名</span>
@@ -389,6 +392,9 @@ const resetSetForm = () => {
   </div>
 </template>
 <style scoped lang="scss">
+.btn{
+  margin-bottom: rem(10);
+}
   .card {
     margin-top: rem(5);
     margin-bottom: rem(15);

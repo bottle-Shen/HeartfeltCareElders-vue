@@ -32,6 +32,7 @@ export interface UserInfoFormType {
   common_address: string;// 现在家庭住址
   elderly_real_name: string;// 绑定老人验证
   elderly_id_card: string;// 绑定老人验证
+  elderly_phone: string;// 绑定老人验证
   //机构人员
   caregiver_id: number;
   department: string;// 部门

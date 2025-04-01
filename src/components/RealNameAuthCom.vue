@@ -28,7 +28,7 @@ const saveUserInfo = async () => {
             try {
             const response = await getRealName(formData);
             if (response.code === 200) {
-                ElMessage.success("实名认证成功");
+                // ElMessage.success("实名认证成功");
                 // 触发自定义事件，将实名信息传递给父组件
                 emit("real-name-auth-success", form.real_name, form.id_card);
                 resetForm()// 重置表单
@@ -60,6 +60,10 @@ const props = defineProps({
     type: String,
     default: '请输入身份证号', // 默认值
   },
+  buttonText: { // 新增 prop 用于接收按钮文本
+    type: String,
+    default: '保存', // 默认值为“保存”
+  },
 });
 defineExpose({
   resetFormFromParent
@@ -83,7 +87,7 @@ defineExpose({
                     <el-input v-model="form.id_card" :placeholder="props.idCardPlaceholder"/>
             </el-form-item>
             <el-form-item>
-              <el-button class="primary-button w-full" @click="saveUserInfo">保存</el-button>
+              <el-button class="primary-button w-full" @click="saveUserInfo">{{ props.buttonText }}</el-button>
             </el-form-item>
       </el-form>
     </div>

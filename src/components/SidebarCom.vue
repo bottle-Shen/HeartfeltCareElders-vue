@@ -14,17 +14,11 @@ const handleSelect = (index: string) => {
     case '4':
       router.push('/interact');
       break;
-    // case '5':
-    //   router.push('/consult');
-    //   break;
-    case '6':
+    case '5':
       router.push('/document');
       break;
-    case '7':
+    case '6':
       router.push({ path: '/userInfo', query: { tab: 'first' } });
-      break;
-    case '8':
-      router.push('/setting');
       break;
     default:
       break;
@@ -59,17 +53,13 @@ const handleSelect = (index: string) => {
       <el-icon><i-ep-FirstAidKit /></el-icon>
       <el-icon>咨询服务</el-icon>
     </el-menu-item> -->
-    <el-menu-item index="6">
+    <el-menu-item index="5">
       <el-icon><i-ep-MessageBox /></el-icon>
       <el-icon>健康档案</el-icon>
     </el-menu-item>
-    <el-menu-item index="7">
+    <el-menu-item index="6">
       <el-icon><i-ep-User /></el-icon>
       <el-icon>个人主页</el-icon>
-    </el-menu-item>
-    <el-menu-item index="8">
-      <el-icon><i-ep-Setting /></el-icon>
-      <el-icon>设置</el-icon>
     </el-menu-item>
   </el-menu>
 </template>

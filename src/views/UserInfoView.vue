@@ -3,7 +3,7 @@ import { userInfo,userInfoForm } from '@/utils/form'
 import type { user,UserInfoFormType,IUserInfo, elderlyInfoResponse, familyInfoResponse, caregiverInfoResponse } from '@/@types/userInfo'
 import { getUserInfo, updateUserInfo,uploadAvatar,uploadBackground } from '@/api/userInfo';
 import { ElMessage, ElDialog } from 'element-plus'
-import type { TabsPaneContext } from 'element-plus'
+import type { TabsPaneContext,ElForm } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import type { UploadProps,UploadFile } from 'element-plus'
 import { useStore } from 'vuex';
@@ -106,7 +106,7 @@ const formatDate = (dateString: string) => {
 const store = useStore()
 const isLoading = ref(true)// 是否加载中
 const isEditMode = ref(false)// 响应式控制是否处于编辑模式
-const ruleFormRef = ref()// 表单引用
+const ruleFormRef = ref<InstanceType<typeof ElForm> | null>(null)// 表单引用
 const backgroundUrl = ref<string | null>(null)// 背景图上传的预览地址
 const backgroundFile = ref<File | null>(null); // 用于保存背景图文件对象
 const avatarFile = ref<File | null>(null); // 用于保存文件对象
@@ -205,6 +205,7 @@ const changedParams = ref<UserInfoFormType>({
       caregiver:store.state.user.caregiver,
       elderly_id_card: store.state.user.elderly_id_card,
       elderly_real_name: store.state.user.elderly_real_name,
+      elderly_phone: store.state.user.elderly_phone,
     //家属
       family_id: store.state.user.user.family_id, // 确保Vuex中存在family_id
         relation:store.state.user.relation,
@@ -444,6 +445,7 @@ const toggleEditMode = () => {
   }
   isEditMode.value = !isEditMode.value;
 };
+
 onBeforeRouteLeave(() => {
   // 清空倒计时
   isCounting.value = false;
@@ -842,12 +844,16 @@ onBeforeRouteLeave(() => {
 }
 .uploader-icon {
     font-size: rem(28);
-    color: var(--white);
+    color: var(--blue);
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 1; // 确保“+”号在头像上方
   }
+    :deep(.el-dialog__footer) {
+        padding-top: rem(16);
+    }
+
 }
 </style>

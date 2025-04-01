@@ -57,6 +57,7 @@ export const userInfo = reactive<UserInfoFormType>({
   common_address: '',//现在家庭地址
   elderly_real_name: '',//绑定老人验证
   elderly_id_card: '',//绑定老人验证
+  elderly_phone: '',//绑定老人验证
   //机构人员
   caregiver_id: 0,
   department: '',//部门

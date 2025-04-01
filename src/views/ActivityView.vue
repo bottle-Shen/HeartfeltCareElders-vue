@@ -390,7 +390,7 @@ const resetForm = () => {
             <el-button class="primary-button" v-if="!hasRegistered(activity.id) && !activityEndedStatus[activity.id]" v-debounce:click="()=>activityBtn(activity.id)">确认报名</el-button>
             <el-button class="primary-button danger" v-else-if="hasRegistered(activity.id) && !activityEndedStatus[activity.id]" v-debounce:click="()=>cancelActivity(activity.id)" type="danger">取消报名</el-button>
             <el-button class="primary-button danger" v-else disabled>
-                活动已结束
+                已结束
             </el-button>
           </div>
         </div>
@@ -490,7 +490,7 @@ const resetForm = () => {
               <el-button class="primary-button" v-if="!hasRegistered(scope.row.id) && !activityEndedStatus[scope.row.id]" v-debounce:click="()=>activityBtn(scope.row.id)">确认报名</el-button>
               <el-button class="primary-button danger" v-else-if="hasRegistered(scope.row.id) && !activityEndedStatus[scope.row.id]" v-debounce:click="()=>cancelActivity(scope.row.id)">取消报名</el-button>
               <el-button class="primary-button danger" v-else disabled>
-                活动已结束
+                已结束
               </el-button>
             </div>
           </div>

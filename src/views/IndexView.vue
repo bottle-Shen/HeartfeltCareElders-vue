@@ -10,6 +10,12 @@ const { isAsideVisible,toggleAside } = useResponsiveLayout();
 // 定义响应式数据
 // const store = useStore()
 // ------------拖拽按钮开始------------
+const isButtonVisible = ref(true); // 控制按钮的显示隐藏
+// 跨组件通信
+provide('isButtonVisible', isButtonVisible);//provide将数据或方法提供给所有其它组件
+provide('toggleButtonVisibility', () => {
+  isButtonVisible.value = !isButtonVisible.value;
+});
 const draggableButton = ref<{ $el: HTMLElement } | null>(null); // 定义 ref
 const buttonWidth = ref(0); // 按钮宽度
 const buttonHeight = ref(0); // 按钮高度
@@ -50,7 +56,7 @@ const {
         <SidebarCom/>
       </el-aside>
       </Transition>
-      <el-button ref="draggableButton" type="primary" :icon="Opportunity" circle
+      <el-button v-if="isButtonVisible" ref="draggableButton" type="primary" :icon="Opportunity" circle
       :style="{
     left: `${position.x}px`,
     top: `${position.y}px`,
