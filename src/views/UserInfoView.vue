@@ -281,6 +281,7 @@ const saveUserInfo = async () => {
   }
 };
 
+import { compressImage } from '@/utils/index';
 
 // 头像上传配置
 const uploadHeaders = computed(() => ({
@@ -336,6 +337,23 @@ const saveAvatar = async () => {
       ElMessage.error("无法识别的文件类型");
       return;
   }
+  const coverImage = await compressImage(avatarFile.value, {
+    quality: 0.8,// 压缩质量,范围0-1
+    maxWidth: 800,// 最大宽度
+    maxHeight: 800,// 最大高度
+    resize: "cover",// 是否调整图片尺寸
+  });
+  // 检查文件大小，如果仍然较大，进一步调整压缩质量
+  const maxSize = 1 * 1024 * 1024; // 1MB
+  if (avatarFile.value.size > maxSize) {
+    const furtherCompressedCoverImage = await compressImage(avatarFile.value, {
+      quality: 0.6, // 进一步降低压缩质量
+    });
+    avatarFile.value = furtherCompressedCoverImage as File;
+  }
+  // 更新数据
+  avatarFile.value = coverImage as File;
+
   // 调用 uploadAvatar 函数上传头像
   const uploadedUrl = await uploadAvatar(avatarFile.value);
   userInfoForm.value.avatar = uploadedUrl; // 更新本地头像地址
@@ -421,6 +439,22 @@ const saveBackground = async () => {
       ElMessage.error("无法识别的文件类型");
       return;
   }
+  const coverImage = await compressImage(backgroundFile.value, {
+    quality: 0.8,// 压缩质量,范围0-1
+    maxWidth: 800,// 最大宽度
+    maxHeight: 800,// 最大高度
+    resize: "cover",// 是否调整图片尺寸
+  });
+  // 检查文件大小，如果仍然较大，进一步调整压缩质量
+  const maxSize = 1 * 1024 * 1024; // 1MB
+  if (backgroundFile.value.size > maxSize) {
+    const furtherCompressedCoverImage = await compressImage(backgroundFile.value, {
+      quality: 0.6, // 进一步降低压缩质量
+    });
+    backgroundFile.value = furtherCompressedCoverImage as File;
+  }
+  // 更新数据
+  backgroundFile.value = coverImage as File;
   // 调用 uploadBackground 函数上传背景图
   const uploadedUrl = await uploadBackground(backgroundFile.value);
   userInfoForm.value.background_image = uploadedUrl; // 更新本地背景图地址

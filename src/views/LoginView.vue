@@ -129,24 +129,24 @@ onBeforeRouteLeave(() => {
       </div>
       <div>
       <!-- 手机号 -->
-      <el-form-item prop="phone" v-show="showPhoneInput">
+      <el-form-item class="form-input" prop="phone" v-show="showPhoneInput">
         <el-input placeholder="请输入手机号" v-model="form.phone" :disabled="isPhoneDisabled"/>
       </el-form-item>
       <!-- 验证码 -->
-      <el-form-item prop="captcha" v-show="showVerificationCode">
+      <el-form-item class="form-input" prop="captcha" v-show="showVerificationCode">
          <div class="flex-center captcha-group">
           <el-input class="captcha" placeholder="请输入验证码" v-model="form.captcha" />
-         <el-button class="get-captcha primary-button" type="primary" v-debounce:click="sendSms" :disabled="!form.phone||isCounting" :loading="isCounting">
+         <el-button class="get-captcha primary-button" v-debounce:click="sendSms" :disabled="!form.phone||isCounting" :loading="isCounting">
           {{ isCounting ? `${countdown}秒后重新获取` : '获取验证码' }}
         </el-button>
          </div>
       </el-form-item>
       <!-- 账号 -->
-      <el-form-item prop="account" v-show="showAccountInput">
+      <el-form-item class="form-input" prop="account" v-show="showAccountInput">
         <el-input placeholder="请输入账号" v-model="form.account" />
       </el-form-item>
       <!-- 密码 -->
-      <el-form-item prop="password1" v-show="showPasswordInput">
+      <el-form-item class="form-input" prop="password1" v-show="showPasswordInput">
         <el-input placeholder="请输入密码" autocomplete="new-password" v-model="form.password1" show-password />
       </el-form-item>
       <div class="flex-between">
@@ -203,11 +203,11 @@ h1{
 .el-form{
   width:80%;/* 确保有明确的宽度 */
   padding:rem(30) rem(60) rem(50);
-  .el-form-item{
+  .form-input{
     padding-bottom: rem(18);
-    &:last-child{
-      padding-bottom: 0;
-    }
+  }
+  .el-form-item{
+    margin-bottom: 0;
   }
   .el-input{
     height: rem(48);

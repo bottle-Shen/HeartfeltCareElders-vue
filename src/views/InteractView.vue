@@ -170,10 +170,11 @@ const handleImageSuccess = (file: File) => {
 const handleVideoRemove = () => {// 移除视频
   postForm.value.video = null;
 };
-
+import { compressImage,compressImages,compressVideo } from '@/utils/index';
 
 // 发布帖子
 const addPostBtn = async () => {
+  // 检查表单是否填写完整
   if (!postForm.value.coverImage) {
     ElMessage.error('封面图不能为空');
     return;
@@ -184,8 +185,59 @@ const addPostBtn = async () => {
   }
   // console.log('检查图片组',postForm.value.images); // 检查图片组
   // console.log(postForm.value.video); // 检查视频
+  
 
-  // 创建 FormData 对象
+  // 调用 API 发布帖子
+  try {
+
+    // 压缩封面图和图片组
+    const {coverImage,images} = await compressImages(postForm.value.coverImage, postForm.value.images, {
+      maxWidth: 800,// 最大宽度
+      maxHeight: 800,// 最大高度
+      quality: 0.8,// 压缩质量,范围0-1
+      resize: "cover",// 是否调整图片尺寸
+    });
+    // 检查文件大小，如果仍然较大，进一步调整压缩质量
+    const maxSize = 1 * 1024 * 1024; // 1MB
+    if (coverImage.size > maxSize) {
+      const furtherCompressedCoverImage = await compressImage(coverImage, {
+        quality: 0.6, // 进一步降低压缩质量
+      });
+      postForm.value.coverImage = furtherCompressedCoverImage as File;
+    }
+    if (images.some(img => img.size > maxSize)) {
+      postForm.value.images = await Promise.all(
+        images.map(img => compressImage(img, {
+          quality: 0.6, // 进一步降低压缩质量
+        }))
+      ) as File[];
+    }
+    // if (images.length > 0) {
+    //   for (let i = 0; i < images.length; i++) {
+    //     const image = images[i];
+    //     if (image.size > maxSize) {
+    //       const furtherCompressedImage = await compressImage(image, {
+    //         quality: 0.6, // 进一步降低压缩质量
+    //       });
+    //       images[i] = furtherCompressedImage as File;
+    //    }
+    //   }
+    // }
+    // console.log('压缩后的图片', coverImage, images); // 检查压缩
+
+    // 如果存在视频，则压缩视频
+    let compressedVideo: File | null = null;
+    if (postForm.value.video) {
+      compressedVideo = await compressVideo(postForm.value.video as File); // 类型断言
+    }
+
+    // 更新表单数据
+    postForm.value.coverImage = coverImage;
+    postForm.value.images = images;
+    postForm.value.video = compressedVideo;
+
+
+  // 创建 FormData 对象并上传
   const formData = new FormData();
   formData.append('title', postForm.value.title);
   formData.append('content', postForm.value.content);
@@ -203,8 +255,7 @@ const addPostBtn = async () => {
     formData.append('video', postForm.value.video); // 视频文件对象
   }
 
-  // 调用 API 发布帖子
-  try {
+
     const response = await addPost(formData);
     ElMessage.success('帖子发布成功');
     showPostForm.value = false; // 关闭表单弹窗

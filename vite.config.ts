@@ -80,6 +80,7 @@ export default defineConfig({
           'vuex': ['vuex'], // Vuex
           'element-plus': ['element-plus'], // Element Plus
           'lodash-es': ['lodash-es'],
+          'compressorjs': ['compressorjs'],// Compressor.js图片压缩
           // 'echarts': ['echarts'], // ECharts
           'axios': ['axios'], // Axios
           'crypto-js': ['crypto-js'], // CryptoJS

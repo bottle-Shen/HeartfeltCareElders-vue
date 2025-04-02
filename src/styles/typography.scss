@@ -279,7 +279,6 @@ b,strong{
     padding: 0 rem(5);
     cursor: pointer;
     @include mobile {
-        font-size: rem(10);
         padding: 0 rem(3);
     }
     @include hover {
@@ -343,6 +342,7 @@ b,strong{
     justify-content: center;
     align-items: center;
     background-color: var(--white);
+    width: 100%;
     z-index: 9999;
 }
 .loading {// 底部
