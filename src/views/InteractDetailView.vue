@@ -688,8 +688,6 @@ const toggleText = async() => {
       width: 100%;
       position: absolute;
       bottom: rem(10);
-      @extend .flex-between;
-      align-items: flex-end;
       .post-info{
         .info-username{
           word-wrap: break-word;// 允许换行
@@ -788,15 +786,9 @@ const toggleText = async() => {
     }
     @include mobile{
       flex-direction: column;
-      .post-infotime{
-        flex-direction: column;
-        .post-info{
-          width: 100%;
-        }
-      }
       .comment-container{
       width: 96.6%;
-      height: 40%;
+      height: rem(300);
       margin-left: rem(0);
       padding: rem(10);
       box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);

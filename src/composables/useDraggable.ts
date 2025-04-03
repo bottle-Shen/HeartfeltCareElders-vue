@@ -58,6 +58,9 @@ const updateWindowHeight = () => {
       startX.value = eventTouch.touches[0].clientX;
       startY.value = eventTouch.touches[0].clientY;
   }
+    // 更新鼠标或触摸位置
+    mouseX.value = startX.value;
+    mouseY.value = startY.value;
     // 监听鼠标位置变化
   watch([isPressed, mouseX, mouseY], ([pressed, newX, newY]) => {
       if (pressed && isDragging.value) {
