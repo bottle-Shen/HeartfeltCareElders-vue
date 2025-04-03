@@ -295,10 +295,12 @@ b,strong{
     // background-color: transparent !important;
     // border: 1px solid transparent !important;
     color: var(--dark-blue);
-}
-.link-button:hover {
-    background-color: transparent;
-    color: var(--blue) !important;
+    @include hover{
+        &:hover{
+            background-color: transparent;
+            color: var(--blue) !important;
+        }
+    }
 }
 //------定义main样式类开始------
 .el-main {

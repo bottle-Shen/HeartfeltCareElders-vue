@@ -131,6 +131,7 @@ onUnmounted(() => {
       }
     }
     .header-menu-container{// 菜单容器-避免触发main的点击事件
+      position: relative;
       width: 100vw;
       height: 100vh;
       background-color: transparent;
