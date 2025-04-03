@@ -376,7 +376,7 @@ const isExpanded = ref(false); // 控制文本展开状态
 const isButtonVisible = ref(true); // 控制展开按钮的显示状态
 // 调用函数，对文本进行截断，限制行数
 function initializeTextTruncation() {
-  truncateText('.title-content', 1); // 应用省略号
+  truncateText('.title-content', 2); // 应用省略号
 }
 
 // 检查是否有截断样式
@@ -690,6 +690,15 @@ const toggleText = async() => {
       bottom: rem(10);
       @extend .flex-between;
       align-items: flex-end;
+      .post-info{
+        .info-username{
+          word-wrap: break-word;// 允许换行
+        }
+      }
+    }
+    .link-button{
+      color: var(--white);
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); // 添加文字阴影
     }
   }
     .actions{
@@ -778,12 +787,20 @@ const toggleText = async() => {
       }
     }
     @include mobile{
+      flex-direction: column;
       .post-infotime{
         flex-direction: column;
         .post-info{
           width: 100%;
         }
       }
+      .comment-container{
+      width: 96.6%;
+      height: 40%;
+      margin-left: rem(0);
+      padding: rem(10);
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    }
     }
 }
 </style>

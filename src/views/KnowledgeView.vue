@@ -61,7 +61,7 @@ onUnmounted(() => {
             <li class="card" :class="`color-${index % 4}`">
                 <router-link :to="`/knowledge/${knowledge.id}`">
                       <p class="tip">{{ knowledge.title }}</p>
-                      <p class="second-text">{{ knowledge.content }}</p>
+                      <p class="second-text">{{ knowledge.desc }}</p>
                 </router-link>
             </li>
          </ul>
@@ -79,16 +79,15 @@ h1{
 }
 .knowledge-list{
     // max-height: 80vh; //高度限制
-    height: 80%;
+    width: 97%;
+    height: 100%;
     overflow: auto;
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-    gap:rem(0) rem(80);
-    position: fixed;
-    // border: 1px solid red;
+    position: absolute;
 .cards {
-    width: 90%;
+    width: 100%;
     // border: 1px solid red;
     // flex:1 1 auto;
     padding-bottom: rem(30);
@@ -108,14 +107,15 @@ h1{
     transition: 400ms;
     white-space: nowrap; // 防止文字换行
     p.tip {
-    width: 100%;
+    width: rem(300);
     font-size: 1em;
     font-weight: 700;
+    padding-bottom: rem(5);
     overflow: hidden;// 隐藏超出部分
     text-overflow: ellipsis; // 显示省略号
     }
     p.second-text {
-      width: 100%;
+      width: rem(300);
       font-size: .7em;
       overflow: hidden;// 隐藏超出部分
       text-overflow: ellipsis; // 显示省略号

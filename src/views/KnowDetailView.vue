@@ -34,12 +34,14 @@ onUnmounted(() => {
 <template>
     <div class="knowledge-detail">
         <!-- 返回按钮 -->
-        <button @click="goBack" class="back-button header">返回</button>
+        <div class="back-button-container">
+            <button @click="goBack" class="back-button header">返回</button>
+        </div>
         <div class="content">
             <h1 class="h2">{{ knowledge?.title }}</h1>
-            <p class="time">发布时间：{{ formatDate(knowledge?.create_time) }}</p>
-            <img :src="knowledge?.image" :alt="knowledge?.title"/>
-            <p>{{ knowledge?.content }}</p>
+            <p class="time">发布时间：{{ formatDate(knowledge?.create_at) }}</p>
+            <p class="desc">{{ knowledge?.desc }}</p>
+            <p class="content">{{ knowledge?.content }}</p>
         </div>
     </div>
 </template>
@@ -49,17 +51,21 @@ onUnmounted(() => {
     padding: 1.4vw 0;
     @extend .title;
 }
+.back-button-container{
+    padding: 2.1vh 0;
+}
 .content{
     // display: flex;
     // flex-direction: column;
     // justify-content: center;
     p{
         text-indent: 2em;// 首行首字缩进
+        line-height: rem(30);// 行间距
     }
-    img{
-        width: rem(200);
-        float: left;
-    }
+    // img{
+    //     width: rem(200);
+    //     float: left;
+    // }
     .time{
         display: flex;
         justify-content: flex-end;

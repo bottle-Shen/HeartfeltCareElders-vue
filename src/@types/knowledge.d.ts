@@ -7,6 +7,6 @@ export interface IKnowledge {
     image: string;//图片
     click_num: number;//点击量
     is_recommend: boolean;//是否推荐
-    create_time: string;
-    update_time: string;
+    create_at: string;
+    update_at: string;
 }

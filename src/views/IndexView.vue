@@ -101,7 +101,10 @@ onUnmounted(() => {
     cursor:'grab',
   }"
   @mousedown="startDrag"
-  @mouseup="endDrag"/>
+  @mouseup="endDrag"
+  @touchstart="startDrag"
+  @touchend="endDrag"
+  />
       <el-main>
         <router-view></router-view>
       </el-main>

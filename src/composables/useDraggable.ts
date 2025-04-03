@@ -52,11 +52,11 @@ const updateWindowHeight = () => {
   // startY.value = buttonY; // 按钮的初始 Y 位置
     } else if ("touches" in event) {
         sourceType.value = "touch"; // 触摸事件
-      // console.log("touch")
+      console.log("touch")
       const eventTouch = event as TouchEvent;
       event.preventDefault(); // 阻止默认行为
       startX.value = eventTouch.touches[0].clientX;
-  startY.value = eventTouch.touches[0].clientY;
+      startY.value = eventTouch.touches[0].clientY;
   }
     // 监听鼠标位置变化
   watch([isPressed, mouseX, mouseY], ([pressed, newX, newY]) => {

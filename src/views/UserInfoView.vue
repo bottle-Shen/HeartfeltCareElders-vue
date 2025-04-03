@@ -674,6 +674,8 @@ onBeforeRouteLeave(() => {
               </div>
             </li>
           </ul>
+          <!-- 没有发布时显示暂无 -->
+          <p v-if="userPosts.length === 0">快去发布第一个作品吧~</p>
           <!-- 加载状态 -->
           <LoadingCom v-if="loadingUserPosts" class="loading"/>
           <!-- <div v-if="finishedUserPosts" class="no-more-data">
@@ -694,6 +696,8 @@ onBeforeRouteLeave(() => {
               </div>
             </li>
           </ul>
+          <!-- 没有赞帖子时显示暂无 -->
+          <p v-if="likedPosts.length === 0">暂无点赞帖子</p>
           <!-- 加载状态 -->
           <LoadingCom v-if="loadingLikedPosts" class="loading"/>
           <!-- <div v-if="finishedLikedPosts" class="no-more-data">
