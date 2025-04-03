@@ -83,11 +83,9 @@ const postForm = ref({
 const postFormRules = {
   title: [
     { required: true, message: '请输入帖子标题', trigger: 'blur' },
-    { min: 3, max: 50, message: '标题长度应在3到50个字符之间', trigger: 'blur' }
   ],
   content: [
     { required: true, message: '请输入帖子内容', trigger: 'blur' },
-    { min: 5, max: 500, message: '内容长度应在5到500个字符之间', trigger: 'blur' }
   ],
   coverImage: [
     { required: true, message: '封面图不能为空', trigger: 'change' }
@@ -179,10 +177,19 @@ const addPostBtn = async () => {
     ElMessage.error('封面图不能为空');
     return;
   }
+  if (!postForm.value.title) {
+    ElMessage.error('标题不能为空');
+    return;
+  }
+  if (!postForm.value.content) {
+    ElMessage.error('内容不能为空');
+    return;
+  }
   if (postForm.value.video && postForm.value.images.length > 0) {
     ElMessage.error('您只能选择上传图片组或视频，但不能同时上传两者');
     return;
   }
+
   // console.log('检查图片组',postForm.value.images); // 检查图片组
   // console.log(postForm.value.video); // 检查视频
   
@@ -242,20 +249,19 @@ const addPostBtn = async () => {
   formData.append('title', postForm.value.title);
   formData.append('content', postForm.value.content);
   // formData.append('user_id', userId.toString());
-  formData.append('image', postForm.value.coverImage); // 封面图文件对象
+  formData.append('image', postForm.value.coverImage,`image${Date.now()}.jpg`); // 封面图文件对象
   // 添加多张图片
   if (postForm.value.images.length > 0) {
     postForm.value.images.forEach((img:File) => {
-      formData.append(`images`, img); // 确保这里正确添加了文件
+      formData.append(`images`, img,`images${Date.now()}.jpg`); // 确保这里正确添加了文件
     });
   }
 
   // 添加视频
   if (postForm.value.video) {
-    formData.append('video', postForm.value.video); // 视频文件对象
-  }
-
-
+    formData.append('video', postForm.value.video,`video${Date.now()}.mp4`); // 视频文件对象
+    }
+  
     const response = await addPost(formData);
     ElMessage.success('帖子发布成功');
     showPostForm.value = false; // 关闭表单弹窗
@@ -316,6 +322,11 @@ onMounted(() => {
 
 });
 onUnmounted(() => {
+  // 离开组件时，重置用户帖子和点赞帖子的状态和数据
+  store.commit('post/SET_CURRENT_PAGE', 1);// 重置当前页码
+  store.commit('post/SET_LOADING', false);// 重置加载状态
+  store.commit('post/SET_FINISHED', false);// 重置完成状态
+  store.commit('post/CLEAR_LOADED_PAGES');// 重置缓存页码
   // 移除滚动事件监听
   removeSocialDataScroll()
   // 清理资源
@@ -446,8 +457,7 @@ onUnmounted(() => {
     position: fixed;
     // right: 0;
     // top: 0;
-    // max-height: 80vh; //高度限制
-    height: 100%;
+    height: 80%;
     overflow: auto;
   }
   .el-form-item {

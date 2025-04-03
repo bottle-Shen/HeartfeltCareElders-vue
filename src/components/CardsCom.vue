@@ -7,13 +7,13 @@ defineProps<{
   index: number;
 }>();
 // 调用函数，对 .text_s 中的文本进行截断，限制为 1 行
-function initializeTextTruncation() {
-  // truncateText('.text_m', 1); // 对 .text_m 应用单行省略号
-  // truncateText('.text_s', 1); // 对 .text_s 应用单行省略号
-}
+// function initializeTextTruncation() {
+//   truncateText('.text_m', 1); // 对 .text_m 应用单行省略号
+//   truncateText('.text_s', 1); // 对 .text_s 应用单行省略号
+// }
 
 // 确保在 DOM 加载完成后调用
-document.addEventListener('DOMContentLoaded', initializeTextTruncation);
+// document.addEventListener('DOMContentLoaded', initializeTextTruncation);
 </script>
 <template>
   <div class="main">

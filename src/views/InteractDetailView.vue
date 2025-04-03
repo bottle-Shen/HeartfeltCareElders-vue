@@ -299,7 +299,7 @@ const handleClickOutside = (event: MouseEvent) => {
   // 如果 moreBox 被显示，且点击位置不在 moreBox 内部，则隐藏 moreBox
   if (isMoreShow.value && moreBox && !moreBox.contains(event.target as Node)) {
     isMoreShow.value = false;
-    console.log('点击了页面其他地方');
+    // console.log('点击了页面其他地方');
   }
   // 如果 commentContainer 被显示，且点击位置不在 commentContainer 内部，则隐藏 commentContainer
   if (post.value?.isCommentsVisible && commentContainer && !commentContainer.contains(event.target as Node)) {
@@ -335,11 +335,18 @@ onMounted(async () => {
   if (isDataLoaded.value) {
     initializeWebSocketConnection(postId.value, userId.value); // 初始化 WebSocket 连接
   }
+  nextTick(() => {// 确保在 DOM 加载完成后调用
+    initializeTextTruncation();
+    setupResizeObserver(); // 截断文本并设置按钮显示状态
+  });
 });
 
 onUnmounted(() => {
   if (socket) {
     socket.close()
+  }
+  if (resizeObserver) {
+    resizeObserver.disconnect(); // 停止 ResizeObserver 监听
   }
   document.removeEventListener('click', handleClickOutside);
 });
@@ -361,6 +368,63 @@ watch(() => route.params.id, (newId) => {
   // 重新加载帖子和评论数据
   loadPostAndComments(newPostId,route);
 });
+
+
+import { truncateText } from '@/utils'
+
+const isExpanded = ref(false); // 控制文本展开状态
+const isButtonVisible = ref(true); // 控制展开按钮的显示状态
+// 调用函数，对文本进行截断，限制行数
+function initializeTextTruncation() {
+  truncateText('.title-content', 1); // 应用省略号
+}
+
+// 检查是否有截断样式
+const isOverflow = () => {
+  const elements = document.querySelectorAll('.title-content');
+  let hasOverflow = false;
+  elements.forEach((el) => {
+    const element = el as HTMLElement;
+    if (element.scrollHeight > element.clientHeight) {
+      hasOverflow = true;
+    }
+  });
+  return hasOverflow;
+}
+
+let resizeObserver: ResizeObserver | null = null;
+ // 使用 ResizeObserver 监听窗口大小变化-显示隐藏展开按钮
+const setupResizeObserver = () => {
+  resizeObserver = new ResizeObserver(() => {
+    if (isOverflow()) {
+      // console.log('有截断样式');
+      isButtonVisible.value = true;
+    } else {
+      // console.log('没有截断样式');
+      isButtonVisible.value = false;
+    }
+  });
+  resizeObserver.observe(document.body);
+};
+const toggleText = async() => {
+  isExpanded.value = !isExpanded.value; // 切换展开状态
+  if (!isExpanded.value) {
+    // 如果状态变为未展开，重新应用文本截断
+    nextTick(() => {
+      initializeTextTruncation();
+    });
+  } else {
+    // 如果状态变为展开，移除截断样式
+    const elements = document.querySelectorAll('.title-content');
+    elements.forEach((el) => {
+      const element = el as HTMLElement; // 强制转换为 HTMLElement
+      element.style.overflow = '';
+      element.style.textOverflow = '';
+      element.style.display = '';
+      element.style.webkitLineClamp = '';
+    });
+  }
+};
 </script>
 <template>
   <div class="interact-detail w-full h-full body">
@@ -436,8 +500,9 @@ watch(() => route.params.id, (newId) => {
       </span>
       <div class="post-infotime">
         <div class="post-info">
-        <p>{{ post?.user.username }}</p>
-        <p>{{ post?.title }}&nbsp;{{ post?.content }}</p>
+        <p class="info-username">{{ post?.user.username }}</p>
+        <p class="title-content">{{ post?.title }}&nbsp;{{ post?.content }}</p>
+        <el-button v-if="isButtonVisible" class="link-button toggle-button" link @click="toggleText">{{ isExpanded ? '收起' : '展开' }}</el-button>
       </div>
       <p class="time body-s">发布时间：{{ formatDate(post?.created_at) }}</p>
       </div>
@@ -619,14 +684,21 @@ watch(() => route.params.id, (newId) => {
           object-fit: contain;
         }
     }
-    .post-info{
+    .post-infotime{
+      width: 100%;
       position: absolute;
       bottom: rem(10);
-    }
-    .time{
-      position: absolute;
-      bottom: rem(10);
-      right: 0;
+      @extend .flex-between;
+      align-items: flex-end;
+      .post-info{
+        p{
+            overflow: hidden; // 隐藏超出部分
+            text-overflow: ellipsis; // 显示省略号
+          }
+      }
+      .time{
+        
+      }
     }
   }
     .actions{
@@ -716,20 +788,9 @@ watch(() => route.params.id, (newId) => {
     }
     @include mobile{
       .post-infotime{
+        flex-direction: column;
         .post-info{
           width: 100%;
-          bottom: rem(30);
-          p{
-            white-space: nowrap; // 防止文字换行
-            overflow: hidden; // 隐藏超出部分
-            text-overflow: ellipsis; // 显示省略号
-          }
-        }
-        .time{
-          width: 100%;
-          white-space: nowrap; // 防止文字换行
-          overflow: hidden; // 隐藏超出部分
-          text-overflow: ellipsis; // 显示省略号
         }
       }
     }

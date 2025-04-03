@@ -1129,18 +1129,15 @@ const toggleTableVisibility = () => {
       </div>
       <div class="body-item">
         <div id="health-status" class="item-two" style="width: 100%; height: 100%;"></div>
-        <div class="item-two">
-          <!-- 根据数据条数和健康状态显示描述 -->
-          <div v-if="healthMetrics.healthStatus.length > 0">
-            <p>根据近期的 {{ healthMetrics.healthStatus.length }} 条数据记录显示：</p>
-            <!-- 显示建议 -->
-            <div v-if="healthSuggestion">
-              <p>其中，{{ healthSuggestion }}</p>
-            </div>
-          </div>
-        </div>
       </div>
         </div>
+          <!-- 根据数据条数和健康状态显示描述 -->
+          <div v-if="healthMetrics.healthStatus.length > 0" class="item-suggestion">
+            <h1>建议：</h1>
+            <p>根据近期的 {{ healthMetrics.healthStatus.length }} 条数据记录显示：</p>
+            <!-- 显示建议 -->
+            <p v-if="healthSuggestion">其中，{{ healthSuggestion }}</p>
+          </div>
         <div class="footer-container">
       <div id="height-weight" class="footer-item" style="width: 100%; height: 100%;"></div>
       <div id="blood-pressure" class="footer-item" style="width: 100%; height: 100%;"></div>
@@ -1241,7 +1238,11 @@ h1{
 }
 }
 }
-
+.item-suggestion{
+  padding: rem(20);
+  border-radius: rem(20);
+  box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.1);
+}
 .body-container{
   display: flex;
   flex-wrap: wrap;
@@ -1253,7 +1254,7 @@ h1{
     padding: rem(20);
     flex: 1 1 auto;
     border: 1px solid var(--dark);
-    border-radius: 20px;
+    border-radius: rem(20);
     box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.1);
     &:first-child{
       width: 18.5vw;

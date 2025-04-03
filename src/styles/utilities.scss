@@ -30,31 +30,11 @@
     flex-direction: column;
 }
 
-// flex布局-占满剩余空间
-.flex-one {
-    flex: 1;
-}
-.flex-two {
-    flex: 2;
-}
-.flex-three {
-    flex: 3;
-}
 // 相对定位
 .relative {
     position: relative;
 }
-// 固定位置
-// .fixed-top {
-//     position: fixed; // 固定顶部
-//     top: 0;
-//     z-index: 999; // 确保在内容上方
-// }
-// .fixed-bottom {
-//     position: fixed; // 固定底部
-//     bottom: 0;
-//     z-index: 999; // 确保在内容上方
-// }
+
 // 绝对定位
 .absolute{
     position: absolute;

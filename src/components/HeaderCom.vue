@@ -9,7 +9,6 @@ const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);
 const user = computed(() => store.getters['user/getUser']);
 // console.log('token', token)
 const searchQuery = ref(""); // 搜索关键词
-const headerMenuVisible = ref(false);// 顶部菜单是否显示
 // 搜索逻辑
 const handleSearch = async (query:string) => {
   if (query.trim()) {
@@ -29,9 +28,11 @@ const handleClear = () => {
   // console.log('clear');
   searchQuery.value = '';
 };
-// 切换头部菜单
-const toggleHeaderMenu=() => {
-  headerMenuVisible.value = !headerMenuVisible.value;
+
+const emit = defineEmits(["toggle-menu"]);
+// 切换头部菜单显示隐藏-向父组件传递事件
+const ClickHeaderMenu = (event: MouseEvent) => {
+  emit('toggle-menu',event); // 向父组件发送自定义事件emit，并传递 event 参数
 };
 const showUserInfo = ref(false);// 用户信息是否显示
 const router = useRouter();
@@ -73,13 +74,8 @@ const goToUserInfo = () => {
       <router-link class="title" to="/register">注册</router-link>
       &nbsp;<b class="title">|</b>&nbsp;<router-link class="title" to="/login">登录</router-link>
     </div>
-    <i-ep-Menu @click="toggleHeaderMenu" class="header-menu"/>
+    <i-ep-Menu @click="ClickHeaderMenu" class="header-menu"/>
   </div>
-  <transition name="slide-x">
-    <div class="header-menu-com" v-show="headerMenuVisible">
-      <UserInfoCom />
-    </div>
-  </transition>
 </template>
 <style scoped lang="scss">
 .element-header{
@@ -195,15 +191,5 @@ const goToUserInfo = () => {
       }
     }
   }
-}
-.header-menu-com{
-  display: none;
- @include mobile{
-  display: block;
-  width: 75%;
-  max-width: rem(350);
-  position: absolute;
-  right: 0;
- }
 }
 </style>

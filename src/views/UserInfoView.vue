@@ -353,9 +353,12 @@ const saveAvatar = async () => {
   }
   // 更新数据
   avatarFile.value = coverImage as File;
+  // 创建一个新的 File 对象，指定文件名
+  const fileName = `avatar${Date.now()}.jpg`; // 你可以根据需要生成唯一的文件名
+  const newFile = new File([avatarFile.value], fileName, { type: 'image/jpeg' });
 
   // 调用 uploadAvatar 函数上传头像
-  const uploadedUrl = await uploadAvatar(avatarFile.value);
+  const uploadedUrl = await uploadAvatar(newFile);
   userInfoForm.value.avatar = uploadedUrl; // 更新本地头像地址
   // 更新 Vuex 中的头像地址
   store.commit("user/setAvatar", uploadedUrl);
@@ -455,8 +458,12 @@ const saveBackground = async () => {
   }
   // 更新数据
   backgroundFile.value = coverImage as File;
+  // 创建一个新的 File 对象，指定文件名
+  const fileName = `background${Date.now()}.jpg`; // 你可以根据需要生成唯一的文件名
+  const newFile = new File([backgroundFile.value], fileName, { type: 'image/jpeg' });
+
   // 调用 uploadBackground 函数上传背景图
-  const uploadedUrl = await uploadBackground(backgroundFile.value);
+  const uploadedUrl = await uploadBackground(newFile);
   userInfoForm.value.background_image = uploadedUrl; // 更新本地背景图地址
   // 更新 Vuex 中的头像地址
   store.commit("user/setBackground", uploadedUrl);

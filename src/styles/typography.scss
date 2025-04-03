@@ -67,22 +67,22 @@
 // ----------全局字体样式----------
 html {
     font-size: rem(16);
-    /* 默认字体大小 */
+    // 默认字体大小
     // @include mobile {
-    //         font-size: rem(10);
-    //     }
+    //     font-size: rem(10);
+    // }
     
-        // @include tablet {
-        //     font-size: rem(18);
-        // }
+    // @include tablet {
+    //     font-size: rem(18);
+    // }
     
-        // @include desktop {
-        //     font-size: rem(20);
-        // }
+    // @include desktop {
+    //     font-size: rem(20);
+    // }
     
-        // @include hd {
-        //     font-size: rem(28);
-        // }
+    // @include hd {
+    //     font-size: rem(28);
+    // }
 }
 body{
     position: relative;
@@ -93,18 +93,6 @@ body{
     // 隐藏滚动条
     ::-webkit-scrollbar {
         display: none;
-    }
-    @include mobile {
-        font-size: rem(10);
-    }
-    @include tablet {
-        font-size: rem(18);
-    }
-    @include desktop {
-        font-size: rem(20);
-    }
-    @include hd {
-        font-size: rem(28);
     }
 }
 b,strong{
@@ -200,8 +188,7 @@ b,strong{
     @extend .primary-font;
 }
 
-.body {//正文样式，使用 @extend 继承工具类，并通过 @include desktop 提供响应式调整。
-    // @extend .font-light;
+.body {//正文样式
     font-size: rem(16);
     // font-weight: 400;
 }
@@ -256,21 +243,15 @@ b,strong{
 }
 
 // ------按钮样式开始------
-.button {
-    background-color: var(--blue);
-    color: var(--white);
-    padding: 0 rem(5);
-    cursor: pointer;
-    font-size: rem(14);
-    @include rounded-border;
-    @include shadow;
-    // @include hover {
-    //     &:hover {
-    //         color: var(--blue);
-    //         background-color: transparent;
-    //     }
-    // }
-}
+// .button {
+//     background-color: var(--blue);
+//     color: var(--white);
+//     padding: 0 rem(5);
+//     cursor: pointer;
+//     font-size: rem(14);
+//     @include rounded-border;
+//     @include shadow;
+// }
 
 .primary-button {
     background-color: var(--blue);
@@ -308,6 +289,7 @@ b,strong{
     color: var(--white);
 }
 .link-button{
+    background-color: transparent;
     cursor: pointer;
     padding: 0;
     // background-color: transparent !important;
@@ -315,6 +297,7 @@ b,strong{
     color: var(--dark-blue);
 }
 .link-button:hover {
+    background-color: transparent;
     color: var(--blue) !important;
 }
 //------定义main样式类开始------

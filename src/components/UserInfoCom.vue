@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import type { SocialData } from '@/@types/social'
 const store = useStore()
 const user = computed(() => store.getters['user/getUser'])
+const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);
 const router = useRouter()
 const activeName = ref('1')// 默认选中的项
 // 获取最后三个帖子并倒序显示的通用函数
@@ -80,6 +81,7 @@ onMounted(async() => {
 </script>
 <template>
     <div class="user-info-com body-big">
+      <div v-if="isAuthenticated">
         <div class="user-info-com-header">
             <div class="user-info-com-header-avatar">
               <el-avatar :size="45" class="mr-3" :src="user.avatar" />
@@ -148,6 +150,15 @@ onMounted(async() => {
             <el-button class="primary-button w-full" @click="logoutBtn">退出登录</el-button>
           </span>
         </div>
+        </div>
+      <div v-else>
+        <span class="register-btn">
+          <el-button class="primary-button w-full" @click="router.push('/register')">注册</el-button>
+        </span>
+        <span>
+          <el-button class="primary-button w-full" @click="router.push('/login')">登录</el-button>
+        </span>
+      </div>
     </div>
 </template>
 <style lang="scss" scoped>
@@ -222,8 +233,10 @@ onMounted(async() => {
       }
     }
   }
-  @include mobile{
-    width: 100%;
+  .register-btn{
+    .el-button{
+      margin-bottom: rem(20);
+    }
   }
 }
 </style>

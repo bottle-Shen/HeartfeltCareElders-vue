@@ -79,7 +79,7 @@ h1{
 }
 .knowledge-list{
     // max-height: 80vh; //高度限制
-    height: 100%;
+    height: 80%;
     overflow: auto;
     display: flex;
     justify-content: center;

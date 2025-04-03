@@ -100,13 +100,13 @@ onBeforeRouteLeave(() => {
 .form-container{
   min-width: rem(300);
   @extend .flex-center;
-  border-radius: 30% 10px 20% 20%;
+  border-radius: 30% rem(10) 20% 20%;
   background-color: var(--white);
-  width:rem(650);/* 确保有明确的宽度 */
+  width:rem(650);// 确保有明确的宽度
   margin: 0 rem(20);
 }
 .el-form{
-  width:80%;/* 确保有明确的宽度 */
+  width:80%;// 确保有明确的宽度
   padding:rem(30) rem(60) rem(50);
     h1{
       color: var(--dark-blue);

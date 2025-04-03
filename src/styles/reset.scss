@@ -6,6 +6,7 @@ html {
 * {
     margin: 0;
     padding: 0;
+    -webkit-tap-highlight-color: transparent;// 移除移动端点击高亮效果
 }
 
 *,

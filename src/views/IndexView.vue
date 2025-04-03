@@ -44,12 +44,49 @@ const {
   endDrag,
 } = useDraggable({ x: 0, y: topOffset },buttonWidth,buttonHeight,toggleAside); // 初始位置
 // ------------拖拽按钮结束------------
+const headerMenuVisible = ref(false);// 顶部菜单是否显示
+// 切换头部菜单显示隐藏
+const toggleHeaderMenu = (event: MouseEvent) => {
+  event.stopPropagation(); // 阻止事件冒泡--避免触发父组件的点击其它位置关闭弹窗事件
+  headerMenuVisible.value = !headerMenuVisible.value;
+};
+// 点击页面其他地方隐藏
+const handleClickOutside = (event: MouseEvent) => {
+  const headerMenu = document.querySelector('.header-menu-com');
+  // 如果 headerMenu 被显示，且点击位置不在 headerMenu 内部，则隐藏 headerMenu
+  if (headerMenuVisible.value && headerMenu && !headerMenu.contains(event.target as Node)) {
+    headerMenuVisible.value = false;
+    console.log('点击了页面其他地方');
+  }
+};
+// 监听 showUserInfo 的变化
+watch(headerMenuVisible, (newVal) => {
+  if (newVal) {
+    // 当 isMoreShow 为 true 时绑定事件监听器
+    document.addEventListener('click', handleClickOutside);
+  } else {
+    // 当 isMoreShow 为 false 时移除事件监听器
+    document.removeEventListener('click', handleClickOutside);
+  }
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
+
 </script>
 
 <template>
   <el-container>
     <el-header>
-      <HeaderCom/>
+      <HeaderCom @toggle-menu="toggleHeaderMenu"/>
+      <transition name="slide-x">
+    <div class="header-menu-container" v-show="headerMenuVisible">
+      <div class="header-menu-com">
+      <UserInfoCom />
+    </div>
+    </div>
+  </transition>
     </el-header>
       <Transition name="slide-x">
         <el-aside v-if="isAsideVisible">
@@ -83,6 +120,21 @@ const {
     border-bottom: 1px solid var(--gray);
     box-shadow: 0 1px 4px var(--gray-rgb);
     background-color: var(--bg-one);
+    .header-menu-com{
+      display: none;
+      @include mobile{
+       display: block;
+       width: 75%;
+       max-width: rem(350);
+       position: absolute;
+       right: 0;
+      }
+    }
+    .header-menu-container{// 菜单容器-避免触发main的点击事件
+      width: 100vw;
+      height: 100vh;
+      background-color: transparent;
+    }
   }
   .el-aside {
     width: clamp(var(--min-aside-width),17%, var(--aside-width));

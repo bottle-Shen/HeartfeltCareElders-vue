@@ -164,7 +164,7 @@ onBeforeRouteLeave(() => {
       </el-form-item>
       </div>
       <!-- 切换注册 -->
-      <el-form-item class="text">
+      <el-form-item  class="text">
         <span>没有账号？去<router-link to="/register" class="link-button" @click="handleRegisterClick">注册</router-link></span>
         <span><router-link class="link-button" to="/reset">忘记密码</router-link></span>
       </el-form-item>
@@ -185,11 +185,10 @@ onBeforeRouteLeave(() => {
 .form-container{
   min-width: rem(300);
   @extend .flex-center;
-  border-radius: 30% 10px 20% 20%;
+  border-radius: 30% rem(10) 20% 20%;
   background-color: var(--white);
-  width:rem(650);/* 确保有明确的宽度 */
+  width:rem(650);// 明确宽度
   margin: 0 rem(20);
-}
 :deep(.el-form-item__content){//:deep()穿透
   @extend .flex-between;
 }
@@ -201,7 +200,7 @@ h1{
   justify-content: flex-end;
 }
 .el-form{
-  width:80%;/* 确保有明确的宽度 */
+  width:80%;// 确保有明确的宽度
   padding:rem(30) rem(60) rem(50);
   .form-input{
     padding-bottom: rem(18);
@@ -226,8 +225,14 @@ h1{
     // @extend .button;// 继承全局按钮样式
     @extend .w-full;
   }
-  @include mobile{
-     padding: 5% 2% 10%;
+  .text{
+    padding-bottom: rem(8);
   }
+}
+@include mobile{
+  .el-form{
+    padding: 5% 2% 10%;
+  }
+}
 }
 </style>
