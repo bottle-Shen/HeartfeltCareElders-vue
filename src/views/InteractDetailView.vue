@@ -690,15 +690,6 @@ const toggleText = async() => {
       bottom: rem(10);
       @extend .flex-between;
       align-items: flex-end;
-      .post-info{
-        p{
-            overflow: hidden; // 隐藏超出部分
-            text-overflow: ellipsis; // 显示省略号
-          }
-      }
-      .time{
-        
-      }
     }
   }
     .actions{
