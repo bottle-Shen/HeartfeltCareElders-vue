@@ -739,18 +739,17 @@ onBeforeRouteLeave(() => {
 </template>
 <style scoped lang="scss">
 .userInfo-page,.not-logged-in{
+  padding: 0 2.1vw;
   padding-top:2.1vh;
 }
 .userInfo-page{
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 97%;
   position: absolute;
   overflow: auto;
-  .userInfo-left,.userInfo-right{
-    padding-right: 2.1vw;
-  }
   .text{
     padding: rem(5) 0;
     color:var(--gray);
@@ -804,7 +803,7 @@ onBeforeRouteLeave(() => {
     }
   }
   .el-form{
-    height: rem(350);
+    // height: rem(350);
     // overflow: hidden; // 隐藏溢出部分
     // text-overflow: ellipsis; // 溢出时显示省略号
     display: flex;
@@ -865,7 +864,7 @@ onBeforeRouteLeave(() => {
 .avatar-container {
   width: rem(100);
   height: rem(100);
-  padding-top: rem(30);
+  margin-top: rem(30);
   display: flex;
   flex-direction: column;
   margin-bottom: rem(20);

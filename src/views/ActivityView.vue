@@ -527,6 +527,7 @@ const resetForm = () => {
 <style scoped lang="scss">
 // @use '@/styles/main.scss';
 .activity-page{
+  padding: 0 2.1vw;
   height: 100%;
   display: flex;
   flex-wrap: wrap;

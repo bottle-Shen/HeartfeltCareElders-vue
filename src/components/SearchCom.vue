@@ -19,11 +19,14 @@ watch(searchQuery, (newVal) => {
     emit("clear"); // 触发 clear 事件
   }
 });
+import { debounce } from '@/utils/index';
+// 使用自定义 debounce 函数-enter 键提交评论
+const debouncedhandleSearch = debounce(handleSearch, 500);
 // const input = ref('')
 </script>
 <template>
     <!-- <div> -->
-      <el-input class="h-full" @keyup.enter="handleSearch" v-model="searchQuery" :placeholder="placeholder" :prefix-icon="Search" />
+      <el-input class="h-full" @keyup.enter="debouncedhandleSearch" v-model="searchQuery" :placeholder="placeholder" :prefix-icon="Search" />
     <!-- </div> -->
 </template>
 <style lang="scss" scoped>

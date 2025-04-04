@@ -75,11 +75,15 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 h1{
-    padding: 2.1vh 0;
+    height: 9.2vh;
+    padding-left: 2.1vw;
+    min-height: rem(50);
+    @extend .title-big;
+    @extend .flex-align-center;
 }
 .knowledge-list{
     // max-height: 80vh; //高度限制
-    width: 97%;
+    width: 100%;
     height: 100%;
     overflow: auto;
     display: flex;
@@ -87,7 +91,7 @@ h1{
     flex-wrap: wrap;
     position: absolute;
 .cards {
-    width: 100%;
+    width: 90%;
     // border: 1px solid red;
     // flex:1 1 auto;
     padding-bottom: rem(30);

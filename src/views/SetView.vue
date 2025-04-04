@@ -221,7 +221,7 @@ const toggleButtonVisibility = inject('toggleButtonVisibility') as ((evt: MouseE
 </script>
 <template>
   <!-- 用户信息已加载 -->
-  <div class="userInfo-page body" v-if="isAuthenticated">
+  <div class="set-page body" v-if="isAuthenticated">
 
     <div class="userInfo-left">
       <!-- 头像 -->
@@ -397,7 +397,6 @@ const toggleButtonVisibility = inject('toggleButtonVisibility') as ((evt: MouseE
 }
   .card {
     margin-top: rem(5);
-    margin-bottom: rem(15);
     background: linear-gradient(to right, var(--bg-one) 27%, var(--bg-two) 27%);
     display: flex;
     flex-direction: column;
@@ -475,8 +474,8 @@ const toggleButtonVisibility = inject('toggleButtonVisibility') as ((evt: MouseE
   }
 
 
-.userInfo-page,.not-logged-in{
-  padding-top: 2.1vh;
+.set-page,.not-logged-in{
+  padding: 2.1vh;
 }
 .avatar-container{
   @extend .flex-align-center;

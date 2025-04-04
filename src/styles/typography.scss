@@ -307,8 +307,6 @@ b,strong{
     position: relative;
     margin-left: clamp(var(--min-aside-width), 17%, var(--aside-width));// 留出侧边栏的空间
     margin-top: var(--header-top);
-    padding-right: 2.1vw;
-    padding-left: 1.4vw;
     height: calc(100vh - var(--header-top)); // 内容区域占据剩余空间
 }
 .el-main-hidden {// 侧边栏隐藏main占满左侧
@@ -317,7 +315,6 @@ b,strong{
 //------定义移动端样式类------
 .el-main-mobile {
     margin-left: clamp(var(--min-mobile-aside-width), 20%, var(--mobile-aside-width));
-    padding-right: 1.4vw;
 }
 //------定义main样式类结束------
 //------加载样式类开始------

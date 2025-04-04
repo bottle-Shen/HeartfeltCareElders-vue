@@ -47,12 +47,12 @@ onUnmounted(() => {
 </template>
 
 <style lang="scss" scoped>
+.knowledge-detail{
+    padding: 0 2.1vh;
+}
 .header{
     padding: 1.4vw 0;
     @extend .title;
-}
-.back-button-container{
-    padding: 2.1vh 0;
 }
 .content{
     // display: flex;

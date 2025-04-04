@@ -16,3 +16,8 @@ declare module '@ffmpeg/ffmpeg' {
   export function createFFmpeg(options: { log: boolean }): FFmegIstance;
   export function fetchFile(file: File): Promise<ArrayBuffer>;
 }
+
+// 手动声明 vuex 模块
+declare module 'vuex' {
+  export * from 'vuex/types/index.d.ts';
+}

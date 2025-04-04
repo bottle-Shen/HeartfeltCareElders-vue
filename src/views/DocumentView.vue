@@ -4,7 +4,8 @@ import { getElderlyList} from '@/api/healthData'
 import type { HealthData } from '@/@types/healthdata'
 import { useStore } from 'vuex'
 import type { elderlyInfoResponse } from '@/@types/userInfo'
-const selectedElderly = ref<number>(1)// 选择的老人用户ID
+const selectedElderly = ref<number | undefined>(undefined)// 选择的老人用户ID
+const hasElderly = ref(true);// 用于标记是否有老人用户
 const elderlyList = ref<elderlyInfoResponse[]>([])// 机构人员绑定的老人用户列表
 const store = useStore()
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);// 获取用户是否登录
@@ -49,7 +50,13 @@ const getDocumentBtn = async (page: number, limit: number) => {
         } else if (getUserType.value === 2) {
             response = await getUserElderlyHealthDocument(page, limit);
         } else if (getUserType.value === 3) {
-            response = await getCaregiverElderlyHealthDocument(selectedElderly.value,page, limit);
+          if (selectedElderly.value === undefined) {
+            hasElderly.value = false;
+            throw new Error("未选择老人用户");
+          }
+          response = await getCaregiverElderlyHealthDocument(selectedElderly.value, page, limit);
+          hasElderly.value = true;
+          hasDocumentData.value = true;
         } else {
             throw new Error("未知的用户类型");
         }
@@ -127,7 +134,7 @@ const prevPage = async () => {
     if (currentPage.value > 1) {
         currentPage.value--;
         await getDocumentBtn(currentPage.value, pageSize.value);
-    }
+  }
 };
 // 切换排序方向
 const toggleSortDirection = () => {
@@ -154,7 +161,10 @@ onMounted(async () => {
     if (isAuthenticated.value) {
       if(getUserType.value === 3){
         const response = await getElderlyList();
-        elderlyList.value = response;
+        elderlyList.value = response || [];
+        if (elderlyList.value.length > 0) {
+          selectedElderly.value = elderlyList.value[0].elderly_id; // 默认选择第一个老人
+        }
         // console.log('elderlyList',elderlyList.value)
       }
       await getDocumentBtn(currentPage.value, pageSize.value); // 等待异步操作完成
@@ -170,7 +180,7 @@ onMounted(async () => {
 <template>
     <div class="knowledge-page">
     <div v-if="isAuthenticated">
-        <el-select class="elderly-select" v-if="getUserType === 3" v-model="selectedElderly" placeholder="请选择老人" @change="handleElderlyChange">
+        <el-select  class="elderly-select" v-if="getUserType === 3 && hasElderly" v-model="selectedElderly" placeholder="请选择老人" @change="handleElderlyChange">
           <el-option
             v-for="elderly in elderlyList"
             :key="elderly.elderly_id"
@@ -180,6 +190,7 @@ onMounted(async () => {
             用户名:{{ elderly.username }}
           </el-option>
         </el-select>
+        
         <div class="noFound-item" v-if="!hasDocumentData">
             暂无健康档案
         </div>
@@ -202,9 +213,9 @@ onMounted(async () => {
         <!-- 健康档案 -->
         <!-- <el-button @click="getDocumentBtn"></el-button> -->
          <div class="pagination">
-            <el-button class="link-button" @click="prevPage" link :disabled="currentPage === 1">上一页</el-button>
+            <el-button class="link-button" @click="prevPage" link v-show="currentPage !== 1">上一页</el-button>
             <span>第 {{ currentPage }} 页 / 共 {{ Math.ceil(documentURL.length / pageSize) }} 页</span>
-            <el-button class="link-button" @click="nextPage" link :disabled="finished">下一页</el-button>
+            <el-button class="link-button"  v-debounce:click="nextPage" link>下一页</el-button>
         </div>
         </div>
     </div>
@@ -219,6 +230,7 @@ onMounted(async () => {
 
 <style scoped lang="scss">
 .knowledge-page{
+  padding: 0 2.1vw;
     .elderly-select,.noFound-item{
         padding-top: rem(15);
     }

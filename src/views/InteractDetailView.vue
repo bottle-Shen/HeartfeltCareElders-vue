@@ -94,6 +94,11 @@ const toggleComments = (event: MouseEvent) => {
 };
 // 提交评论
 const submitComment = async () => {
+  // console.log('提交评论');
+  if (!isAuthenticated.value) {
+    ElMessage.error("请先登录");
+    return;
+  }
   if (!CommentContent.value.trim()) {
     ElMessage.error("评论内容不能为空");
     return;
@@ -116,6 +121,9 @@ const submitComment = async () => {
   // 清空输入框
   CommentContent.value = "";
 };
+import { debounce } from '@/utils/index';
+// 使用自定义 debounce 函数-enter 键提交评论
+const debouncedSubmitComment = debounce(submitComment, 500);
 // 初始化 WebSocket 连接
 const initializeWebSocketConnection = (postId: number, userId: number) => {
   initializeWebSocket(postId, userId)
@@ -550,9 +558,9 @@ const toggleText = async() => {
       <div v-else class="no-comments">期待您的第一条评论~</div>
       </div>
       <div class="comment-form">
-      <el-input v-model="CommentContent" placeholder="评论内容" />
+      <el-input v-model="CommentContent" @keyup.enter="debouncedSubmitComment" placeholder="评论内容" />
       <!-- <el-button type="primary" @click="addComment(postId, CommentContent, userId)">评论</el-button> -->
-      <el-button class="primary-button" type="primary" @click="submitComment" :disabled="!isAuthenticated || !CommentContent.trim()">评论</el-button>
+      <el-button class="primary-button" type="primary" v-debounce:click="submitComment">评论</el-button>
       </div>
     </div>
     <transition name="slide-y">
@@ -568,6 +576,7 @@ const toggleText = async() => {
 
 <style lang="scss" scoped>
 .interact-detail {
+  box-sizing: border-box;
   display: flex;
   position: relative;
   color: var(--white);
@@ -655,7 +664,8 @@ const toggleText = async() => {
     filter: blur(rem(35));
   }
   .header{
-    padding-top: 1.4vw;
+    padding-left: 2.1vw;
+    padding-top: 2.1vw;
     position: absolute;
     z-index: 1;
   }
@@ -685,6 +695,7 @@ const toggleText = async() => {
         }
     }
     .post-infotime{
+      padding-left: 2.1vw;
       width: 100%;
       position: absolute;
       bottom: rem(10);
@@ -700,6 +711,7 @@ const toggleText = async() => {
     }
   }
     .actions{
+      padding-right: 2.1vw;
       z-index: 1;
       cursor: pointer;
       position: absolute;
@@ -740,6 +752,7 @@ const toggleText = async() => {
       margin-left: rem(15);
       padding: rem(10);
       z-index: 1;
+      background-color: var(--white);
       box-shadow: -4px 0 5px rgba(0, 0, 0, 0.1);
       display: flex;
       flex-direction: column;
@@ -787,7 +800,7 @@ const toggleText = async() => {
     @include mobile{
       flex-direction: column;
       .comment-container{
-      width: 96.6%;
+      width: 100%;
       height: rem(300);
       margin-left: rem(0);
       padding: rem(10);

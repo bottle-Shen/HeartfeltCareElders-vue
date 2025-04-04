@@ -446,7 +446,7 @@ onUnmounted(() => {
 .interact-page {
   .header {
     @extend .flex-between;
-    padding: 2.1vh 0;
+    padding: 2.1vh;
   }
   .post-list{
     display: flex;
