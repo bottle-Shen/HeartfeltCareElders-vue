@@ -93,7 +93,7 @@ const adjustActionsAndInfoTime = () => {
     );
   // 根据视口宽度和评论区的显示状态调整样式
   if (viewportWidth <= mobileBreakpoint) {
-    if (post.value.isCommentsVisible) {
+    if (post.value?.isCommentsVisible) {
       console.log('评论区显示，隐藏点赞图标和发布时间');
       actions.classList.add('mobile-hidden');
       postInfotime.classList.add('mobile-hidden');
