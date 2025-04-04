@@ -613,7 +613,7 @@ const toggleText = async() => {
 
 <style lang="scss" scoped>
 .mobile-hidden{
-  visibility:hidden;
+  display: none !important;
 }
 .interact-detail {
   box-sizing: border-box;

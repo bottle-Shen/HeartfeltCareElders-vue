@@ -111,6 +111,13 @@ const beforeVideoUpload = (file:File) => {
   const isVideo = file.type.startsWith('video/');
   if (!isVideo) {
     ElMessage.error('只能上传视频文件');
+    return;
+  }
+  // 检查文件大小
+  const maxSize = 56.7 * 1024 * 1024; // 56.7 MB
+  if (file.size > maxSize) {
+    ElMessage.error(`视频文件大小不能超过${maxSize}MB`);
+    return;
   }
   return isVideo;
 };
@@ -168,8 +175,38 @@ const handleImageSuccess = (file: File) => {
 const handleVideoRemove = () => {// 移除视频
   postForm.value.video = null;
 };
-import { compressImage,compressImages } from '@/utils/index';
+// -------------后端压缩-轮询-发布处理start---------------
+import { compressImage, compressImages } from '@/utils/index';
+import SecureLS from 'secure-ls'
+const secret = import.meta.env.VITE_ENCRYPTION_SECRET || 'default-secret'
+const ls = new SecureLS({ encodingType: 'aes', encryptionSecret: secret });
+// 后端处理压缩进度
+const checkProgress = async (taskId: string) => {
+  try {
+    const progressResponse = await getUploadProgress(taskId);
+    const progress = progressResponse.data.progress;
+    uploadProgress.value = progress; // 更新进度条的值为后端返回的进度
 
+    if (progress < 100) {
+      setTimeout(() => checkProgress(taskId), 1000); // 每秒查询一次
+    } else if (progress === 100) {
+      console.log('视频压缩完成');
+      uploading.value = false; // 确保在任务完成后设置 uploading 为 false
+      ls.remove('taskId');// 任务完成后清理 localStorage
+      // ElMessage.success('视频压缩完成');
+    } else {
+      console.error('视频压缩失败');
+      uploading.value = false; // 确保在任务失败后设置 uploading 为 false
+      // ElMessage.error('视频压缩失败');
+      ls.remove('taskId');// 任务失败后清理 localStorage
+    }
+  } catch (error) {
+    console.error('查询进度失败：', error);
+    uploading.value = false; // 确保在查询失败后设置 uploading 为 false
+    // ElMessage.error('查询进度失败');
+    ls.remove('taskId');// 查询进度失败后清理 localStorage
+  }
+};
 // 发布帖子
 const addPostBtn = async () => {
   // 检查表单是否填写完整
@@ -186,7 +223,7 @@ const addPostBtn = async () => {
     return;
   }
   if (postForm.value.video && postForm.value.images.length > 0) {
-    ElMessage.error('您只能选择上传图片组或视频，但不能同时上传两者');
+    ElMessage.error('您只能选择一种，不能同时上传图片组和视频');
     return;
   }
 
@@ -245,30 +282,21 @@ const addPostBtn = async () => {
 
     uploading.value = true;
     uploadProgress.value = 0;
+    uploadStatus.value = 'uploading';// 设置为前端上传状态
     const response = await addPost(formData, (progress: number) => {
-      uploadProgress.value = progress;
+      uploadProgress.value = progress;// 更新前端的上传进度
     });
     // 设置轮询获取后端任务进度
     const taskId = response.task_id;
-    // 定期查询任务进度
-    const checkProgress = async () => {
-      try {
-        const progressResponse = await getUploadProgress(taskId);
-        const progress = progressResponse.data.progress;
-        uploadProgress.value = progress;
-        if (progress < 100) {
-          setTimeout(checkProgress, 1000); // 每秒查询一次
-        } else if (progress === 100) {
-          ElMessage.success('视频压缩完成');
-        } else {
-          ElMessage.error('视频压缩失败');
-        }
-      } catch (error) {
-        console.error('查询进度失败：', error);
-        ElMessage.error('查询进度失败');
-      }
-    };
-    checkProgress();
+    if (!taskId) {
+      ElMessage.error('上传失败，请刷新重试');
+      return;
+    }
+    // 保存任务 ID 到 localStorage
+    ls.set('taskId', taskId);
+    uploadStatus.value = 'processing'; // 设置为后端处理状态
+    
+    checkProgress(taskId)// 定期查询任务进度
 
     uploading.value = false;
     ElMessage.success('帖子发布成功');
@@ -278,8 +306,22 @@ const addPostBtn = async () => {
   } catch (error) {
     uploading.value = false;
     console.error('帖子发布失败：', error);
+    ElMessage.error('帖子发布失败，请稍后再试');
   }
 }
+const uploading = ref(false);
+const uploadProgress = ref(0);
+const uploadStatus = ref('uploading'); // 'uploading' 或 'processing'-表示当前的上传状态是前端上传还是后端处理
+type StatusType = "" | "success" | "warning" | "exception" | "";
+// 计算进度条的状态
+const progressStatus = computed<StatusType>(() => {
+  if (uploadProgress.value === 100) {
+    return 'success';
+  }
+  return ""; // 默认无状态
+});
+// -------------后端压缩-轮询-发布处理end---------------
+
 // const saveToDraft = () => {
 //   const draftData = {
 //     title: postForm.value.title,
@@ -323,6 +365,11 @@ const addPostBtn = async () => {
 
 // 在组件中只初始化一个 WebSocket 连接
 onMounted(() => {
+  const savedTaskId = ls.get('taskId') as string;
+  if (savedTaskId) {
+    // 如果本地存在上传任务 ID，调用 checkProgress 函数
+    checkProgress(savedTaskId);
+  }
     getSocialData()
     restoreSocialDataScroll()// 恢复滚动位置
     addSocialDataListeners()
@@ -340,20 +387,6 @@ onUnmounted(() => {
   // 清理资源
   cleanupSocialData()
 });
-const uploading = ref(false);
-const uploadProgress = ref(0);
-type StatusType = "" | "success" | "warning" | "exception" | "";
-// 计算进度条的状态
-const progressStatus = computed<StatusType>(() => {
-  if (uploadProgress.value === 100) {
-    return 'success';
-  } else if (uploadProgress.value >= 70) {
-    return 'exception';
-  } else if (uploadProgress.value >= 50) {
-    return 'exception';
-  }
-  return ""; // 默认无状态
-});
 </script>
 <template>
   <div class="interact-page h-full">
@@ -370,7 +403,8 @@ const progressStatus = computed<StatusType>(() => {
         <el-progress type="circle" :percentage="uploadProgress"
         :status="progressStatus"
         />
-        <p>如果文件过大会影响上传速度，请耐心等待~</p>
+        <p v-if="uploadStatus === 'uploading'">正在上传文件，请耐心等待~</p>
+        <p v-else-if="uploadStatus === 'processing'">文件处理中，请耐心等待~</p>
       </div>
     </div>
     <!-- 发布帖子的表单 -->

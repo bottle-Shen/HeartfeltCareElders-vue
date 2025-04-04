@@ -85,8 +85,10 @@ export const addPost = (formData: FormData, onProgress: (progress: number) => vo
             }
         }
     }).then(response => {
-        // console.log('发布帖子',response);
-        return response.data;
+        if (response.status === 201) {
+            console.log('发布帖子',response.data)
+            return response.data
+        }
     }).catch((error) => {
       if (error.code === 'ECONNABORTED') {
       ElMessage.error('请求超时，请稍后再试');
@@ -95,14 +97,14 @@ export const addPost = (formData: FormData, onProgress: (progress: number) => vo
     });
 }
 // 上传进度查询
-export const getUploadProgress = (taskId: number) => {
+export const getUploadProgress = (taskId: string) => {
     return request({
         url: `api/social/tasks/${taskId}/progress/`,
         method: 'GET',
     }).then(response => {
       console.log('上传进度查询',response.data)
       if (response.status === 200) {
-        // console.log(response.data)
+        console.log('上传进度查询200',response.data)
         return response.data
       }
     }).catch((error) => {
