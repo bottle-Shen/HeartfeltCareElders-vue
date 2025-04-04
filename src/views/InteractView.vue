@@ -30,7 +30,7 @@
 //   });
 // }
 import type {SocialData} from '@/@types/social'
-import { addPost } from '@/api/social'
+import { addPost,getUploadProgress } from '@/api/social'
 import { useStore } from 'vuex'
 import { useInfiniteScroll } from '@/utils'
 import type { UploadFile, UploadFiles } from 'element-plus';
@@ -248,6 +248,28 @@ const addPostBtn = async () => {
     const response = await addPost(formData, (progress: number) => {
       uploadProgress.value = progress;
     });
+    // 设置轮询获取后端任务进度
+    const taskId = response.task_id;
+    // 定期查询任务进度
+    const checkProgress = async () => {
+      try {
+        const progressResponse = await getUploadProgress(taskId);
+        const progress = progressResponse.data.progress;
+        uploadProgress.value = progress;
+        if (progress < 100) {
+          setTimeout(checkProgress, 1000); // 每秒查询一次
+        } else if (progress === 100) {
+          ElMessage.success('视频压缩完成');
+        } else {
+          ElMessage.error('视频压缩失败');
+        }
+      } catch (error) {
+        console.error('查询进度失败：', error);
+        ElMessage.error('查询进度失败');
+      }
+    };
+    checkProgress();
+
     uploading.value = false;
     ElMessage.success('帖子发布成功');
     showPostForm.value = false; // 关闭表单弹窗
@@ -326,32 +348,11 @@ const progressStatus = computed<StatusType>(() => {
   if (uploadProgress.value === 100) {
     return 'success';
   } else if (uploadProgress.value >= 70) {
-    return 'warning';
+    return 'exception';
   } else if (uploadProgress.value >= 50) {
     return 'exception';
   }
   return ""; // 默认无状态
-});
-const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (uploading.value) {
-        event.preventDefault();
-        event.returnValue = '上传正在进行，离开页面可能会导致数据丢失。';
-    }
-};
-
-onMounted(() => {
-    window.addEventListener('beforeunload', handleBeforeUnload);
-});
-
-onUnmounted(() => {
-    window.removeEventListener('beforeunload', handleBeforeUnload);
-});
-onMounted(() => {
-    window.addEventListener('beforeunload', handleBeforeUnload);
-});
-
-onUnmounted(() => {
-    window.removeEventListener('beforeunload', handleBeforeUnload);
 });
 </script>
 <template>
@@ -364,11 +365,13 @@ onUnmounted(() => {
       </div>
     </div>
     <!-- 进度条 -->
-    <div class="demo-progress" v-if="uploading">
-    <!-- <div class="demo-progress"> -->
-    <el-progress type="circle" :percentage="uploadProgress"
-    :status="progressStatus"
-    />
+    <div class="progress-bac" v-if="uploading">
+      <div class="demo-progress">
+        <el-progress type="circle" :percentage="uploadProgress"
+        :status="progressStatus"
+        />
+        <p>如果文件过大会影响上传速度，请耐心等待~</p>
+      </div>
     </div>
     <!-- 发布帖子的表单 -->
      <!-- :before-close="handleClose" -->
@@ -472,16 +475,26 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .interact-page {
-.demo-progress{
+  .progress-bac{
+    // background-color: rgba(0, 0, 0, 0.5);
+    background: linear-gradient(179deg, var(--bg-one) 0%, var(--bg-two) 100%);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index:9999;
+    .demo-progress{
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  // width: 100%;
-  // height: 100%;
   z-index:9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   .el-progress{
-    width: 50vw;
+    width: 30vw;
     height: auto;
   }
   :deep(.el-progress-circle) {
@@ -489,9 +502,14 @@ onUnmounted(() => {
   height: 100% !important; // 设置高度-覆盖element默认样式
   }
   :deep(.el-progress__text){
-    font-size: rem(50) !important;// 设置大小-覆盖element默认样式
+    font-size: clamp(rem(16),2.5vw,rem(50)) !important;// 设置大小-覆盖element默认样式
+  }
+  p{
+    font-size: clamp(rem(16),2.5vw,rem(50));
+    padding-top: rem(50);
   }
 }
+  }
   .header {
     @extend .flex-between;
     padding: 2.1vh;

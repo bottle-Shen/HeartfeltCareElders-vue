@@ -3,9 +3,7 @@ export function useResponsiveLayout() {
     const store = useStore();
     const isAsideVisible = computed(() => store.getters['asideVisible/isAsideVisible']);
     const isHeaderVisible = ref(true);
-    // const isAsideVisible = ref(true);
-
-// 头部大小变化
+// 头部大小变化-暂未使用
 const adjustHeaderStyle = () => {
     const header = document.querySelector<HTMLElement>('.el-header');
         if (header) {
@@ -61,14 +59,11 @@ const toggleAside = () => {
         adjustHeaderStyle();
         adjustMainStyle();
         window.addEventListener('resize', adjustHeaderStyle);
-        // window.addEventListener('resize', adjustAsideTop);
         window.addEventListener('resize', adjustMainStyle);
-
     });
 
     onUnmounted(() => {
         window.removeEventListener('resize', adjustHeaderStyle);
-        // window.removeEventListener('resize', adjustAsideTop);
         window.removeEventListener('resize', adjustMainStyle);
     });
 

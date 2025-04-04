@@ -81,6 +81,33 @@ const goBack = () => {
   router.back(); // 返回到上一个页面
 };
 
+// 移动端评论区显示时隐藏点赞图标等样式的变化-控制 actions 和 post-infotime 的显示和隐藏
+const adjustActionsAndInfoTime = () => {
+  // 判断评论区是否显示，如果显示则隐藏点赞图标等样式
+    const actions = document.querySelector<HTMLElement>('.actions');
+    const postInfotime = document.querySelector<HTMLElement>('.post-infotime');
+    if (!actions || !postInfotime) return;
+    const viewportWidth = window.innerWidth;// 获取视口宽度
+    const mobileBreakpoint = parseFloat(// 获取 CSS 自定义属性的值
+      getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-mobile-device')
+    );
+  // 根据视口宽度和评论区的显示状态调整样式
+  if (viewportWidth <= mobileBreakpoint) {
+    if (post.value.isCommentsVisible) {
+      console.log('评论区显示，隐藏点赞图标和发布时间');
+      actions.classList.add('mobile-hidden');
+      postInfotime.classList.add('mobile-hidden');
+    } else {
+      console.log('评论区隐藏，显示点赞图标和发布时间');
+      actions.classList.remove('mobile-hidden');
+      postInfotime.classList.remove('mobile-hidden');
+    }
+  } else {
+    // 如果不是移动端，始终显示点赞图标和发布时间
+    actions.classList.remove('mobile-hidden');
+    postInfotime.classList.remove('mobile-hidden');
+  }
+};
 // 点击评论图标时切换评论区的显示状态
 const toggleComments = (event: MouseEvent) => {
   if (isMoreShow.value) {
@@ -90,6 +117,8 @@ const toggleComments = (event: MouseEvent) => {
   event.stopPropagation(); // 阻止事件冒泡--避免触发父组件的点击其它位置关闭弹窗事件
   if (post.value) {
     post.value.isCommentsVisible = !post.value.isCommentsVisible;
+    // 调整样式
+    adjustActionsAndInfoTime();
   }
 };
 // 提交评论
@@ -103,10 +132,10 @@ const submitComment = async () => {
     ElMessage.error("评论内容不能为空");
     return;
   }
-  if (CommentContent.value.length > 200) {
-    ElMessage.error("评论内容不能超过200个字符");
-    return;
-  }
+  // if (CommentContent.value.length > 200) {
+  //   ElMessage.error("评论内容不能超过200个字符");
+  //   return;
+  // }
   // 发送 WebSocket 消息
   if (socket) {
     socket.send(
@@ -313,6 +342,8 @@ const handleClickOutside = (event: MouseEvent) => {
   if (post.value?.isCommentsVisible && commentContainer && !commentContainer.contains(event.target as Node)) {
     if (post.value) { // 确保 post.value 不为 null
       post.value.isCommentsVisible = false;
+      // 调整样式
+      adjustActionsAndInfoTime();
     }
   }
 };
@@ -347,6 +378,10 @@ onMounted(async () => {
     initializeTextTruncation();
     setupResizeObserver(); // 截断文本并设置按钮显示状态
   });
+  // 初始化时也调用一次，确保初始状态正确
+  adjustActionsAndInfoTime();
+  // 绑定窗口大小变化事件
+  window.addEventListener('resize', adjustActionsAndInfoTime);
 });
 
 onUnmounted(() => {
@@ -357,6 +392,7 @@ onUnmounted(() => {
     resizeObserver.disconnect(); // 停止 ResizeObserver 监听
   }
   document.removeEventListener('click', handleClickOutside);
+  window.removeEventListener('resize', adjustActionsAndInfoTime);
 });
 
 // 监听路由参数 id 的变化
@@ -377,7 +413,7 @@ watch(() => route.params.id, (newId) => {
   loadPostAndComments(newPostId,route);
 });
 
-
+// --------文本截断和展开按钮显示控制start---------
 import { truncateText } from '@/utils'
 
 const isExpanded = ref(false); // 控制文本展开状态
@@ -433,6 +469,7 @@ const toggleText = async() => {
     });
   }
 };
+// --------文本截断和展开按钮显示控制end---------
 </script>
 <template>
   <div class="interact-detail w-full h-full body">
@@ -491,7 +528,7 @@ const toggleText = async() => {
     <!-- 返回按钮 -->
     <button @click="goBack" class="back-button header title">返回</button>
     <div class="content w-full h-full">
-      <span class="image-container w-full h-full">
+      <span class="image-container w-full">
          <!-- 判断是否有图片组 -->
           <el-carousel v-if="post?.images && post.images.length > 0"  trigger="click">
             <el-carousel-item v-for="item in post?.images" :key="item.id">
@@ -590,7 +627,7 @@ const toggleText = async() => {
     background-color: var(--bg-one);
     position: absolute;
     bottom: 0;
-    z-index: 1;
+    z-index: 2;
   }
   .el-form-item{
       &:nth-child(2){
@@ -677,11 +714,15 @@ const toggleText = async() => {
     z-index: 1;
   }
   .content{
+    display: flex;
+    flex-direction: column;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); // 添加文字阴影
     position: relative;
     .image-container{
       display: flex;
       justify-content: center;
+      flex:1;
+      height:50%;
       .el-carousel{
         width: 100%;
         height: 100%;
@@ -702,11 +743,9 @@ const toggleText = async() => {
         }
     }
     .post-infotime{
-      z-index:-1;
       padding-left: 2.1vw;
-      width: 100%;
-      position: absolute;
-      bottom: rem(10);
+      width: 50%;
+      padding-bottom: rem(5);
       .post-info{
         .info-username{
           word-wrap: break-word;// 允许换行
@@ -724,7 +763,7 @@ const toggleText = async() => {
       cursor: pointer;
       position: absolute;
       right: 0;
-      top: 50%;
+      top: 75%;
       transform: translateY(-50%);
       display: flex;
       flex-direction: column;
@@ -757,7 +796,6 @@ const toggleText = async() => {
     }
     .comment-container{
       width: clamp(rem(200), 50%, rem(350));
-      margin-left: rem(15);
       padding: rem(10);
       z-index: 1;
       background-color: var(--white);
@@ -813,7 +851,6 @@ const toggleText = async() => {
       .comment-container{
       width: 100%;
       height: 50%;
-      margin-left: rem(0);
       padding: rem(10);
       border-radius: rem(10) rem(10) 0 0;
       box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);

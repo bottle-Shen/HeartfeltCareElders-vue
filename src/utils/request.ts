@@ -8,7 +8,7 @@ let hasRetriedRefresh = false;
 // 创建axios实例
 const request = axios.create({
   baseURL: import.meta.env.VITE_BASE_URL, // 使用环境变量设置基础路径
-  timeout: 5000,
+  timeout: 5000,// 请求超时时间
   withCredentials: true,// 携带 cookie
 })
 

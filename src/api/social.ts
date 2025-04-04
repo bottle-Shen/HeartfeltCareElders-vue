@@ -72,7 +72,7 @@ export const addPost = (formData: FormData, onProgress: (progress: number) => vo
         headers: {
             'Content-Type': 'multipart/form-data' // 确保设置正确的 Content-Type
       },
-        timeout: 10000, // 设置超时时间为 10 秒
+        timeout: 600 * 1000, // 设置超时时间为 120 秒
         onUploadProgress(progressEvent) {
           if (onProgress) {
               if (progressEvent.total) {
@@ -90,11 +90,24 @@ export const addPost = (formData: FormData, onProgress: (progress: number) => vo
     }).catch((error) => {
       if (error.code === 'ECONNABORTED') {
       ElMessage.error('请求超时，请稍后再试');
-    } else {
-      ElMessage.error('帖子发布失败，请稍后再试');
     }
         throw error; // 抛出错误，以便在调用处捕获
     });
+}
+// 上传进度查询
+export const getUploadProgress = (taskId: number) => {
+    return request({
+        url: `api/social/tasks/${taskId}/progress/`,
+        method: 'GET',
+    }).then(response => {
+      console.log('上传进度查询',response.data)
+      if (response.status === 200) {
+        // console.log(response.data)
+        return response.data
+      }
+    }).catch((error) => {
+      console.error(error)
+    })
 }
 // 删除帖子
 export const deletePost = (postId: number) => {
