@@ -72,7 +72,7 @@ export const addPost = (formData: FormData, onProgress: (progress: number) => vo
         headers: {
             'Content-Type': 'multipart/form-data' // 确保设置正确的 Content-Type
       },
-        timeout: 60000, // 设置超时时间为 60 秒
+        timeout: 10000, // 设置超时时间为 10 秒
         onUploadProgress(progressEvent) {
           if (onProgress) {
               if (progressEvent.total) {

@@ -255,6 +255,7 @@ const addPostBtn = async () => {
     router.push(`/interact/${response.id}`); // 跳转到帖子详情页
   } catch (error) {
     uploading.value = false;
+    console.error('帖子发布失败：', error);
   }
 }
 // const saveToDraft = () => {
@@ -319,8 +320,9 @@ onUnmounted(() => {
 });
 const uploading = ref(false);
 const uploadProgress = ref(0);
+type StatusType = "" | "success" | "warning" | "exception" | "";
 // 计算进度条的状态
-const progressStatus = computed(() => {
+const progressStatus = computed<StatusType>(() => {
   if (uploadProgress.value === 100) {
     return 'success';
   } else if (uploadProgress.value >= 70) {
@@ -328,9 +330,9 @@ const progressStatus = computed(() => {
   } else if (uploadProgress.value >= 50) {
     return 'exception';
   }
-  return null; // 默认无状态
+  return ""; // 默认无状态
 });
-const handleBeforeUnload = (event) => {
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
     if (uploading.value) {
         event.preventDefault();
         event.returnValue = '上传正在进行，离开页面可能会导致数据丢失。';
@@ -360,6 +362,13 @@ onUnmounted(() => {
         <el-button class="primary-button" v-if = "isAuthenticated" @click="showPostForm = true">点我发布</el-button>
         <el-button class="primary-button info"  v-else disabled>请登录后操作</el-button>
       </div>
+    </div>
+    <!-- 进度条 -->
+    <div class="demo-progress" v-if="uploading">
+    <!-- <div class="demo-progress"> -->
+    <el-progress type="circle" :percentage="uploadProgress"
+    :status="progressStatus"
+    />
     </div>
     <!-- 发布帖子的表单 -->
      <!-- :before-close="handleClose" -->
@@ -446,10 +455,6 @@ onUnmounted(() => {
         </span>
       </template>
     </el-dialog>
-    <div class="demo-progress" v-if="uploading">
-    <el-progress type="circle" :percentage="uploadProgress"
-    status="success" />
-  </div>
     <div ref="socialDataContainerRef" class="post-list">
       <div v-for="(post,index) in socialData" :key="post.id" class="post-item">
         <router-link :to="`/interact/${post.id}`" @click="recordViewHistory(post)">
@@ -468,7 +473,24 @@ onUnmounted(() => {
 <style scoped lang="scss">
 .interact-page {
 .demo-progress{
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  // width: 100%;
+  // height: 100%;
   z-index:9999;
+  .el-progress{
+    width: 50vw;
+    height: auto;
+  }
+  :deep(.el-progress-circle) {
+  width: 100% !important; // 设置宽度-覆盖element默认样式
+  height: 100% !important; // 设置高度-覆盖element默认样式
+  }
+  :deep(.el-progress__text){
+    font-size: rem(50) !important;// 设置大小-覆盖element默认样式
+  }
 }
   .header {
     @extend .flex-between;
