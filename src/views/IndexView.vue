@@ -50,6 +50,10 @@ const toggleHeaderMenu = (event: MouseEvent) => {
   event.stopPropagation(); // 阻止事件冒泡--避免触发父组件的点击其它位置关闭弹窗事件
   headerMenuVisible.value = !headerMenuVisible.value;
 };
+// 隐藏头部菜单
+const hideHeaderMenu = () => {
+  headerMenuVisible.value = false;
+};
 // 点击页面其他地方隐藏
 const handleClickOutside = (event: MouseEvent) => {
   const headerMenu = document.querySelector('.header-menu-com');
@@ -83,7 +87,7 @@ onUnmounted(() => {
       <transition name="slide-x">
     <div class="header-menu-container" v-show="headerMenuVisible">
       <div class="header-menu-com">
-      <UserInfoCom />
+      <UserInfoCom @hide-header-menu="hideHeaderMenu"/>
     </div>
     </div>
   </transition>

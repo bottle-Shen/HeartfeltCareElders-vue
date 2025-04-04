@@ -78,6 +78,22 @@ onMounted(async() => {
     ElMessage.error('加载数据失败，请稍后重试');
   }
 });
+const emit = defineEmits(['hide-header-menu'])
+const toggleRouter = (type:string,id?:number) => {
+  // 触发自定义事件，通知父组件隐藏头部菜单
+  emit('hide-header-menu');
+  if (type === 'reset') {
+    router.push('/reset')
+  } else if (type === 'setting') {
+    router.push('/setting')
+  } else if (type === 'register') {
+    router.push('/register');
+  }else if (type === 'login') {
+    router.push('/login');
+  }else if(type === 'interact') {
+    router.push(`/interact/${id}`);
+  }
+}
 </script>
 <template>
     <div class="user-info-com body-big">
@@ -100,7 +116,7 @@ onMounted(async() => {
                   <span>我的喜欢</span>
                 </template>
         <ul v-if="lastThreeLikedPosts.length > 0">
-          <li class="ellipsis" v-for="(item, index) in lastThreeLikedPosts" :key="index" @click="router.push(`/interact/${item.id}`)">
+          <li class="ellipsis" v-for="(item, index) in lastThreeLikedPosts" :key="index" @click="toggleRouter('interact', item.id)">
             <img :src="item.image" alt="封面图">
             <p>
               {{ item.title }}#{{ item.content }}
@@ -115,7 +131,7 @@ onMounted(async() => {
           <span>历史记录</span>
         </template>
         <ul v-if="lastThreeViewHistory.length > 0">
-          <li class="ellipsis" v-for="(item, index) in lastThreeViewHistory" :key="index" @click="router.push(`/interact/${item.id}`)">
+          <li class="ellipsis" v-for="(item, index) in lastThreeViewHistory" :key="index" @click="toggleRouter('interact', item.id)">
             <img :src="item.image" alt="封面图">
             <p>
               {{ item.title }}#{{ item.content }}
@@ -130,7 +146,7 @@ onMounted(async() => {
           <span>我的发布</span>
         </template>
         <ul v-if="lastThreeUserPosts.length > 0">
-          <li class="ellipsis" v-for="(item, index) in lastThreeUserPosts" :key="index" @click="router.push(`/interact/${item.id}`)">
+          <li class="ellipsis" v-for="(item, index) in lastThreeUserPosts" :key="index" @click="toggleRouter('interact', item.id)">
             <img :src="item.image" alt="封面图">
             <p>
               {{ item.title }}#{{ item.content }}
@@ -144,10 +160,10 @@ onMounted(async() => {
         </div>
         <div class="user-info-com-footer">
           <span>
-            <el-button class="primary-button w-full" @click="router.push('/setting')">设置</el-button>
+            <el-button class="primary-button w-full" @click="toggleRouter('setting')">设置</el-button>
           </span>
           <span>
-            <el-button class="primary-button w-full" @click="router.push('/reset')">修改密码</el-button>
+            <el-button class="primary-button w-full" @click="toggleRouter('reset')">修改密码</el-button>
           </span>
           <span>
             <el-button class="primary-button w-full" @click="logoutBtn">退出登录</el-button>
@@ -156,10 +172,10 @@ onMounted(async() => {
         </div>
       <div v-else>
         <span class="register-btn">
-          <el-button class="primary-button w-full" @click="router.push('/register')">注册</el-button>
+          <el-button class="primary-button w-full" @click="toggleRouter('register')">注册</el-button>
         </span>
         <span>
-          <el-button class="primary-button w-full" @click="router.push('/login')">登录</el-button>
+          <el-button class="primary-button w-full" @click="toggleRouter('login')">登录</el-button>
         </span>
       </div>
     </div>

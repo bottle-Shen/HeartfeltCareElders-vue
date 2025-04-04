@@ -59,7 +59,7 @@ onUnmounted(() => {
          <div ref="knowledgeDataContainerRef" class="knowledge-list">
             <ul class="cards" v-for="(knowledge,index) in knowledgeData" :key="knowledge.id">
             <li class="card" :class="`color-${index % 4}`">
-                <router-link :to="`/knowledge/${knowledge.id}`">
+                <router-link :to="`/knowledge/${knowledge.id}`" class="card-link">
                       <p class="tip">{{ knowledge.title }}</p>
                       <p class="second-text">{{ knowledge.desc }}</p>
                 </router-link>
@@ -110,8 +110,10 @@ h1{
     cursor: pointer;
     transition: 400ms;
     white-space: nowrap; // 防止文字换行
+    .card-link{
+      width: 100%;
+    }
     p.tip {
-    width: rem(300);
     font-size: 1em;
     font-weight: 700;
     padding-bottom: rem(5);
@@ -119,7 +121,6 @@ h1{
     text-overflow: ellipsis; // 显示省略号
     }
     p.second-text {
-      width: rem(300);
       font-size: .7em;
       overflow: hidden;// 隐藏超出部分
       text-overflow: ellipsis; // 显示省略号

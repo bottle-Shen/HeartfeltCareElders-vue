@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type {SocialData} from '@/@types/social'
-import { searchPost } from '@/api/social'
+// import { searchPost } from '@/api/social'
 import { useStore } from 'vuex'
 import { useInfiniteScroll } from '@/utils'
 
@@ -112,17 +112,15 @@ onBeforeRouteLeave((to) => {
   .header {
     @extend .flex-between;
     padding: 2.1vh 0;
+    padding-left: 2.1vw;
   }
   .post-list{
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap:rem(0) rem(80);
-    // padding-left: rem(20);
-    // padding-top: rem(20);
     position: fixed;
-    // right: 0;
-    // top: 0;
+    padding: 0 2.1vw;
     max-height: 80vh; //高度限制
     overflow: auto;
   }

@@ -3,4 +3,4 @@ export * from './modules/formatDate';
 export * from './modules/infiniteScroll';
 export * from './modules/truncateText';
 export * from './modules/imageCompressor';
-export * from './modules/videoCompressor';
+// export * from './modules/videoCompressor';

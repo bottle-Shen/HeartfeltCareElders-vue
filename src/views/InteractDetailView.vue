@@ -575,6 +575,9 @@ const toggleText = async() => {
 </template>
 
 <style lang="scss" scoped>
+.mobile-hidden{
+  visibility:hidden;
+}
 .interact-detail {
   box-sizing: border-box;
   display: flex;
@@ -657,11 +660,15 @@ const toggleText = async() => {
   .interact-container {
     flex:1;
     position: relative;
+    @include mobile{
+      height: 50%;
+    }
   }
   .image-bac{
     position: absolute;
     object-fit: cover;
     filter: blur(rem(35));
+    z-index:-2;
   }
   .header{
     padding-left: 2.1vw;
@@ -695,6 +702,7 @@ const toggleText = async() => {
         }
     }
     .post-infotime{
+      z-index:-1;
       padding-left: 2.1vw;
       width: 100%;
       position: absolute;
@@ -728,7 +736,7 @@ const toggleText = async() => {
       .avatar-container{
         width: rem(45);
         height: rem(45);
-        padding-bottom: rem(30);
+        margin-bottom: rem(30);
         .avatar{
           border-radius: 50%;
         }
@@ -759,6 +767,9 @@ const toggleText = async() => {
       .comments-section {
         flex: 1; // 让评论列表占满剩余空间
         overflow-y: auto; // 如果评论过多，允许滚动
+        .no-comments{
+          color:var(--black);
+        }
       }
       .comments{
         // width: 100%;
@@ -801,9 +812,10 @@ const toggleText = async() => {
       flex-direction: column;
       .comment-container{
       width: 100%;
-      height: rem(300);
+      height: 50%;
       margin-left: rem(0);
       padding: rem(10);
+      border-radius: rem(10) rem(10) 0 0;
       box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
     }
     }

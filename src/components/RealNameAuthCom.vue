@@ -87,7 +87,7 @@ defineExpose({
                     <el-input v-model="form.id_card" :placeholder="props.idCardPlaceholder"/>
             </el-form-item>
             <el-form-item>
-              <el-button class="primary-button w-full" @click="saveUserInfo">{{ props.buttonText }}</el-button>
+              <el-button class="primary-button w-full" v-debounce:click="saveUserInfo">{{ props.buttonText }}</el-button>
             </el-form-item>
       </el-form>
     </div>

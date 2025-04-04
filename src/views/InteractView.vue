@@ -168,7 +168,7 @@ const handleImageSuccess = (file: File) => {
 const handleVideoRemove = () => {// 移除视频
   postForm.value.video = null;
 };
-import { compressImage,compressImages,compressVideo } from '@/utils/index';
+import { compressImage,compressImages } from '@/utils/index';
 
 // 发布帖子
 const addPostBtn = async () => {
@@ -219,29 +219,10 @@ const addPostBtn = async () => {
         }))
       ) as File[];
     }
-    // if (images.length > 0) {
-    //   for (let i = 0; i < images.length; i++) {
-    //     const image = images[i];
-    //     if (image.size > maxSize) {
-    //       const furtherCompressedImage = await compressImage(image, {
-    //         quality: 0.6, // 进一步降低压缩质量
-    //       });
-    //       images[i] = furtherCompressedImage as File;
-    //    }
-    //   }
-    // }
-    // console.log('压缩后的图片', coverImage, images); // 检查压缩
-
-    // 如果存在视频，则压缩视频
-    let compressedVideo: File | null = null;
-    if (postForm.value.video) {
-      compressedVideo = await compressVideo(postForm.value.video as File); // 类型断言
-    }
 
     // 更新表单数据
     postForm.value.coverImage = coverImage;
     postForm.value.images = images;
-    postForm.value.video = compressedVideo;
 
 
   // 创建 FormData 对象并上传
@@ -259,17 +240,21 @@ const addPostBtn = async () => {
 
   // 添加视频
   if (postForm.value.video) {
-    formData.append('video', postForm.value.video,`video${Date.now()}.mp4`); // 视频文件对象
+    formData.append('video', postForm.value.video); // 视频文件对象
     }
-  
-    const response = await addPost(formData);
+
+    uploading.value = true;
+    uploadProgress.value = 0;
+    const response = await addPost(formData, (progress: number) => {
+      uploadProgress.value = progress;
+    });
+    uploading.value = false;
     ElMessage.success('帖子发布成功');
     showPostForm.value = false; // 关闭表单弹窗
     postForm.value = { title: '', content: '', coverImage: null, video: null, images: [], uploadType: 'image' }; // 清空表单
     router.push(`/interact/${response.id}`); // 跳转到帖子详情页
   } catch (error) {
-    console.error('帖子发布失败：', error);
-    ElMessage.error('帖子发布失败，请稍后再试');
+    uploading.value = false;
   }
 }
 // const saveToDraft = () => {
@@ -332,6 +317,40 @@ onUnmounted(() => {
   // 清理资源
   cleanupSocialData()
 });
+const uploading = ref(false);
+const uploadProgress = ref(0);
+// 计算进度条的状态
+const progressStatus = computed(() => {
+  if (uploadProgress.value === 100) {
+    return 'success';
+  } else if (uploadProgress.value >= 70) {
+    return 'warning';
+  } else if (uploadProgress.value >= 50) {
+    return 'exception';
+  }
+  return null; // 默认无状态
+});
+const handleBeforeUnload = (event) => {
+    if (uploading.value) {
+        event.preventDefault();
+        event.returnValue = '上传正在进行，离开页面可能会导致数据丢失。';
+    }
+};
+
+onMounted(() => {
+    window.addEventListener('beforeunload', handleBeforeUnload);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+});
+onMounted(() => {
+    window.addEventListener('beforeunload', handleBeforeUnload);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+});
 </script>
 <template>
   <div class="interact-page h-full">
@@ -347,6 +366,7 @@ onUnmounted(() => {
     <el-dialog
       title="发布帖子"
       v-model="showPostForm"
+      :close-on-click-modal="false"
     >
       <el-form
       class="w-full"
@@ -419,14 +439,17 @@ onUnmounted(() => {
         </el-upload>
       </el-form-item>
       </el-form>
-
       <template #footer>
         <span class="dialog-footer">
-          <el-button class="primary-button" @click="showPostForm = false">取消</el-button>
-          <el-button class="primary-button" @click="addPostBtn">发布</el-button>
+          <el-button class="primary-button" @click="showPostForm = false" :disabled="uploading">取消</el-button>
+          <el-button class="primary-button" @click="addPostBtn" :disabled="uploading">发布</el-button>
         </span>
       </template>
     </el-dialog>
+    <div class="demo-progress" v-if="uploading">
+    <el-progress type="circle" :percentage="uploadProgress"
+    status="success" />
+  </div>
     <div ref="socialDataContainerRef" class="post-list">
       <div v-for="(post,index) in socialData" :key="post.id" class="post-item">
         <router-link :to="`/interact/${post.id}`" @click="recordViewHistory(post)">
@@ -444,6 +467,9 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .interact-page {
+.demo-progress{
+  z-index:9999;
+}
   .header {
     @extend .flex-between;
     padding: 2.1vh;

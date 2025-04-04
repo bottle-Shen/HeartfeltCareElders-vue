@@ -70,6 +70,9 @@ const handleSelect = (index: string) => {
   height: 100%;
   background: linear-gradient(to right, var(--bg-one) 27%, var(--bg-two) 27%);
 }
+.el-menu-item:hover{// element-ui默认hover样式修改
+    background-color: var(--white-blue-rgb);
+  }
 .el-menu-item{
   height: rem(75.6);
   padding: 0 2.1vw;
@@ -90,11 +93,6 @@ const handleSelect = (index: string) => {
     padding-left: rem(20);
     @extend .body-big;
     // font-size: rem(22);
-  }
-  @include hover{
-    &:hover{
-      background-color: var(--white-blue-rgb);
-    }
   }
   &:active {
       background-color: var(--white-blue-rgb);

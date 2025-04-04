@@ -64,19 +64,35 @@ export const getUserSocial =(params: { page?: number})=> {
 
 
 // 发布帖子
-export const addPost = (formData: FormData) => {
+export const addPost = (formData: FormData, onProgress: (progress: number) => void) => {
     return request({
         url: `api/social/posts/`,
         method: 'POST',
         data: formData, // 直接传递 FormData 对象
         headers: {
             'Content-Type': 'multipart/form-data' // 确保设置正确的 Content-Type
+      },
+        timeout: 60000, // 设置超时时间为 60 秒
+        onUploadProgress(progressEvent) {
+          if (onProgress) {
+              if (progressEvent.total) {
+                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    onProgress(percentCompleted);
+                } else {
+                    // 如果 progressEvent.total 为 undefined，设置一个默认值或不更新进度
+                    onProgress(0); // 或者设置一个默认的进度值
+                }
+            }
         }
     }).then(response => {
         // console.log('发布帖子',response);
         return response.data;
     }).catch((error) => {
-        console.error(error);
+      if (error.code === 'ECONNABORTED') {
+      ElMessage.error('请求超时，请稍后再试');
+    } else {
+      ElMessage.error('帖子发布失败，请稍后再试');
+    }
         throw error; // 抛出错误，以便在调用处捕获
     });
 }

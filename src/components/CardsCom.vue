@@ -70,6 +70,9 @@ defineProps<{
     background-position: center; // 背景图居中
     border-radius: 7px;
     cursor: pointer;
+    @include mobile{
+      width: 14em;
+    }
   }
 
   .fl {
@@ -119,6 +122,9 @@ defineProps<{
     margin-left: 0.7em;
     transition: .2s ease-in-out;
     z-index: -1;
+    @include mobile{
+      width: 14em;
+    }
   }
 
   .main:hover .card_back {
