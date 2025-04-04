@@ -60,15 +60,15 @@ export default defineConfig({
   build: {
     target: 'esnext',
     minify: 'terser', // 使用 Terser 进行压缩
-    terserOptions: {
-      compress: {
-        drop_console: true, // 删除所有 console.* 语句
-        drop_debugger: true, // 删除所有 debugger 语句
-      },
-      output: {
-        comments: false,// 删除所有注释
-      },
-    },
+    // terserOptions: {
+    //   compress: {
+    //     drop_console: true, // 删除所有 console.* 语句
+    //     drop_debugger: true, // 删除所有 debugger 语句
+    //   },
+    //   output: {
+    //     comments: false,// 删除所有注释
+    //   },
+    // },
     chunkSizeWarningLimit: 1024 * 1024 * 2, // 分块大小警告设置为 2MB
     rollupOptions: {
       output: {
