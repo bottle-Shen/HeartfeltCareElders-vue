@@ -48,6 +48,8 @@ declare module 'vue' {
     IEpCaretLeft: typeof import('~icons/ep/caret-left')['default']
     IEpCaretRight: typeof import('~icons/ep/caret-right')['default']
     IEpChatRound: typeof import('~icons/ep/chat-round')['default']
+    IEpCircleCloseFilled: typeof import('~icons/ep/circle-close-filled')['default']
+    IEpCloseBold: typeof import('~icons/ep/close-bold')['default']
     IEpGuide: typeof import('~icons/ep/guide')['default']
     IEpMenu: typeof import('~icons/ep/menu')['default']
     IEpMessageBox: typeof import('~icons/ep/message-box')['default']

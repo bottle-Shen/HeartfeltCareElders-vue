@@ -85,9 +85,11 @@ export const addPost = (formData: FormData, onProgress: (progress: number) => vo
             }
         }
     }).then(response => {
+      console.log('完整响应数据:', response);
         if (response.status === 201) {
-            console.log('发布帖子',response.data)
-            return response.data
+          console.log('发布帖子', response.data)
+          console.log('response.data.task_id', response.data.task_id);
+          return response.data
         }
     }).catch((error) => {
       if (error.code === 'ECONNABORTED') {
@@ -109,8 +111,33 @@ export const getUploadProgress = (taskId: string) => {
       }
     }).catch((error) => {
       console.error(error)
+      if (error.response && error.response.status === 404) {
+            console.error('任务 ID 无效或接口路径错误');
+      }
     })
 }
+// 调用后端接口清理缓存
+export const clearTaskCache = (taskId:string) => {
+    return request({
+        url: `api/social/tasks/${taskId}/clear/`,
+        method: 'DELETE',
+    }).then(response => {
+        console.log('缓存清理成功', response.data);
+    }).catch((error) => {
+        console.error('缓存清理失败', error);
+    });
+};
+// 获取用户任务
+export const getUserTasks = async () => {
+    return request({
+        url: `api/social/tasks/user/`,
+        method: 'GET',
+    }).then(response => {
+        return response.data;
+    }).catch((error) => {
+        console.error('获取用户任务失败',error);
+    });
+};
 // 删除帖子
 export const deletePost = (postId: number) => {
     return request({

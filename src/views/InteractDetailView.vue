@@ -15,15 +15,6 @@ const userId = computed(() => store.getters['user/getUserId']); // 用户ID从 V
 const postId = ref<number>(parseInt(route.params.id as string, 10)); // 确保 postId 是数字类型,10 表示十进制
 // console.log(postId);
 const showPostForm = ref(false); // 控制表单弹窗的显示
-const isMoreShow = ref(false);// 控制更多按钮的显示
-const MoreBtn = (event: MouseEvent) => {
-  if (post.value?.isCommentsVisible) {
-    // 如果 commentContainer 显示，则不执行返回操作
-    return;
-  }
-  event.stopPropagation(); // 阻止事件冒泡--避免触发父组件的点击其它位置关闭弹窗事件
-  isMoreShow.value = !isMoreShow.value;
-}
 // 表单数据
 const postForm = ref({
   title: '',
@@ -80,33 +71,21 @@ const goBack = () => {
   }
   router.back(); // 返回到上一个页面
 };
-
-// 移动端评论区显示时隐藏点赞图标等样式的变化-控制 actions 和 post-infotime 的显示和隐藏
-const adjustActionsAndInfoTime = () => {
-  // 判断评论区是否显示，如果显示则隐藏点赞图标等样式
-    const actions = document.querySelector<HTMLElement>('.actions');
-    const postInfotime = document.querySelector<HTMLElement>('.post-infotime');
-    if (!actions || !postInfotime) return;
-    const viewportWidth = window.innerWidth;// 获取视口宽度
-    const mobileBreakpoint = parseFloat(// 获取 CSS 自定义属性的值
-      getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-mobile-device')
-    );
-  // 根据视口宽度和评论区的显示状态调整样式
-  if (viewportWidth <= mobileBreakpoint) {
-    if (post.value?.isCommentsVisible) {
-      console.log('评论区显示，隐藏点赞图标和发布时间');
-      actions.classList.add('mobile-hidden');
-      postInfotime.classList.add('mobile-hidden');
-    } else {
-      console.log('评论区隐藏，显示点赞图标和发布时间');
-      actions.classList.remove('mobile-hidden');
-      postInfotime.classList.remove('mobile-hidden');
-    }
-  } else {
-    // 如果不是移动端，始终显示点赞图标和发布时间
-    actions.classList.remove('mobile-hidden');
-    postInfotime.classList.remove('mobile-hidden');
+// ----------调整评论区等显示时的样式变化start-----------
+const isControlsVisible = ref(true);// 控制视频播放显示隐藏
+const isMoreShow = ref(false);// 控制更多按钮的显示
+// 点击更多图标时切换更多弹窗的显示状态
+const MoreBtn = (event: MouseEvent) => {
+  if (post.value?.isCommentsVisible) {
+    // 如果 commentContainer 显示，则不执行返回操作
+    return;
   }
+  event.stopPropagation(); // 阻止事件冒泡--避免触发父组件的点击其它位置关闭弹窗事件
+  isMoreShow.value = true;
+  isControlsVisible.value = false;// 隐藏视频播放器---防止点击页面其他位置时影响视频播放
+}
+const closeMoreBox = () => {
+  isMoreShow.value = false;
 };
 // 点击评论图标时切换评论区的显示状态
 const toggleComments = (event: MouseEvent) => {
@@ -121,6 +100,42 @@ const toggleComments = (event: MouseEvent) => {
     adjustActionsAndInfoTime();
   }
 };
+const closeComments = () => {// 评论区内部按钮显关闭评论区
+      if (post.value) {
+        post.value.isCommentsVisible = false;
+      }
+    };
+// 移动端评论区显示时隐藏点赞图标等样式的变化-控制 actions 和 post-infotime 的显示和隐藏
+const adjustActionsAndInfoTime = () => {
+  // 判断评论区是否显示，如果显示则隐藏点赞图标等样式
+    const actions = document.querySelector<HTMLElement>('.actions');
+    const postInfotime = document.querySelector<HTMLElement>('.post-infotime');
+    if (!actions || !postInfotime) return;
+    const viewportWidth = window.innerWidth;// 获取视口宽度
+    const mobileBreakpoint = parseFloat(// 获取 CSS 自定义属性的值
+      getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-mobile-device')
+    );
+  // 根据视口宽度和评论区的显示状态调整样式
+  if (viewportWidth <= mobileBreakpoint) {
+    if (post.value?.isCommentsVisible) {
+      console.log('评论区显示，隐藏点赞图标和发布时间和视频播放器');
+      actions.classList.add('mobile-hidden');
+      postInfotime.classList.add('mobile-hidden');
+      isControlsVisible.value = false;
+    } else {
+      console.log('评论区隐藏，显示点赞图标和发布时间');
+      actions.classList.remove('mobile-hidden');
+      postInfotime.classList.remove('mobile-hidden');
+      isControlsVisible.value = true;
+    }
+  } else {
+    // 如果不是移动端，始终显示点赞图标和发布时间
+    actions.classList.remove('mobile-hidden');
+    postInfotime.classList.remove('mobile-hidden');
+    isControlsVisible.value = true;
+  }
+};
+// ----------移动端调整评论区等显示时的样式变化end-----------
 // 提交评论
 const submitComment = async () => {
   // console.log('提交评论');
@@ -329,25 +344,34 @@ const resetFormOnClose = () => {
     postFormRef.value.resetFields(); // 重置表单数据和验证状态
   }
 };
+// --------点击页面其他地方隐藏显示评论区和更多start---------
 // 点击页面其他地方隐藏
 const handleClickOutside = (event: MouseEvent) => {
   const moreBox = document.querySelector('.more-box');
   const commentContainer = document.querySelector('.comment-container');
+  const videoPlayer = document.querySelector('.video-player'); // 获取视频播放器元素
+  // 注意它们的位置会影响执行判断的顺序
   // 如果 moreBox 被显示，且点击位置不在 moreBox 内部，则隐藏 moreBox
+  // 并且如果视频播放器被显示，且点击位置在视频播放器内部，隐藏视频播放器
   if (isMoreShow.value && moreBox && !moreBox.contains(event.target as Node)) {
     isMoreShow.value = false;
-    // console.log('点击了页面其他地方');
+    console.log('点击了页面其他地方');
+  }
+  // 如果视频播放器被显示，且点击位置在视频播放器内部，则不触发隐藏逻辑
+  if (videoPlayer && videoPlayer.contains(event.target as Node)) {
+    return; // 不触发隐藏逻辑
   }
   // 如果 commentContainer 被显示，且点击位置不在 commentContainer 内部，则隐藏 commentContainer
   if (post.value?.isCommentsVisible && commentContainer && !commentContainer.contains(event.target as Node)) {
     if (post.value) { // 确保 post.value 不为 null
       post.value.isCommentsVisible = false;
+      console.log('点击了页面其他地方');
       // 调整样式
       adjustActionsAndInfoTime();
     }
   }
 };
-// 监听 isMoreShow 的变化
+// 监听 isMoreShow 更多的变化
 watch(isMoreShow, (newVal) => {
   if (newVal) {
     // 当 isMoreShow 为 true 时绑定事件监听器
@@ -357,7 +381,7 @@ watch(isMoreShow, (newVal) => {
     document.removeEventListener('click', handleClickOutside);
   }
 });
-// 监听 post.value?.isCommentsVisible 的变化
+// 监听 post.value?.isCommentsVisible 评论区的变化
 watch(() => post.value?.isCommentsVisible, (newVal) => {
   if (newVal) {
     // 当评论框显示时绑定事件监听器
@@ -367,6 +391,7 @@ watch(() => post.value?.isCommentsVisible, (newVal) => {
     document.removeEventListener('click', handleClickOutside);
   }
 });
+// --------点击页面其他地方隐藏显示评论区和更多endt---------
 onMounted(async () => {
   // 在组件挂载时加载帖子和评论数据
   await loadPostAndComments(postId.value,route);
@@ -486,8 +511,8 @@ const toggleText = async() => {
       >
       <el-form-item label="封面图" prop="coverImage" required>
         <!-- 自定义按钮 -->
-        <label for="custom-file-upload" class="custom-file-upload">
-          修改封面图
+        <label for="custom-file-upload" class="custom-file-upload link-button">
+          点击修改封面图
         </label>
         <!-- 隐藏的原生文件输入 -->
         <input id="custom-file-upload" type="file" @change="onCoverImageChange" accept="image/*" style="display: none;">
@@ -536,7 +561,7 @@ const toggleText = async() => {
             </el-carousel-item>
           </el-carousel>
           <!-- 判断是否有视频 -->
-           <video v-else-if="post?.video" controls class="video-player w-full h-full" autoplay>
+           <video v-else-if="post?.video" :controls="isControlsVisible" class="video-player w-full h-full" autoplay>
              <source :src="post.video" type="video/mp4">
               您的设备不支持视频播放。
             </video>
@@ -581,6 +606,7 @@ const toggleText = async() => {
     </div>
     </div>
     <div v-if="post?.isCommentsVisible" class="comment-container">
+      <div class="flex-end"><el-icon class="link-button" @click="closeComments"><i-ep-CloseBold /></el-icon></div>
       <div class="comments-section">
         <ul class="comments" v-if="post?.comments && post?.comments.length > 0">
         <li v-for="comment in post?.comments" :key="comment.id" class="comment-item">
@@ -602,7 +628,8 @@ const toggleText = async() => {
     </div>
     <transition name="slide-y">
       <div v-show="isMoreShow" class="more-box">
-        <div class="flex-center h-full w-full">
+        <div class="flex-center h-full w-full relative">
+          <div class="absolute" @click="closeMoreBox"><el-icon class="link-button" @click="closeMoreBox"><i-ep-CircleCloseFilled /></el-icon></div>
           <el-button class="primary-button" @click="editPost">修改</el-button>
           <el-button class="primary-button danger" @click="deleteUserPost">删除</el-button>
         </div>
@@ -622,12 +649,16 @@ const toggleText = async() => {
   color: var(--white);
   .more-box{
     width: 100%;
-    height: rem(100);
+    height: rem(130);
     border-radius: rem(10) rem(10) 0 0;
     background-color: var(--bg-one);
     position: absolute;
     bottom: 0;
     z-index: 2;
+    padding: rem(10);
+    .absolute{
+      right: 0;
+    }
   }
   .el-form-item{
       &:nth-child(2){
@@ -741,8 +772,13 @@ const toggleText = async() => {
           height: 100%;
           object-fit: contain;
         }
+      // .video-player::-webkit-media-controls {// 视频播放器
+      //   display: none;
+      // }
     }
     .post-infotime{
+      position: absolute;
+      bottom: 8%;
       padding-left: 2.1vw;
       width: 50%;
       padding-bottom: rem(5);
@@ -763,7 +799,7 @@ const toggleText = async() => {
       cursor: pointer;
       position: absolute;
       right: 0;
-      top: 75%;
+      top: 70%;
       transform: translateY(-50%);
       display: flex;
       flex-direction: column;

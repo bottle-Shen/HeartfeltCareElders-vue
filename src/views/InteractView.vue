@@ -30,7 +30,7 @@
 //   });
 // }
 import type {SocialData} from '@/@types/social'
-import { addPost,getUploadProgress } from '@/api/social'
+import { addPost,getUploadProgress,clearTaskCache,getUserTasks } from '@/api/social'
 import { useStore } from 'vuex'
 import { useInfiniteScroll } from '@/utils'
 import type { UploadFile, UploadFiles } from 'element-plus';
@@ -108,24 +108,33 @@ const onCoverImageChange = (event: Event) => {
 // 视频上传验证
 const beforeVideoUpload = (file:File) => {
   // console.log("触发视频上传验证", file);
-  const isVideo = file.type.startsWith('video/');
+  const isVideo = file.type.startsWith('video/');// 检查文件类型
   if (!isVideo) {
     ElMessage.error('只能上传视频文件');
-    return;
+    return false; // 阻止文件选择
   }
   // 检查文件大小
-  const maxSize = 56.7 * 1024 * 1024; // 56.7 MB
+  const maxSize = 60 * 1024 * 1024; // 60 MB
   if (file.size > maxSize) {
-    ElMessage.error(`视频文件大小不能超过${maxSize}MB`);
-    return;
+    ElMessage.error(`视频文件大小不能超过${ maxSize / (1024 * 1024)}MB`);
+    return false; // 阻止文件选择
   }
-  return isVideo;
+  return true;// 允许上传
 };
 // 视频文件发生变化时
 const handleVideoChange = (file: UploadFile, fileList: UploadFiles) => {
   // console.log("视频文件发生变化", file, fileList);
-  if (beforeVideoUpload(file.raw!)) {// 手动调用beforeVideoUpload
-    postForm.value.video = file.raw!; // 存储视频文件对象
+  // 手动调用 beforeVideoUpload 验证文件
+  const isValid = beforeVideoUpload(file.raw!);
+  if (isValid) {
+    // 如果文件通过验证，存储视频文件对象
+    postForm.value.video = file.raw!;
+  } else {
+    // 如果文件未通过验证，从 fileList 中移除该文件
+    const index = fileList.findIndex(f => f.uid === file.uid);
+    if (index !== -1) {
+      fileList.splice(index, 1);
+    }
   }
   videoFileList.value = fileList; // 同步到 videoFileList
 };
@@ -177,34 +186,38 @@ const handleVideoRemove = () => {// 移除视频
 };
 // -------------后端压缩-轮询-发布处理start---------------
 import { compressImage, compressImages } from '@/utils/index';
-import SecureLS from 'secure-ls'
-const secret = import.meta.env.VITE_ENCRYPTION_SECRET || 'default-secret'
-const ls = new SecureLS({ encodingType: 'aes', encryptionSecret: secret });
 // 后端处理压缩进度
-const checkProgress = async (taskId: string) => {
+const checkProgress = async (taskId: string,postId:number) => {
   try {
     const progressResponse = await getUploadProgress(taskId);
     const progress = progressResponse.data.progress;
     uploadProgress.value = progress; // 更新进度条的值为后端返回的进度
 
     if (progress < 100) {
-      setTimeout(() => checkProgress(taskId), 1000); // 每秒查询一次
+      setTimeout(() => checkProgress(taskId, postId), 1000); // 每秒查询一次
     } else if (progress === 100) {
       console.log('视频压缩完成');
       uploading.value = false; // 确保在任务完成后设置 uploading 为 false
-      ls.remove('taskId');// 任务完成后清理 localStorage
+      await clearTaskCache(taskId);// 调用后端接口清理后端缓存
       // ElMessage.success('视频压缩完成');
-    } else {
+      // 跳转到详情页
+      if (postId) {
+          ElMessage.success('帖子发布成功');
+          router.push(`/interact/${postId}`);
+      } else {
+        ElMessage.error('帖子发布失败');
+      }
+    } else if (progress === -1) {
       console.error('视频压缩失败');
       uploading.value = false; // 确保在任务失败后设置 uploading 为 false
+      await clearTaskCache(taskId);// 调用后端接口清理后端缓存
       // ElMessage.error('视频压缩失败');
-      ls.remove('taskId');// 任务失败后清理 localStorage
     }
   } catch (error) {
     console.error('查询进度失败：', error);
     uploading.value = false; // 确保在查询失败后设置 uploading 为 false
+    await clearTaskCache(taskId);// 调用后端接口清理后端缓存
     // ElMessage.error('查询进度失败');
-    ls.remove('taskId');// 查询进度失败后清理 localStorage
   }
 };
 // 发布帖子
@@ -276,7 +289,7 @@ const addPostBtn = async () => {
   }
 
   // 添加视频
-  if (postForm.value.video) {
+    if (postForm.value.video) {
     formData.append('video', postForm.value.video); // 视频文件对象
     }
 
@@ -286,23 +299,24 @@ const addPostBtn = async () => {
     const response = await addPost(formData, (progress: number) => {
       uploadProgress.value = progress;// 更新前端的上传进度
     });
-    // 设置轮询获取后端任务进度
-    const taskId = response.task_id;
-    if (!taskId) {
-      ElMessage.error('上传失败，请刷新重试');
-      return;
+    if (postForm.value.video) {
+      // 如果上传了视频，保存任务 ID 并开始轮询查询任务进度
+      // 设置轮询获取后端任务进度
+      const taskId = response.task_id;
+        if (!taskId) {
+          ElMessage.error('上传失败，请刷新重试');
+          uploading.value = false;
+          return;
+        }
+        uploadStatus.value = 'processing'; // 设置为后端处理状态
+        checkProgress(taskId,response.id);// 定期查询任务进度
+    } else {
+      // 如果只上传了图片，直接跳转到详情页
+      ElMessage.success('帖子发布成功');
+      showPostForm.value = false;
+      postForm.value = { title: '', content: '', coverImage: null, video: null, images: [], uploadType: 'image' };
+      router.push(`/interact/${response.id}`); // 跳转到帖子详情页
     }
-    // 保存任务 ID 到 localStorage
-    ls.set('taskId', taskId);
-    uploadStatus.value = 'processing'; // 设置为后端处理状态
-    
-    checkProgress(taskId)// 定期查询任务进度
-
-    uploading.value = false;
-    ElMessage.success('帖子发布成功');
-    showPostForm.value = false; // 关闭表单弹窗
-    postForm.value = { title: '', content: '', coverImage: null, video: null, images: [], uploadType: 'image' }; // 清空表单
-    router.push(`/interact/${response.id}`); // 跳转到帖子详情页
   } catch (error) {
     uploading.value = false;
     console.error('帖子发布失败：', error);
@@ -364,12 +378,18 @@ const progressStatus = computed<StatusType>(() => {
 // }
 
 // 在组件中只初始化一个 WebSocket 连接
-onMounted(() => {
-  const savedTaskId = ls.get('taskId') as string;
-  if (savedTaskId) {
-    // 如果本地存在上传任务 ID，调用 checkProgress 函数
-    checkProgress(savedTaskId);
-  }
+onMounted(async () => {
+  try {
+        const userTasks = await getUserTasks();
+        if (userTasks.tasks.length > 0) {
+            const taskId = userTasks.tasks[0].task_id;
+            const postId = userTasks.tasks[0].post_id;
+            checkProgress(taskId, postId);// 调用 checkProgress 函数，检查用户未完成的上传任务
+        }
+    } catch (error) {
+        console.error('获取用户任务失败：', error);
+        // ElMessage.error('获取用户任务失败，请稍后再试');
+    }
     getSocialData()
     restoreSocialDataScroll()// 恢复滚动位置
     addSocialDataListeners()
@@ -404,7 +424,7 @@ onUnmounted(() => {
         :status="progressStatus"
         />
         <p v-if="uploadStatus === 'uploading'">正在上传文件，请耐心等待~</p>
-        <p v-else-if="uploadStatus === 'processing'">文件处理中，请耐心等待~</p>
+        <p v-if="uploadStatus === 'processing'">文件处理中，请耐心等待~</p>
       </div>
     </div>
     <!-- 发布帖子的表单 -->
