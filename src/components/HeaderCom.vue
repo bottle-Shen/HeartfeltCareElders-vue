@@ -188,6 +188,8 @@ const goToUserInfo = () => {
     .avatar{
       .userInfo-com{
         display: none;
+        max-width: rem(350);
+        width: 50vw;
       }
     }
   }

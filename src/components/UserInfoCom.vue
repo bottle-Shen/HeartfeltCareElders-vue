@@ -184,7 +184,7 @@ const toggleRouter = (type:string,id?:number) => {
 .user-info-com {
   box-sizing: border-box;
   width: 100%;
-  max-width: rem(350);
+  // max-width: rem(350);
   background-color: var(--white);
   border-radius: rem(10);
   padding: rem(15);
