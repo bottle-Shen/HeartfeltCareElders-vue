@@ -155,8 +155,9 @@ const goToUserInfo = () => {
       position: relative;
       .userInfo-com{
       position: absolute;
-      top: var(--header-height);
       right: 0;
+      max-width: rem(350);
+      width: 50vw;
       }
     }
     .el-icon{
@@ -188,8 +189,6 @@ const goToUserInfo = () => {
     .avatar{
       .userInfo-com{
         display: none;
-        max-width: rem(350);
-        width: 50vw;
       }
     }
   }
