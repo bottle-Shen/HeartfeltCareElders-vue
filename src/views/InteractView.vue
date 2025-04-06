@@ -114,7 +114,7 @@ const beforeVideoUpload = (file:File) => {
     return false; // 阻止文件选择
   }
   // 检查文件大小
-  const maxSize = 60 * 1024 * 1024; // 60 MB
+  const maxSize = 50 * 1024 * 1024; // 50 MB
   if (file.size > maxSize) {
     ElMessage.error(`视频文件大小不能超过${ maxSize / (1024 * 1024)}MB`);
     return false; // 阻止文件选择
@@ -123,7 +123,7 @@ const beforeVideoUpload = (file:File) => {
 };
 // 视频文件发生变化时
 const handleVideoChange = (file: UploadFile, fileList: UploadFiles) => {
-  // console.log("视频文件发生变化", file, fileList);
+  console.log("视频文件发生变化", file, fileList);
   // 手动调用 beforeVideoUpload 验证文件
   const isValid = beforeVideoUpload(file.raw!);
   if (isValid) {
@@ -186,15 +186,25 @@ const handleVideoRemove = () => {// 移除视频
 };
 // -------------后端压缩-轮询-发布处理start---------------
 import { compressImage, compressImages } from '@/utils/index';
-// 后端处理压缩进度
+// 后端处理压缩进度maxRetries = 30 限制轮询次数
+// const checkProgress = async (taskId: string,postId:number,maxRetries = 30) => {
 const checkProgress = async (taskId: string,postId:number) => {
   try {
     const progressResponse = await getUploadProgress(taskId);
-    const progress = progressResponse.data.progress;
+    console.log("后端返回的进度响应:", progressResponse); // 打印后端返回的响应
+    const progress = progressResponse.progress;
     uploadProgress.value = progress; // 更新进度条的值为后端返回的进度
-
-    if (progress < 100) {
-      setTimeout(() => checkProgress(taskId, postId), 1000); // 每秒查询一次
+    // 打印当前进度
+    console.log(`当前进度: ${progress}%`);
+    if (progress > -1 && progress < 100) {
+          setTimeout(() => checkProgress(taskId, postId), 1000); // 每秒查询一次
+      // if (maxRetries > 0) {
+      //     setTimeout(() => checkProgress(taskId, postId, maxRetries - 1), 1000); // 每秒查询一次
+      // } else {
+      //     console.error('轮询次数达到上限，任务可能已失败');
+      //     uploading.value = false;
+      //     await clearTaskCache(taskId);
+      // }
     } else if (progress === 100) {
       console.log('视频压缩完成');
       uploading.value = false; // 确保在任务完成后设置 uploading 为 false
@@ -308,8 +318,10 @@ const addPostBtn = async () => {
           uploading.value = false;
           return;
         }
+        showPostForm.value = false;
         uploadStatus.value = 'processing'; // 设置为后端处理状态
         checkProgress(taskId,response.id);// 定期查询任务进度
+        // checkProgress(taskId,response.id,30);// 定期查询任务进度,限制轮询次数为30
     } else {
       // 如果只上传了图片，直接跳转到详情页
       ElMessage.success('帖子发布成功');
@@ -334,6 +346,9 @@ const progressStatus = computed<StatusType>(() => {
   }
   return ""; // 默认无状态
 });
+const closeProgress = () =>{
+  uploading.value = false;
+}
 // -------------后端压缩-轮询-发布处理end---------------
 
 // const saveToDraft = () => {
@@ -418,13 +433,15 @@ onUnmounted(() => {
       </div>
     </div>
     <!-- 进度条 -->
+     <!-- <div class="progress-bac"> -->
     <div class="progress-bac" v-if="uploading">
-      <div class="demo-progress">
+      <div class="demo-progress relative">
+        <el-button class="absolute link-button body-s" @click="closeProgress">隐藏</el-button>
         <el-progress type="circle" :percentage="uploadProgress"
         :status="progressStatus"
         />
-        <p v-if="uploadStatus === 'uploading'">正在上传文件，请耐心等待~</p>
-        <p v-if="uploadStatus === 'processing'">文件处理中，请耐心等待~</p>
+        <p v-if="uploadStatus === 'uploading'">文件正在上传中，请耐心等待~</p>
+        <p v-if="uploadStatus === 'processing'">文件较大将导致上传速度较慢</p>
       </div>
     </div>
     <!-- 发布帖子的表单 -->
@@ -531,36 +548,45 @@ onUnmounted(() => {
 .interact-page {
   .progress-bac{
     // background-color: rgba(0, 0, 0, 0.5);
-    background: linear-gradient(179deg, var(--bg-one) 0%, var(--bg-two) 100%);
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    // background: linear-gradient(179deg, var(--bg-one) 0%, var(--bg-two) 100%);
+    // position: fixed;
+    // top: 0;
+    // left: 0;
+    // width: 100%;
+    // height: 100%;
     z-index:9999;
     .demo-progress{
+      border-radius:rem(10);
+      padding:rem(10);
+      background-color: rgba(0, 0, 0, 0.2);
+      z-index:9999;
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  // top: 50%;
+  // left: 50%;
+  // transform: translate(-50%, -50%);
+  bottom:rem(20);
+  left:rem(10);
   z-index:9999;
   display: flex;
-  flex-direction: column;
+  // flex-direction: column;
   align-items: center;
   .el-progress{
-    width: 30vw;
+    width: clamp(rem(60),2.5vw,rem(100));
     height: auto;
+  }
+  .absolute{
+    right: rem(5);
   }
   :deep(.el-progress-circle) {
   width: 100% !important; // 设置宽度-覆盖element默认样式
   height: 100% !important; // 设置高度-覆盖element默认样式
   }
   :deep(.el-progress__text){
-    font-size: clamp(rem(16),2.5vw,rem(50)) !important;// 设置大小-覆盖element默认样式
+    font-size: clamp(rem(16),2.5vw,rem(20)) !important;// 设置大小-覆盖element默认样式
   }
   p{
-    font-size: clamp(rem(16),2.5vw,rem(50));
-    padding-top: rem(50);
+    font-size: clamp(rem(16),2.5vw,rem(20));
+    // padding-top: rem(50);
   }
 }
   }

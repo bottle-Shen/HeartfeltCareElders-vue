@@ -104,15 +104,15 @@ export const getUploadProgress = (taskId: string) => {
         url: `api/social/tasks/${taskId}/progress/`,
         method: 'GET',
     }).then(response => {
-      console.log('上传进度查询',response.data)
       if (response.status === 200) {
-        console.log('上传进度查询200',response.data)
+        console.log('上传进度查询2',response.data)
         return response.data
       }
     }).catch((error) => {
       console.error(error)
+      console.error('任务 ID 无效或接口路径错误',error);
       if (error.response && error.response.status === 404) {
-            console.error('任务 ID 无效或接口路径错误');
+            console.error('任务 ID 无效或接口路径错误404',error);
       }
     })
 }

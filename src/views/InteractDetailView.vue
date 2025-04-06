@@ -104,7 +104,8 @@ const closeComments = () => {// 评论区内部按钮显关闭评论区
       if (post.value) {
         post.value.isCommentsVisible = false;
       }
-    };
+
+};
 // 移动端评论区显示时隐藏点赞图标等样式的变化-控制 actions 和 post-infotime 的显示和隐藏
 const adjustActionsAndInfoTime = () => {
   // 判断评论区是否显示，如果显示则隐藏点赞图标等样式
@@ -358,9 +359,9 @@ const handleClickOutside = (event: MouseEvent) => {
     console.log('点击了页面其他地方');
   }
   // 如果视频播放器被显示，且点击位置在视频播放器内部，则不触发隐藏逻辑
-  if (videoPlayer && videoPlayer.contains(event.target as Node)) {
-    return; // 不触发隐藏逻辑
-  }
+  // if (videoPlayer && videoPlayer.contains(event.target as Node)) {
+  //   return; // 不触发隐藏逻辑
+  // }
   // 如果 commentContainer 被显示，且点击位置不在 commentContainer 内部，则隐藏 commentContainer
   if (post.value?.isCommentsVisible && commentContainer && !commentContainer.contains(event.target as Node)) {
     if (post.value) { // 确保 post.value 不为 null
@@ -641,6 +642,16 @@ const toggleText = async() => {
 <style lang="scss" scoped>
 .mobile-hidden{
   display: none !important;
+}
+:deep(.el-carousel__indicators){
+  width:100%;
+  display:flex;
+  .el-carousel__indicator{
+    flex:1;
+    .el-carousel__button{
+      width:100%;
+    }
+  }
 }
 .interact-detail {
   box-sizing: border-box;
